@@ -109,6 +109,14 @@ module class_nlgrid_parser
         read(unit_number) self%imax, self%jmax, self%kmax
         read(unit_number) dtheta
 
+#ifdef _DEBUG
+        print *, "DEBUG: nlgrid parser: grid size:"
+        print *, "i = [", self%imin, ", ", self%imax, "]"
+        print *, "j = [", self%jmin, ", ", self%jmax, "]"
+        print *, "k = [", self%kmin, ", ", self%kmax, "]"
+        print *, "---------------------------------"
+#endif
+
         allocate(self%x_poss_cell_cent       (self%imin-2:self%imax+2, self%jmin-2:self%jmax+2, self%kmin-2:self%kmax+2     ))
         allocate(self%y_poss_cell_cent       (self%imin-2:self%imax+2, self%jmin-2:self%jmax+2, self%kmin-2:self%kmax+2     ))
         allocate(self%z_poss_cell_cent       (self%imin-2:self%imax+2, self%jmin-2:self%jmax+2, self%kmin-2:self%kmax+2     ))
@@ -1151,7 +1159,7 @@ module class_nlgrid_parser
                     n = convert_structure_index_to_unstructure_index(i, j, k,                                                    &
                         self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
                         self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-                    call cell_geometries(n)%initialize(8_int64)
+                    call cell_geometries(n)%initialize(8)
 
                     p(1) = convert_structure_index_to_unstructure_index(i, j, k, &
                         self%imin - 1, self%jmin - 1, self%kmin - 1, self%imax, self%jmax, self%kmax)
@@ -1170,14 +1178,14 @@ module class_nlgrid_parser
                     p(8) = convert_structure_index_to_unstructure_index(i - 1, j - 1, k - 1, &
                         self%imin - 1, self%jmin - 1, self%kmin - 1, self%imax, self%jmax, self%kmax)
 
-                    call cell_geometries(n)%set_point_id(1_int64, p(1))
-                    call cell_geometries(n)%set_point_id(2_int64, p(2))
-                    call cell_geometries(n)%set_point_id(3_int64, p(3))
-                    call cell_geometries(n)%set_point_id(4_int64, p(4))
-                    call cell_geometries(n)%set_point_id(5_int64, p(5))
-                    call cell_geometries(n)%set_point_id(6_int64, p(6))
-                    call cell_geometries(n)%set_point_id(7_int64, p(7))
-                    call cell_geometries(n)%set_point_id(8_int64, p(8))
+                    call cell_geometries(n)%set_point_id(1, p(1))
+                    call cell_geometries(n)%set_point_id(2, p(2))
+                    call cell_geometries(n)%set_point_id(3, p(3))
+                    call cell_geometries(n)%set_point_id(4, p(4))
+                    call cell_geometries(n)%set_point_id(5, p(5))
+                    call cell_geometries(n)%set_point_id(6, p(6))
+                    call cell_geometries(n)%set_point_id(7, p(7))
+                    call cell_geometries(n)%set_point_id(8, p(8))
                 end do
             end do
         end do

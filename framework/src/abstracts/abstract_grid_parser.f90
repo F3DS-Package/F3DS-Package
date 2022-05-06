@@ -119,7 +119,7 @@ module abstract_grid_parser
             use class_point_id_list
             import grid_parser
             class  (grid_parser  ), intent(in   ) :: self
-            integer(int_kind     ), intent(inout) :: points         (:, :)
+            integer(real_kind    ), intent(inout) :: points         (:, :)
             class  (point_id_list), intent(inout) :: cell_geometries(:)
         end subroutine get_cell_geometries_interface
     end interface

@@ -6,6 +6,5 @@ module typedef_module
     public
 
     integer, parameter :: real_kind  = real64
-    integer, parameter :: int_kind   = int64
-    integer, parameter :: index_kind = int32
+    integer, parameter :: int_kind   = int32
 end module typedef_module
