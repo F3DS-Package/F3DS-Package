@@ -83,7 +83,7 @@ module boundary_reference_module
         end if
         num_slipwall_faces_ = num_slipwall_faces
 
-        if(num_symetric_faces < 1)then
+        if(num_symetric_faces < 0)then
             call call_error("Number of symetric BC faces must be set over zero.")
         end if
         num_symmetric_faces_ = num_symetric_faces
