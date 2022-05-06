@@ -1,0 +1,24 @@
+[submodule "json-fortran"]
+	path = json-fortran
+	url = https://github.com/jacobwilliams/json-fortran.git
+[submodule "third_party/json-fortran"]
+	path = third_party/json-fortran
+	url = https://github.com/jacobwilliams/json-fortran.git
+[submodule "third_party/VTKFortran"]
+	path = third_party/VTKFortran
+	url = https://github.com/szaghi/VTKFortran.git
+[submodule "third_party/BeFoR64"]
+	path = third_party/BeFoR64
+	url = https://github.com/szaghi/BeFoR64.git
+[submodule "third_party/FACE"]
+	path = third_party/FACE
+	url = https://github.com/szaghi/FACE.git
+[submodule "third_party/FoXy"]
+	path = third_party/FoXy
+	url = https://github.com/Fortran-FOSS-Programmers/FoXy.git
+[submodule "third_party/PENF"]
+	path = third_party/PENF
+	url = https://github.com/szaghi/PENF.git
+[submodule "third_party/StringiFor"]
+	path = third_party/StringiFor
+	url = https://github.com/szaghi/StringiFor.git
