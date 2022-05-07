@@ -294,12 +294,12 @@ module class_nlgrid_parser
 
         n = 0
 
-        if(self%x_puls_direction   == outflow_boundary_type) n = n + (self%imax - self%imin)
-        if(self%y_puls_direction   == outflow_boundary_type) n = n + (self%jmax - self%jmin)
-        if(self%z_puls_direction   == outflow_boundary_type) n = n + (self%kmax - self%kmin)
-        if(self%x_muinus_direction == outflow_boundary_type) n = n + (self%imax - self%imin)
-        if(self%y_muinus_direction == outflow_boundary_type) n = n + (self%jmax - self%jmin)
-        if(self%z_muinus_direction == outflow_boundary_type) n = n + (self%kmax - self%kmin)
+        if(self%x_puls_direction   == outflow_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
+        if(self%y_puls_direction   == outflow_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
+        if(self%z_puls_direction   == outflow_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
+        if(self%x_muinus_direction == outflow_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
+        if(self%y_muinus_direction == outflow_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
+        if(self%z_muinus_direction == outflow_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
     end function get_number_of_outflow_faces
 
     function get_number_of_slipwall_faces(self) result(n)
@@ -312,12 +312,12 @@ module class_nlgrid_parser
 
         n = 0
 
-        if(self%x_puls_direction   == slipwall_boundary_type) n = n + (self%imax - self%imin)
-        if(self%y_puls_direction   == slipwall_boundary_type) n = n + (self%jmax - self%jmin)
-        if(self%z_puls_direction   == slipwall_boundary_type) n = n + (self%kmax - self%kmin)
-        if(self%x_muinus_direction == slipwall_boundary_type) n = n + (self%imax - self%imin)
-        if(self%y_muinus_direction == slipwall_boundary_type) n = n + (self%jmax - self%jmin)
-        if(self%z_muinus_direction == slipwall_boundary_type) n = n + (self%kmax - self%kmin)
+        if(self%x_puls_direction   == slipwall_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
+        if(self%y_puls_direction   == slipwall_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
+        if(self%z_puls_direction   == slipwall_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
+        if(self%x_muinus_direction == slipwall_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
+        if(self%y_muinus_direction == slipwall_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
+        if(self%z_muinus_direction == slipwall_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
     end function get_number_of_slipwall_faces
 
     function get_number_of_symmetric_faces(self) result(n)
@@ -330,12 +330,12 @@ module class_nlgrid_parser
 
         n = 0
 
-        if(self%x_puls_direction   == symmetric_boundary_type) n = n + (self%imax - self%imin)
-        if(self%y_puls_direction   == symmetric_boundary_type) n = n + (self%jmax - self%jmin)
-        if(self%z_puls_direction   == symmetric_boundary_type) n = n + (self%kmax - self%kmin)
-        if(self%x_muinus_direction == symmetric_boundary_type) n = n + (self%imax - self%imin)
-        if(self%y_muinus_direction == symmetric_boundary_type) n = n + (self%jmax - self%jmin)
-        if(self%z_muinus_direction == symmetric_boundary_type) n = n + (self%kmax - self%kmin)
+        if(self%x_puls_direction   == symmetric_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
+        if(self%y_puls_direction   == symmetric_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
+        if(self%z_puls_direction   == symmetric_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
+        if(self%x_muinus_direction == symmetric_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
+        if(self%y_muinus_direction == symmetric_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
+        if(self%z_muinus_direction == symmetric_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
     end function get_number_of_symmetric_faces
 
     function get_number_of_points(self) result(n)
@@ -349,11 +349,11 @@ module class_nlgrid_parser
         n = (self%imax - (self%imin - 1)) * (self%jmax - (self%jmin - 1)) * (self%kmax - (self%kmin - 1))
     end function get_number_of_points
 
-    subroutine get_cells(self, centor_positions, volumes, is_ghost_cells)
+    subroutine get_cells(self, centor_positions, volumes, is_real_cells)
         class(nlgrid_parser), intent(in   ) :: self
         real (real_kind    ), intent(inout) :: centor_positions(:,:)
         real (real_kind    ), intent(inout) :: volumes         (:)
-        logical             , intent(inout) :: is_ghost_cells  (:)
+        logical             , intent(inout) :: is_real_cells  (:)
 
         integer(int_kind) :: i, j, k, n
 
@@ -361,7 +361,7 @@ module class_nlgrid_parser
             call call_error("'parse' method of nlgrid_parser is not called yet. But you call 'get_cells' method.")
         end if
 
-        is_ghost_cells(:) = .true.
+        is_real_cells(:) = .false.
 
         do k = self%kmin, self%kmax, 1
             do j = self%jmin, self%jmax, 1
@@ -373,7 +373,7 @@ module class_nlgrid_parser
                     centor_positions(2, n) = self%y_poss_cell_cent(i, j, k)
                     centor_positions(3, n) = self%z_poss_cell_cent(i, j, k)
                     volumes            (n) = self%cell_vols       (i, j, k)
-                    is_ghost_cells     (n) = .false.
+                    is_real_cells      (n) = .true.
                 end do
             end do
         end do
