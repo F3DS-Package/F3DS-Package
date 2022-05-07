@@ -84,13 +84,13 @@ module abstract_grid_parser
             integer(int_kind)                :: n
         end function get_number_of_points_interface
 
-        subroutine get_cells_interface(self, centor_positions, volumes, is_ghost_cells)
+        subroutine get_cells_interface(self, centor_positions, volumes, is_real_cell)
             use typedef_module
             import grid_parser
             class(grid_parser), intent(in   ) :: self
             real (real_kind  ), intent(inout) :: centor_positions(:,:)
             real (real_kind  ), intent(inout) :: volumes         (:)
-            logical           , intent(inout) :: is_ghost_cells  (:)
+            logical           , intent(inout) :: is_real_cell  (:)
         end subroutine get_cells_interface
 
         subroutine get_faces_interface(self, reference_cell_indexs, normal_vectors, tangential1_vectors, tangential2_vectors, positions, areas)

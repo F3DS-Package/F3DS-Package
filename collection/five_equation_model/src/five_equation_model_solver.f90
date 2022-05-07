@@ -2,7 +2,6 @@ program five_eq_model_solver
     ! Utils
     use typedef_module
     ! Cell system
-    use cells_module
     use faces_module
     use boundary_reference_module
     use cell_geometries_module
@@ -46,14 +45,13 @@ program five_eq_model_solver
     ! parse grid file
     call a_grid_parser%parse("grid.nlgrid")
     ! allocate grid & variable data
-    call initialise_cells             (a_grid_parser%get_number_of_cells())
     call initialise_faces             (a_grid_parser%get_number_of_faces()    , a_grid_parser%get_number_of_ghost_cells())
-    call initialise_cell_geometries   (a_grid_parser%get_number_of_points()   , a_grid_parser%get_number_of_points())
+    call initialise_cell_geometries   (a_grid_parser%get_number_of_points()   , a_grid_parser%get_number_of_cells())
     call initialise_boundary_reference(a_grid_parser%get_number_of_ghost_cells(), &
                                        a_grid_parser%get_number_of_outflow_faces(), a_grid_parser%get_number_of_slipwall_faces(), a_grid_parser%get_number_of_symmetric_faces())
     call initialise_variables         (a_grid_parser%get_number_of_cells())
     ! get grid data
-    call a_grid_parser%get_cells          (cells_centor_position, cells_volume, is_ghost_cells)
+    call a_grid_parser%get_cells          (cells_centor_position, cells_volume, cells_is_real_cell)
     call a_grid_parser%get_faces          (faces_reference_cell_index, faces_normal_vector, faces_tangential1_vector, faces_tangential2_vector, faces_position, faces_area)
     call a_grid_parser%get_boundaries     (outflow_face_indexs, slipwall_face_indexs, symetric_face_indexs)
     call a_grid_parser%get_cell_geometries(points, cell_geometries)
@@ -72,7 +70,7 @@ program five_eq_model_solver
     file_output_counter = 0
     n_output_cells = 0
     do index = 1, get_number_of_cells(), 1
-        if(.not. is_ghost_cells(index)) n_output_cells = n_output_cells + 1
+        if(cells_is_real_cell(index)) n_output_cells = n_output_cells + 1
     end do
     allocate(vtk_scolar   (n_output_cells    ))
     allocate(vtk_cell_type(n_output_cells    ))
@@ -80,7 +78,7 @@ program five_eq_model_solver
     allocate(vtk_connect  (n_output_cells * 8))
     vtk_index = 1
     do index = 1, get_number_of_cells(), 1
-        if(.not. is_ghost_cells(index))then
+        if(cells_is_real_cell(index))then
             n_cell_points = cell_geometries(vtk_index)%get_number_of_points()
             do cell_point_index = 1, n_cell_points, 1
                 vtk_connect((vtk_index - 1) * 8 + cell_point_index) = cell_geometries(vtk_index)%get_point_id(cell_point_index)
@@ -132,7 +130,7 @@ program five_eq_model_solver
             vtk_error = a_vtk_file%xml_writer%write_dataarray   (location='node', action='open')
             vtk_index = 0
             do index = 1, get_number_of_cells(), 1
-                if(.not. is_ghost_cells(index))then
+                if(.not. cells_is_real_cell(index))then
                     associate(                                     &
                         rho1 => primitive_variables_set(1, index), &
                         rho2 => primitive_variables_set(2, index), &
@@ -154,6 +152,5 @@ program five_eq_model_solver
     call finalize_boundary_reference()
     call finalize_faces()
     call finalize_cell_geometries()
-    call finalize_cells()
     call finalize_variables()
 end program five_eq_model_solver

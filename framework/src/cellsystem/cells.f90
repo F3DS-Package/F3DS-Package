@@ -19,7 +19,7 @@ module cells_module
     real(real_kind), public, allocatable :: cells_volume(:)
 
     ! Elm. 1) 1 : {@code num_cells}, cell index
-    logical, public, allocatable :: is_ghost_cells(:)
+    logical, public, allocatable :: cells_is_real_cell(:)
 
     public :: get_number_of_cells
     public :: initialise_cells
@@ -50,10 +50,10 @@ module cells_module
         end if
         allocate(cells_volume(num_cells))
 
-        if(allocated(is_ghost_cells))then
-            call call_error("Array is_ghost_cells is already allocated. But you call the initialiser for cells module.")
+        if(allocated(cells_is_real_cell))then
+            call call_error("Array cells_is_real_cell is already allocated. But you call the initialiser for cells module.")
         end if
-        allocate(is_ghost_cells(num_cells))
+        allocate(cells_is_real_cell(num_cells))
     end subroutine initialise_cells
 
     subroutine finalize_cells()
@@ -67,10 +67,10 @@ module cells_module
         end if
         deallocate(cells_volume)
 
-        if(.not. allocated(is_ghost_cells))then
-            call call_error("Array is_ghost_cells is not allocated. But you call the finalizer for cells module.")
+        if(.not. allocated(cells_is_real_cell))then
+            call call_error("Array cells_is_real_cell is not allocated. But you call the finalizer for cells module.")
         end if
-        deallocate(is_ghost_cells)
+        deallocate(cells_is_real_cell)
 
         num_cells_ = 0
     end subroutine finalize_cells

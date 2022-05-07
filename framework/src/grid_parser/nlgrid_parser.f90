@@ -349,11 +349,11 @@ module class_nlgrid_parser
         n = (self%imax - (self%imin - 1)) * (self%jmax - (self%jmin - 1)) * (self%kmax - (self%kmin - 1))
     end function get_number_of_points
 
-    subroutine get_cells(self, centor_positions, volumes, is_real_cells)
+    subroutine get_cells(self, centor_positions, volumes, is_real_cell)
         class(nlgrid_parser), intent(in   ) :: self
         real (real_kind    ), intent(inout) :: centor_positions(:,:)
         real (real_kind    ), intent(inout) :: volumes         (:)
-        logical             , intent(inout) :: is_real_cells  (:)
+        logical             , intent(inout) :: is_real_cell  (:)
 
         integer(int_kind) :: i, j, k, n
 
@@ -361,7 +361,7 @@ module class_nlgrid_parser
             call call_error("'parse' method of nlgrid_parser is not called yet. But you call 'get_cells' method.")
         end if
 
-        is_real_cells(:) = .false.
+        is_real_cell(:) = .false.
 
         do k = self%kmin, self%kmax, 1
             do j = self%jmin, self%jmax, 1
@@ -373,7 +373,7 @@ module class_nlgrid_parser
                     centor_positions(2, n) = self%y_poss_cell_cent(i, j, k)
                     centor_positions(3, n) = self%z_poss_cell_cent(i, j, k)
                     volumes            (n) = self%cell_vols       (i, j, k)
-                    is_real_cells      (n) = .true.
+                    is_real_cell       (n) = .true.
                 end do
             end do
         end do
