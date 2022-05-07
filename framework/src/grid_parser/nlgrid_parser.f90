@@ -257,7 +257,7 @@ module class_nlgrid_parser
             call call_error("'parse' method of nlgrid_parser is not called yet. But you call 'get_number_of_cells' method.")
         end if
 
-        n = (self%imax - self%imin + 2 * self%num_ghost_cells_) * (self%jmax - self%jmin + 2 * self%num_ghost_cells_) * (self%kmax - self%kmin + 2 * self%num_ghost_cells_)
+        n = (self%imax - self%imin + 1 + 2 * self%num_ghost_cells_) * (self%kmax - self%kmin + 1 + 2 * self%num_ghost_cells_) * (self%jmax - self%jmin + 1 + 2 * self%num_ghost_cells_)
     end function get_number_of_cells
 
     function get_number_of_faces(self) result(n)
