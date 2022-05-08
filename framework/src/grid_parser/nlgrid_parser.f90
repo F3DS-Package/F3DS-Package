@@ -356,6 +356,7 @@ module class_nlgrid_parser
         logical             , intent(inout) :: is_real_cell  (:)
 
         integer(int_kind) :: i, j, k, n
+        real (real_kind) :: cell_to_face_vec(3)
 
         if(.not. self%parsed)then
             call call_error("'parse' method of nlgrid_parser is not called yet. But you call 'get_cells' method.")
@@ -386,17 +387,47 @@ module class_nlgrid_parser
                     n = convert_structure_index_to_unstructure_index(self%imin - i, j, k,                &
                         self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
                         self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-                    centor_positions(1, n) = 2.d0 * self%x_poss_cell_cent(self%imin, j, k) - self%x_poss_cell_cent(self%imin + i, j, k)
-                    centor_positions(2, n) = 2.d0 * self%y_poss_cell_cent(self%imin, j, k) - self%y_poss_cell_cent(self%imin + i, j, k)
-                    centor_positions(3, n) = 2.d0 * self%z_poss_cell_cent(self%imin, j, k) - self%z_poss_cell_cent(self%imin + i, j, k)
+                    cell_to_face_vec(1) = 0.5d0 * (self%x_poss_cell_cent(self%imin-1, j  , k  ) &
+                                                 + self%x_poss_cell_cent(self%imin-1, j-1, k  ) &
+                                                 + self%x_poss_cell_cent(self%imin-1, j  , k-1) &
+                                                 + self%x_poss_cell_cent(self%imin-1, j-1, k-1))&
+                                        - self%x_poss_cell_cent(self%imin, j, k)
+                    cell_to_face_vec(2) = 0.5d0 * (self%y_poss_cell_cent(self%imin-1, j  , k  ) &
+                                                 + self%y_poss_cell_cent(self%imin-1, j-1, k  ) &
+                                                 + self%y_poss_cell_cent(self%imin-1, j  , k-1) &
+                                                 + self%y_poss_cell_cent(self%imin-1, j-1, k-1))&
+                                        - self%y_poss_cell_cent(self%imin, j, k)
+                    cell_to_face_vec(3) = 0.5d0 * (self%z_poss_cell_cent(self%imin-1, j  , k  ) &
+                                                 + self%z_poss_cell_cent(self%imin-1, j-1, k  ) &
+                                                 + self%z_poss_cell_cent(self%imin-1, j  , k-1) &
+                                                 + self%z_poss_cell_cent(self%imin-1, j-1, k-1))&
+                                        - self%z_poss_cell_cent(self%imin, j, k)
+                    centor_positions(1, n) = self%x_poss_cell_cent(self%imin, j, k) + 2.d0 * dble(i) * cell_to_face_vec(1)
+                    centor_positions(2, n) = self%y_poss_cell_cent(self%imin, j, k) + 2.d0 * dble(i) * cell_to_face_vec(2)
+                    centor_positions(3, n) = self%z_poss_cell_cent(self%imin, j, k) + 2.d0 * dble(i) * cell_to_face_vec(3)
                     volumes            (n) = self%cell_vols(self%imin, j, k)
                     ! x+
                     n = convert_structure_index_to_unstructure_index(self%imax + i, j, k,                &
                         self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
                         self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-                    centor_positions(1, n) = 2.d0 * self%x_poss_cell_cent(self%imax, j, k) - self%x_poss_cell_cent(self%imax - i, j, k)
-                    centor_positions(2, n) = 2.d0 * self%y_poss_cell_cent(self%imax, j, k) - self%y_poss_cell_cent(self%imax - i, j, k)
-                    centor_positions(3, n) = 2.d0 * self%z_poss_cell_cent(self%imax, j, k) - self%z_poss_cell_cent(self%imax - i, j, k)
+                    cell_to_face_vec(1) = 0.5d0 * (self%x_poss_cell_cent(self%imax, j  , k  ) &
+                                                 + self%x_poss_cell_cent(self%imax, j-1, k  ) &
+                                                 + self%x_poss_cell_cent(self%imax, j  , k-1) &
+                                                 + self%x_poss_cell_cent(self%imax, j-1, k-1))&
+                                        - self%x_poss_cell_cent(self%imax, j, k)
+                    cell_to_face_vec(2) = 0.5d0 * (self%y_poss_cell_cent(self%imax, j  , k  ) &
+                                                 + self%y_poss_cell_cent(self%imax, j-1, k  ) &
+                                                 + self%y_poss_cell_cent(self%imax, j  , k-1) &
+                                                 + self%y_poss_cell_cent(self%imax, j-1, k-1))&
+                                        - self%y_poss_cell_cent(self%imax, j, k)
+                    cell_to_face_vec(3) = 0.5d0 * (self%z_poss_cell_cent(self%imax, j  , k  ) &
+                                                 + self%z_poss_cell_cent(self%imax, j-1, k  ) &
+                                                 + self%z_poss_cell_cent(self%imax, j  , k-1) &
+                                                 + self%z_poss_cell_cent(self%imax, j-1, k-1))&
+                                        - self%z_poss_cell_cent(self%imax, j, k)
+                    centor_positions(1, n) = self%x_poss_cell_cent(self%imax, j, k) + 2.d0 * dble(i) * cell_to_face_vec(1)
+                    centor_positions(2, n) = self%y_poss_cell_cent(self%imax, j, k) + 2.d0 * dble(i) * cell_to_face_vec(2)
+                    centor_positions(3, n) = self%z_poss_cell_cent(self%imax, j, k) + 2.d0 * dble(i) * cell_to_face_vec(3)
                     volumes            (n) = self%cell_vols(self%imax, j, k)
                 end do
             end do
@@ -410,17 +441,47 @@ module class_nlgrid_parser
                     n = convert_structure_index_to_unstructure_index(i, self%jmin - j, k,                &
                         self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
                         self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-                    centor_positions(1, n) = 2.d0 * self%x_poss_cell_cent(i, self%jmin, k) - self%x_poss_cell_cent(i, self%jmin + j, k)
-                    centor_positions(2, n) = 2.d0 * self%y_poss_cell_cent(i, self%jmin, k) - self%y_poss_cell_cent(i, self%jmin + j, k)
-                    centor_positions(3, n) = 2.d0 * self%z_poss_cell_cent(i, self%jmin, k) - self%z_poss_cell_cent(i, self%jmin + j, k)
+                    cell_to_face_vec(1) = 0.5d0 * (self%x_poss_cell_cent(i  , self%jmin-1, k  ) &
+                                                 + self%x_poss_cell_cent(i-1, self%jmin-1, k  ) &
+                                                 + self%x_poss_cell_cent(i  , self%jmin-1, k-1) &
+                                                 + self%x_poss_cell_cent(i-1, self%jmin-1, k-1))&
+                                        - self%x_poss_cell_cent(self%jmin, j, k)
+                    cell_to_face_vec(2) = 0.5d0 * (self%y_poss_cell_cent(i  , self%jmin-1, k  ) &
+                                                 + self%y_poss_cell_cent(i-1, self%jmin-1, k  ) &
+                                                 + self%y_poss_cell_cent(i  , self%jmin-1, k-1) &
+                                                 + self%y_poss_cell_cent(i-1, self%jmin-1, k-1))&
+                                        - self%y_poss_cell_cent(self%jmin, j, k)
+                    cell_to_face_vec(3) = 0.5d0 * (self%z_poss_cell_cent(i  , self%jmin-1, k  ) &
+                                                 + self%z_poss_cell_cent(i-1, self%jmin-1, k  ) &
+                                                 + self%z_poss_cell_cent(i  , self%jmin-1, k-1) &
+                                                 + self%z_poss_cell_cent(i-1, self%jmin-1, k-1))&
+                                        - self%z_poss_cell_cent(self%jmin, j, k)
+                    centor_positions(1, n) = self%x_poss_cell_cent(i, self%jmin, k) + 2.d0 * dble(j) * cell_to_face_vec(1)
+                    centor_positions(2, n) = self%y_poss_cell_cent(i, self%jmin, k) + 2.d0 * dble(j) * cell_to_face_vec(2)
+                    centor_positions(3, n) = self%z_poss_cell_cent(i, self%jmin, k) + 2.d0 * dble(j) * cell_to_face_vec(3)
                     volumes            (n) = self%cell_vols(i, self%jmin, k)
                     ! y+
                     n = convert_structure_index_to_unstructure_index(i, self%jmax + j, k,                &
                         self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
                         self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-                    centor_positions(1, n) = 2.d0 * self%x_poss_cell_cent(i, self%jmax, k) - self%x_poss_cell_cent(i, self%jmax - j, k)
-                    centor_positions(2, n) = 2.d0 * self%y_poss_cell_cent(i, self%jmax, k) - self%y_poss_cell_cent(i, self%jmax - j, k)
-                    centor_positions(3, n) = 2.d0 * self%z_poss_cell_cent(i, self%jmax, k) - self%z_poss_cell_cent(i, self%jmax - j, k)
+                    cell_to_face_vec(1) = 0.5d0 * (self%x_poss_cell_cent(i  , self%jmax, k  ) &
+                                                 + self%x_poss_cell_cent(i-1, self%jmax, k  ) &
+                                                 + self%x_poss_cell_cent(i  , self%jmax, k-1) &
+                                                 + self%x_poss_cell_cent(i-1, self%jmax, k-1))&
+                                        - self%x_poss_cell_cent(self%jmax, j, k)
+                    cell_to_face_vec(2) = 0.5d0 * (self%y_poss_cell_cent(i  , self%jmax, k  ) &
+                                                 + self%y_poss_cell_cent(i-1, self%jmax, k  ) &
+                                                 + self%y_poss_cell_cent(i  , self%jmax, k-1) &
+                                                 + self%y_poss_cell_cent(i-1, self%jmax, k-1))&
+                                        - self%y_poss_cell_cent(self%jmax, j, k)
+                    cell_to_face_vec(3) = 0.5d0 * (self%z_poss_cell_cent(i  , self%jmax, k  ) &
+                                                 + self%z_poss_cell_cent(i-1, self%jmax, k  ) &
+                                                 + self%z_poss_cell_cent(i  , self%jmax, k-1) &
+                                                 + self%z_poss_cell_cent(i-1, self%jmax, k-1))&
+                                        - self%z_poss_cell_cent(self%jmax, j, k)
+                    centor_positions(1, n) = self%x_poss_cell_cent(i, self%jmax, k) + 2.d0 * dble(j) * cell_to_face_vec(1)
+                    centor_positions(2, n) = self%y_poss_cell_cent(i, self%jmax, k) + 2.d0 * dble(j) * cell_to_face_vec(2)
+                    centor_positions(3, n) = self%z_poss_cell_cent(i, self%jmax, k) + 2.d0 * dble(j) * cell_to_face_vec(3)
                     volumes            (n) = self%cell_vols(i, self%jmax, k)
                 end do
             end do
@@ -434,17 +495,47 @@ module class_nlgrid_parser
                     n = convert_structure_index_to_unstructure_index(i, j, self%kmin - k,                &
                         self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
                         self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-                    centor_positions(1, n) = 2.d0 * self%x_poss_cell_cent(i, j, self%kmin) - self%x_poss_cell_cent(i, j, self%kmin + k)
-                    centor_positions(2, n) = 2.d0 * self%y_poss_cell_cent(i, j, self%kmin) - self%y_poss_cell_cent(i, j, self%kmin + k)
-                    centor_positions(3, n) = 2.d0 * self%z_poss_cell_cent(i, j, self%kmin) - self%z_poss_cell_cent(i, j, self%kmin + k)
+                    cell_to_face_vec(1) = 0.5d0 * (self%x_poss_cell_cent(i  , j  , self%kmin-1) &
+                                                 + self%x_poss_cell_cent(i-1, j  , self%kmin-1) &
+                                                 + self%x_poss_cell_cent(i  , j-1, self%kmin-1) &
+                                                 + self%x_poss_cell_cent(i-1, j-1, self%kmin-1))&
+                                        - self%x_poss_cell_cent(self%kmin, j, k)
+                    cell_to_face_vec(2) = 0.5d0 * (self%y_poss_cell_cent(i  , j  , self%kmin-1) &
+                                                 + self%y_poss_cell_cent(i-1, j  , self%kmin-1) &
+                                                 + self%y_poss_cell_cent(i  , j-1, self%kmin-1) &
+                                                 + self%y_poss_cell_cent(i-1, j-1, self%kmin-1))&
+                                        - self%y_poss_cell_cent(self%kmin, j, k)
+                    cell_to_face_vec(3) = 0.5d0 * (self%z_poss_cell_cent(i  , j  , self%kmin-1) &
+                                                 + self%z_poss_cell_cent(i-1, j  , self%kmin-1) &
+                                                 + self%z_poss_cell_cent(i  , j-1, self%kmin-1) &
+                                                 + self%z_poss_cell_cent(i-1, j-1, self%kmin-1))&
+                                        - self%z_poss_cell_cent(self%kmin, j, k)
+                    centor_positions(1, n) = self%x_poss_cell_cent(i, j, self%kmin) + 2.d0 * dble(k) * cell_to_face_vec(1)
+                    centor_positions(2, n) = self%y_poss_cell_cent(i, j, self%kmin) + 2.d0 * dble(k) * cell_to_face_vec(2)
+                    centor_positions(3, n) = self%z_poss_cell_cent(i, j, self%kmin) + 2.d0 * dble(k) * cell_to_face_vec(3)
                     volumes            (n) = self%cell_vols(i, j, self%kmin)
                     ! z+
                     n = convert_structure_index_to_unstructure_index(i, j, self%kmax + k,                &
                         self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
                         self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-                    centor_positions(1, n) = 2.d0 * self%x_poss_cell_cent(i, j, self%kmax) - self%x_poss_cell_cent(i, j, self%kmax - k)
-                    centor_positions(2, n) = 2.d0 * self%y_poss_cell_cent(i, j, self%kmax) - self%y_poss_cell_cent(i, j, self%kmax - k)
-                    centor_positions(3, n) = 2.d0 * self%z_poss_cell_cent(i, j, self%kmax) - self%z_poss_cell_cent(i, j, self%kmax - k)
+                    cell_to_face_vec(1) = 0.5d0 * (self%x_poss_cell_cent(i  , j  , self%kmax) &
+                                                 + self%x_poss_cell_cent(i-1, j  , self%kmax) &
+                                                 + self%x_poss_cell_cent(i  , j-1, self%kmax) &
+                                                 + self%x_poss_cell_cent(i-1, j-1, self%kmax))&
+                                        - self%x_poss_cell_cent(self%kmax, j, k)
+                    cell_to_face_vec(2) = 0.5d0 * (self%y_poss_cell_cent(i  , j  , self%kmax) &
+                                                 + self%y_poss_cell_cent(i-1, j  , self%kmax) &
+                                                 + self%y_poss_cell_cent(i  , j-1, self%kmax) &
+                                                 + self%y_poss_cell_cent(i-1, j-1, self%kmax))&
+                                        - self%y_poss_cell_cent(self%kmax, j, k)
+                    cell_to_face_vec(3) = 0.5d0 * (self%z_poss_cell_cent(i  , j  , self%kmax) &
+                                                 + self%z_poss_cell_cent(i-1, j  , self%kmax) &
+                                                 + self%z_poss_cell_cent(i  , j-1, self%kmax) &
+                                                 + self%z_poss_cell_cent(i-1, j-1, self%kmax))&
+                                        - self%z_poss_cell_cent(self%kmax, j, k)
+                    centor_positions(1, n) = self%x_poss_cell_cent(i, j, self%kmax) + 2.d0 * dble(j) * cell_to_face_vec(1)
+                    centor_positions(2, n) = self%y_poss_cell_cent(i, j, self%kmax) + 2.d0 * dble(j) * cell_to_face_vec(2)
+                    centor_positions(3, n) = self%z_poss_cell_cent(i, j, self%kmax) + 2.d0 * dble(j) * cell_to_face_vec(3)
                     volumes            (n) = self%cell_vols(i, j, self%kmax)
                 end do
             end do
