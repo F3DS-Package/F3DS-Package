@@ -10,6 +10,8 @@ module weno5_module
 
     private
 
+    integer(int_kind) :: num_ghost_cells_ = 3
+
     public :: reconstruct_weno5
 
     contains
@@ -78,13 +80,13 @@ module weno5_module
 
         do i = 1, n_primitives, 1
             associate(                                                              &
-                v_m2       => primitive_values_set(i  , reference_cell_indexs_set(-2, face_index)), &
-                v_m1       => primitive_values_set(i  , reference_cell_indexs_set(-1, face_index)), &
-                v          => primitive_values_set(i  , reference_cell_indexs_set( 0, face_index)), &
-                v_p1       => primitive_values_set(i  , reference_cell_indexs_set( 1, face_index)), &
-                v_p2       => primitive_values_set(i  , reference_cell_indexs_set( 2, face_index)), &
-                cell_pos_l => cell_positions      (1:3, reference_cell_indexs_set( 0, face_index)), &
-                cell_pos_r => cell_positions      (1:3, reference_cell_indexs_set( 1, face_index)), &
+                v_m2       => primitive_values_set(i  , reference_cell_indexs_set(num_ghost_cells_-2, face_index)), &
+                v_m1       => primitive_values_set(i  , reference_cell_indexs_set(num_ghost_cells_-1, face_index)), &
+                v          => primitive_values_set(i  , reference_cell_indexs_set(num_ghost_cells_+0, face_index)), &
+                v_p1       => primitive_values_set(i  , reference_cell_indexs_set(num_ghost_cells_+1, face_index)), &
+                v_p2       => primitive_values_set(i  , reference_cell_indexs_set(num_ghost_cells_+2, face_index)), &
+                cell_pos_l => cell_positions      (1:3, reference_cell_indexs_set(num_ghost_cells_+0, face_index)), &
+                cell_pos_r => cell_positions      (1:3, reference_cell_indexs_set(num_ghost_cells_+1, face_index)), &
                 face_pos   => face_positions      (1:3, face_index)                                 &
             )
                 cell_cell_distance = vector_distance(cell_pos_l, cell_pos_r)
@@ -119,13 +121,13 @@ module weno5_module
 
         do i = 1, n_primitives, 1
             associate(                                                              &
-                v_m2       => primitive_values_set(i  , reference_cell_indexs_set(-1, face_index)), &
-                v_m1       => primitive_values_set(i  , reference_cell_indexs_set( 0, face_index)), &
-                v          => primitive_values_set(i  , reference_cell_indexs_set( 1, face_index)), &
-                v_p1       => primitive_values_set(i  , reference_cell_indexs_set( 2, face_index)), &
-                v_p2       => primitive_values_set(i  , reference_cell_indexs_set( 3, face_index)), &
-                cell_pos_l => cell_positions      (1:3, reference_cell_indexs_set( 0, face_index)), &
-                cell_pos_r => cell_positions      (1:3, reference_cell_indexs_set( 1, face_index)), &
+                v_m2       => primitive_values_set(i  , reference_cell_indexs_set(num_ghost_cells_-1, face_index)), &
+                v_m1       => primitive_values_set(i  , reference_cell_indexs_set(num_ghost_cells_+0, face_index)), &
+                v          => primitive_values_set(i  , reference_cell_indexs_set(num_ghost_cells_+1, face_index)), &
+                v_p1       => primitive_values_set(i  , reference_cell_indexs_set(num_ghost_cells_+2, face_index)), &
+                v_p2       => primitive_values_set(i  , reference_cell_indexs_set(num_ghost_cells_+3, face_index)), &
+                cell_pos_l => cell_positions      (1:3, reference_cell_indexs_set(num_ghost_cells_+0, face_index)), &
+                cell_pos_r => cell_positions      (1:3, reference_cell_indexs_set(num_ghost_cells_+1, face_index)), &
                 face_pos   => face_positions      (1:3, face_index)                                 &
             )
                 cell_cell_distance = vector_distance(cell_pos_l, cell_pos_r)
@@ -303,8 +305,8 @@ module weno5_module
         real   (real_kind), allocatable :: lhc_primitive   (:)
         real   (real_kind), allocatable :: rhc_primitive   (:)
 
-        lhc_index = reference_cell_indexs_set(0, face_index)
-        rhc_index = reference_cell_indexs_set(1, face_index)
+        lhc_index = reference_cell_indexs_set(num_ghost_cells_+0, face_index)
+        rhc_index = reference_cell_indexs_set(num_ghost_cells_+1, face_index)
 
         lhc_primitive = reconstruct_leftside_weno5(      &
             primitive_values_set                       , &
