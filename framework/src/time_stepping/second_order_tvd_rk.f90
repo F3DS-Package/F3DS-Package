@@ -362,7 +362,7 @@ module second_order_tvd_rk_module
 
         n_conservative_values = size(conservative_variables_set(:,0))
 
-        do j = 0, n_faces, 1
+        do j = 1, n_faces, 1
             element_lef_and_right_side = reconstruction_function( &
                 primitive_variables_set            , &
                 cell_centor_positions              , &
@@ -393,7 +393,7 @@ module second_order_tvd_rk_module
             primitive_variables_set(:, i) = conservative_to_primitive_function(stage1_conservative_variables_set(:, i))
         end do
 
-        do j = 0, n_faces, 1
+        do j = 1, n_faces, 1
             element_lef_and_right_side = reconstruction_function( &
                 primitive_variables_set            , &
                 cell_centor_positions              , &
