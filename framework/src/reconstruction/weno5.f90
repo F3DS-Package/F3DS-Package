@@ -63,12 +63,12 @@ module weno5_module
         face_positions                   , &
         face_index                          ) result(reconstructed_primitive)
 
-        real   (real_kind), intent(in), allocatable :: primitive_values_set      (:, :)
-        integer(int_kind ), intent(in), allocatable :: reference_cell_indexs_set (:, :)
-        real   (real_kind), intent(in), allocatable :: cell_positions            (:, :)
-        real   (real_kind), intent(in), allocatable :: face_positions            (:, :)
-        integer(int_kind ), intent(in)              :: face_index
-        real   (real_kind)                          :: reconstructed_primitive   (size(primitive_values_set(:,0)))
+        real   (real_kind), intent(in) :: primitive_values_set      (:, :)
+        integer(int_kind ), intent(in) :: reference_cell_indexs_set (:, :)
+        real   (real_kind), intent(in) :: cell_positions            (:, :)
+        real   (real_kind), intent(in) :: face_positions            (:, :)
+        integer(int_kind ), intent(in) :: face_index
+        real   (real_kind)             :: reconstructed_primitive   (size(primitive_values_set(:,0)))
 
         integer(int_kind ) :: n_primitives, i
         real   (real_kind) :: w(3), p(3)
@@ -104,12 +104,12 @@ module weno5_module
         face_positions                   , &
         face_index                          ) result(reconstructed_primitive)
 
-        real   (real_kind), intent(in), allocatable :: primitive_values_set      (:, :)
-        integer(int_kind ), intent(in), allocatable :: reference_cell_indexs_set (:, :)
-        real   (real_kind), intent(in), allocatable :: cell_positions            (:, :)
-        real   (real_kind), intent(in), allocatable :: face_positions            (:, :)
-        integer(int_kind ), intent(in)              :: face_index
-        real   (real_kind)                          :: reconstructed_primitive   (size(primitive_values_set(:,0)))
+        real   (real_kind), intent(in) :: primitive_values_set      (:, :)
+        integer(int_kind ), intent(in) :: reference_cell_indexs_set (:, :)
+        real   (real_kind), intent(in) :: cell_positions            (:, :)
+        real   (real_kind), intent(in) :: face_positions            (:, :)
+        integer(int_kind ), intent(in) :: face_index
+        real   (real_kind)             :: reconstructed_primitive   (size(primitive_values_set(:,0)))
 
         integer(int_kind ) :: n_primitives, i
         real   (real_kind) :: w(3), p(3)
@@ -156,17 +156,17 @@ module weno5_module
         primitive_to_conservative_function, &
         integrated_element_function             ) result(element_lef_and_right_side)
 
-        real   (real_kind), intent(in ), allocatable :: primitive_values_set     (:, :)
-        real   (real_kind), intent(in ), allocatable :: cell_centor_positions    (:, :)
-        real   (real_kind), intent(in ), allocatable :: cell_volumes             (:)
-        integer(int_kind ), intent(in ), allocatable :: reference_cell_indexs_set(:,:)
-        real   (real_kind), intent(in ), allocatable :: face_normal_vectors      (:,:)
-        real   (real_kind), intent(in ), allocatable :: face_tangential1_vectors (:,:)
-        real   (real_kind), intent(in ), allocatable :: face_tangential2_vectors (:,:)
-        real   (real_kind), intent(in ), allocatable :: face_centor_positions    (:,:)
-        real   (real_kind), intent(in ), allocatable :: face_areas               (:)
-        integer(int_kind ), intent(in )              :: face_index
-        integer(int_kind ), intent(in )              :: n_conservative_values
+        real   (real_kind), intent(in ) :: primitive_values_set     (:, :)
+        real   (real_kind), intent(in ) :: cell_centor_positions    (:, :)
+        real   (real_kind), intent(in ) :: cell_volumes             (:)
+        integer(int_kind ), intent(in ) :: reference_cell_indexs_set(:,:)
+        real   (real_kind), intent(in ) :: face_normal_vectors      (:,:)
+        real   (real_kind), intent(in ) :: face_tangential1_vectors (:,:)
+        real   (real_kind), intent(in ) :: face_tangential2_vectors (:,:)
+        real   (real_kind), intent(in ) :: face_centor_positions    (:,:)
+        real   (real_kind), intent(in ) :: face_areas               (:)
+        integer(int_kind ), intent(in ) :: face_index
+        integer(int_kind ), intent(in ) :: n_conservative_values
 
         real   (real_kind)                           :: element_lef_and_right_side(n_conservative_values, 2)
 

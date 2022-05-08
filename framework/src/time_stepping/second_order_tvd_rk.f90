@@ -43,19 +43,19 @@ module second_order_tvd_rk_module
             conservative_to_primitive_function         &
         )
 
-        real   (real_kind), intent(inout), allocatable :: conservative_variables_set (:,:)
-        real   (real_kind), intent(inout), allocatable :: primitive_variables_set    (:,:)
-        real   (real_kind), intent(in   ), allocatable :: cell_centor_positions      (:,:)
-        real   (real_kind), intent(in   ), allocatable :: cell_volumes               (:)
-        integer(int_kind ), intent(in   ), allocatable :: reference_cell_indexs_set  (:,:)
-        real   (real_kind), intent(in   ), allocatable :: face_normal_vectors        (:,:)
-        real   (real_kind), intent(in   ), allocatable :: face_tangential1_vectors   (:,:)
-        real   (real_kind), intent(in   ), allocatable :: face_tangential2_vectors   (:,:)
-        real   (real_kind), intent(in   ), allocatable :: face_centor_positions      (:,:)
-        real   (real_kind), intent(in   ), allocatable :: face_areas                 (:)
-        integer(int_kind ), intent(in   )              :: n_cells
-        integer(int_kind ), intent(in   )              :: n_faces
-        real   (real_kind), intent(in   )              :: time_increment
+        real   (real_kind), intent(inout) :: conservative_variables_set (:,:)
+        real   (real_kind), intent(inout) :: primitive_variables_set    (:,:)
+        real   (real_kind), intent(in   ) :: cell_centor_positions      (:,:)
+        real   (real_kind), intent(in   ) :: cell_volumes               (:)
+        integer(int_kind ), intent(in   ) :: reference_cell_indexs_set  (:,:)
+        real   (real_kind), intent(in   ) :: face_normal_vectors        (:,:)
+        real   (real_kind), intent(in   ) :: face_tangential1_vectors   (:,:)
+        real   (real_kind), intent(in   ) :: face_tangential2_vectors   (:,:)
+        real   (real_kind), intent(in   ) :: face_centor_positions      (:,:)
+        real   (real_kind), intent(in   ) :: face_areas                 (:)
+        integer(int_kind ), intent(in   ) :: n_cells
+        integer(int_kind ), intent(in   ) :: n_faces
+        real   (real_kind), intent(in   ) :: time_increment
 
         interface
             pure function reconstruction_function(  &
@@ -78,17 +78,17 @@ module second_order_tvd_rk_module
 
                 use typedef_module
 
-                real   (real_kind), intent(in ), allocatable :: primitive_values_set     (:, :)
-                real   (real_kind), intent(in ), allocatable :: cell_centor_positions    (:, :)
-                real   (real_kind), intent(in ), allocatable :: cell_volumes             (:)
-                integer(int_kind ), intent(in ), allocatable :: reference_cell_indexs_set(:,:)
-                real   (real_kind), intent(in ), allocatable :: face_normal_vectors      (:,:)
-                real   (real_kind), intent(in ), allocatable :: face_tangential1_vectors (:,:)
-                real   (real_kind), intent(in ), allocatable :: face_tangential2_vectors (:,:)
-                real   (real_kind), intent(in ), allocatable :: face_centor_positions    (:,:)
-                real   (real_kind), intent(in ), allocatable :: face_areas               (:)
-                integer(int_kind ), intent(in )              :: face_index
-                integer(int_kind ), intent(in )              :: n_conservative_values
+                real   (real_kind), intent(in ) :: primitive_values_set     (:, :)
+                real   (real_kind), intent(in ) :: cell_centor_positions    (:, :)
+                real   (real_kind), intent(in ) :: cell_volumes             (:)
+                integer(int_kind ), intent(in ) :: reference_cell_indexs_set(:,:)
+                real   (real_kind), intent(in ) :: face_normal_vectors      (:,:)
+                real   (real_kind), intent(in ) :: face_tangential1_vectors (:,:)
+                real   (real_kind), intent(in ) :: face_tangential2_vectors (:,:)
+                real   (real_kind), intent(in ) :: face_centor_positions    (:,:)
+                real   (real_kind), intent(in ) :: face_areas               (:)
+                integer(int_kind ), intent(in ) :: face_index
+                integer(int_kind ), intent(in ) :: n_conservative_values
 
                 real   (real_kind)                           :: element_lef_and_right_side(n_conservative_values, 2)
 
