@@ -96,8 +96,12 @@ program five_eq_model_solver
         vtk_z(index) = points(3, index)
     end do
 
+    call initialize_second_order_tvd_rk(conservative_variables_set)
+
     ! solver timestepping loop
     do timestep = 0, max_timestep, 1
+        print *, "step ", timestep
+
         call compute_next_state_second_order_tvd_rk(   &
             conservative_variables_set               , &
             primitive_variables_set                  , &
@@ -121,8 +125,9 @@ program five_eq_model_solver
             conservative_to_primitive                  &
         )
 
-        if (mod(timestep, max_timestep/200) == 0) then
+        if (.true.) then
             write(vtk_filename, "(i5, a)") file_output_counter, ".vtu"
+            print *, "write vtk "//vtk_filename//"..."
             vtk_error = a_vtk_file%initialize                   (format="binary", filename=vtk_filename, mesh_topology="UnstructuredGrid")
             vtk_error = a_vtk_file%xml_writer%write_piece       (np=n_output_points, nc=n_output_cells)
             vtk_error = a_vtk_file%xml_writer%write_geo         (np=n_output_points, nc=n_output_cells, x=vtk_x, y=vtk_y, z=vtk_z)

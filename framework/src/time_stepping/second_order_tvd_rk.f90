@@ -5,6 +5,7 @@ module second_order_tvd_rk_module
 
     private
 
+    public :: initialize_second_order_tvd_rk
     public :: compute_next_state_second_order_tvd_rk
 
     real(real_kind), allocatable :: residual_set (:,:)
@@ -358,6 +359,7 @@ module second_order_tvd_rk_module
         integer(int_kind ) :: i, j
         integer(int_kind ) :: lhc_index, rhc_index
         integer(int_kind ) :: n_conservative_values
+        integer(int_kind ) :: n_ghost_cells = 3
         real   (real_kind) :: element_lef_and_right_side(size(conservative_variables_set(:,0)), 2)
 
         n_conservative_values = size(conservative_variables_set(:,0))
@@ -381,8 +383,8 @@ module second_order_tvd_rk_module
                 primitive_to_conservative_function , &
                 integrated_element_function          &
             )
-            lhc_index = reference_cell_indexs_set(0, j)
-            rhc_index = reference_cell_indexs_set(1, j)
+            lhc_index = reference_cell_indexs_set(n_ghost_cells+0, j)
+            rhc_index = reference_cell_indexs_set(n_ghost_cells+1, j)
             residual_set(:, lhc_index) = residual_set(:, lhc_index) + element_lef_and_right_side(:, 1)
             residual_set(:, rhc_index) = residual_set(:, rhc_index) + element_lef_and_right_side(:, 2)
         end do
@@ -412,8 +414,8 @@ module second_order_tvd_rk_module
                 primitive_to_conservative_function , &
                 integrated_element_function          &
             )
-            lhc_index = reference_cell_indexs_set(0, j)
-            rhc_index = reference_cell_indexs_set(1, j)
+            lhc_index = reference_cell_indexs_set(n_ghost_cells+0, j)
+            rhc_index = reference_cell_indexs_set(n_ghost_cells+1, j)
             residual_set(:, lhc_index) = residual_set(:, lhc_index) + element_lef_and_right_side(:, 1)
             residual_set(:, rhc_index) = residual_set(:, rhc_index) + element_lef_and_right_side(:, 2)
         end do
