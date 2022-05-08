@@ -268,9 +268,9 @@ module class_nlgrid_parser
             call call_error("'parse' method of nlgrid_parser is not called yet. But you call 'get_number_of_faces' method.")
         end if
 
-        n = (self%imax - self%imin + 1) * (self%jmax - self%jmin    ) * (self%kmax - self%kmin    ) &
-          + (self%imax - self%imin    ) * (self%jmax - self%jmin + 1) * (self%kmax - self%kmin    ) &
-          + (self%imax - self%imin    ) * (self%jmax - self%jmin    ) * (self%kmax - self%kmin + 1)
+        n = (self%imax - self%imin + 2) * (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1) &
+          + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 2) * (self%kmax - self%kmin + 1) &
+          + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 2)
     end function get_number_of_faces
 
     function get_number_of_ghost_cells(self) result(n)
@@ -346,7 +346,7 @@ module class_nlgrid_parser
             call call_error("'parse' method of nlgrid_parser is not called yet. But you call 'get_number_of_points' method.")
         end if
 
-        n = (self%imax - (self%imin - 1)) * (self%jmax - (self%jmin - 1)) * (self%kmax - (self%kmin - 1))
+        n = (self%imax - self%imin + 2) * (self%jmax - self%jmin + 2) * (self%kmax - self%kmin + 2)
     end function get_number_of_points
 
     subroutine get_cells(self, centor_positions, volumes, is_real_cell)
