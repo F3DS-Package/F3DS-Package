@@ -22,8 +22,12 @@ module vector_module
     pure function vector_distance(vector1, vector2) result(distance)
         real(real_kind), intent(in) :: vector1 (3)
         real(real_kind), intent(in) :: vector2 (3)
+        real(real_kind)             :: v(3)
         real(real_kind)             :: distance
-        distance = vector_magnitude(vector1 - vector2)
+        v(1) = vector1(1) - vector2(1)
+        v(2) = vector1(2) - vector2(2)
+        v(3) = vector1(3) - vector2(3)
+        distance = vector_magnitude(v)
     end function vector_distance
 
     pure function multiply_vector(vector1, vector2) result(scalar)
