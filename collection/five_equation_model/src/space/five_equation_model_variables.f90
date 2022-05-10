@@ -16,8 +16,8 @@ module five_equation_model_variables_module
     real(real_kind), public, allocatable :: conservative_variables_set(:,:)
 
     ! Elm. 1) following variables are saved
-    ! primitive_variables_set(1  , :)   : density of fluid1
-    ! primitive_variables_set(2  , :)   : density of fluid2
+    ! primitive_variables_set(1  , :)   : volume fraction * density of fluid1
+    ! primitive_variables_set(2  , :)   : volume fraction * density of fluid2
     ! primitive_variables_set(3:5, :)   : velocity vector (u,v,w)
     ! primitive_variables_set(6  , :)   : specific internal energy (not energy density)
     ! primitive_variables_set(7  , :)   : volume fraction of fluid1
@@ -40,16 +40,16 @@ module five_equation_model_variables_module
         allocate(conservative_variables_set(7))
 
         associate(                              &
-                rho1 => primitive_variables_set(1), &
-                rho2 => primitive_variables_set(2), &
-                u    => primitive_variables_set(3), &
-                v    => primitive_variables_set(4), &
-                w    => primitive_variables_set(5), &
-                ie   => primitive_variables_set(6), &
-                z1   => primitive_variables_set(7)  &
+                rho1_z1 => primitive_variables_set(1), &
+                rho2_z2 => primitive_variables_set(2), &
+                u       => primitive_variables_set(3), &
+                v       => primitive_variables_set(4), &
+                w       => primitive_variables_set(5), &
+                ie      => primitive_variables_set(6), &
+                z1      => primitive_variables_set(7)  &
             )
-            conservative_variables_set(1) = rho1 * z1
-            conservative_variables_set(2) = rho2 * (1.d0 - z1)
+            conservative_variables_set(1) = rho1_z1
+            conservative_variables_set(2) = rho2_z2
             rho = conservative_variables_set(1) + conservative_variables_set(2)
             conservative_variables_set(3) = u  * rho
             conservative_variables_set(4) = v  * rho
@@ -77,16 +77,8 @@ module five_equation_model_variables_module
                 z1      => conservative_variables_set(7)  &
             )
             rho = rho1_z1 + rho2_z2
-            if (z1 == 0.d0) then
-                primitive_variables_set(1) = 0.d0
-                primitive_variables_set(2) = rho2_z2
-            else if (z1 == 1.d0) then
-                primitive_variables_set(1) = rho1_z1
-                primitive_variables_set(2) = 0.d0
-            else
-                primitive_variables_set(1) = rho1_z1 / z1
-                primitive_variables_set(2) = rho2_z2 / (1.d0 - z1)
-            end if
+            primitive_variables_set(1) = rho1_z1
+            primitive_variables_set(2) = rho2_z2
             if (rho == 0.d0)then
                 primitive_variables_set(3:6) = 0.d0
             else

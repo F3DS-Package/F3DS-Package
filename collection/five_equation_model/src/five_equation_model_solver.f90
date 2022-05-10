@@ -37,7 +37,7 @@ program five_eq_model_solver
     character(16)               :: vtk_filename
     integer  (I4P)              :: n_output_cells, n_output_points, n_cell_points, offset_incriment
     real     (R4P), allocatable :: vtk_x(:), vtk_y(:), vtk_z(:)
-    real     (R4P), allocatable :: vtk_pressure(:), vtk_density(:), vtk_volume_fruction(:), vtk_internal_enargy(:)
+    real     (R4P), allocatable :: vtk_pressure(:), vtk_density(:), vtk_volume_fruction(:), vtk_internal_enargy(:), vtk_cell_id(:)
     integer  (I1P), allocatable :: vtk_cell_type(:)
     integer  (I4P), allocatable :: vtk_offset(:), vtk_connect(:)
 
@@ -79,6 +79,7 @@ program five_eq_model_solver
     allocate(vtk_density        (n_output_cells    ))
     allocate(vtk_volume_fruction(n_output_cells    ))
     allocate(vtk_internal_enargy(n_output_cells    ))
+    allocate(vtk_cell_id        (n_output_cells    ))
     allocate(vtk_cell_type(n_output_cells    ))
     allocate(vtk_offset   (n_output_cells    ))
     allocate(vtk_connect  (n_output_cells * 8))
@@ -130,6 +131,7 @@ program five_eq_model_solver
                         vtk_density        (vtk_index) = rho1z1 + rho2z2
                         vtk_volume_fruction(vtk_index) = z1
                         vtk_internal_enargy(vtk_index) = ie
+                        vtk_cell_id        (vtk_index) = index
                     end associate
                     vtk_index = vtk_index + 1
                 end if
@@ -138,6 +140,7 @@ program five_eq_model_solver
             vtk_error = a_vtk_file%xml_writer%write_dataarray   (data_name='density', x=vtk_density)
             vtk_error = a_vtk_file%xml_writer%write_dataarray   (data_name='volume fruction', x=vtk_volume_fruction)
             vtk_error = a_vtk_file%xml_writer%write_dataarray   (data_name='internal enargy', x=vtk_internal_enargy)
+            vtk_error = a_vtk_file%xml_writer%write_dataarray   (data_name='cell id', x=vtk_cell_id)
             vtk_error = a_vtk_file%xml_writer%write_dataarray   (location='cell', action='close')
             vtk_error = a_vtk_file%xml_writer%write_piece()
             vtk_error = a_vtk_file%finalize()

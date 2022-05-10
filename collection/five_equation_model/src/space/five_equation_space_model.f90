@@ -147,38 +147,38 @@ module five_equation_space_model_module
 
         ! # compute EoS, main velosity, and fluxs
         associate(                                         &
-                rho1 => local_coordinate_lhc_primitive(1), &
-                rho2 => local_coordinate_lhc_primitive(2), &
-                u    => local_coordinate_lhc_primitive(3), &
-                v    => local_coordinate_lhc_primitive(4), &
-                w    => local_coordinate_lhc_primitive(5), &
-                ie   => local_coordinate_lhc_primitive(6), &
-                z1   => local_coordinate_lhc_primitive(7)  &
+                rho1_z1 => local_coordinate_lhc_primitive(1), &
+                rho2_z2 => local_coordinate_lhc_primitive(2), &
+                u       => local_coordinate_lhc_primitive(3), &
+                v       => local_coordinate_lhc_primitive(4), &
+                w       => local_coordinate_lhc_primitive(5), &
+                ie      => local_coordinate_lhc_primitive(6), &
+                z1      => local_coordinate_lhc_primitive(7)  &
             )
-            lhc_density    = z1 * rho1 + (1.d0 - z1) * rho2
+            lhc_density    = rho1_z1 + rho2_z2
             lhc_pressure   = eos_pressure_function  (ie, lhc_density, z1)
             lhc_soundspeed = eos_soundspeed_function(ie, lhc_density, z1)
             lhc_main_velocity = u
 
-            lhc_c1 = eos_soundspeed_function(ie, rho1, 1.d0)
-            lhc_c2 = eos_soundspeed_function(ie, rho2, 0.d0)
+            lhc_c1 = eos_soundspeed_function(ie, lhc_density, 1.d0)
+            lhc_c2 = eos_soundspeed_function(ie, lhc_density, 0.d0)
         end associate
         associate(                        &
-                rho1 => local_coordinate_rhc_primitive(1), &
-                rho2 => local_coordinate_rhc_primitive(2), &
-                u    => local_coordinate_rhc_primitive(3), &
-                v    => local_coordinate_rhc_primitive(4), &
-                w    => local_coordinate_rhc_primitive(5), &
-                ie   => local_coordinate_rhc_primitive(6), &
-                z1   => local_coordinate_rhc_primitive(7)  &
+                rho1_z1 => local_coordinate_rhc_primitive(1), &
+                rho2_z2 => local_coordinate_rhc_primitive(2), &
+                u       => local_coordinate_rhc_primitive(3), &
+                v       => local_coordinate_rhc_primitive(4), &
+                w       => local_coordinate_rhc_primitive(5), &
+                ie      => local_coordinate_rhc_primitive(6), &
+                z1      => local_coordinate_rhc_primitive(7)  &
             )
-            rhc_density    = z1 * rho1 + (1.d0 - z1) * rho2
+            rhc_density    = rho1_z1 + rho2_z2
             rhc_pressure   = eos_pressure_function  (ie, rhc_density, z1)
             rhc_soundspeed = eos_soundspeed_function(ie, rhc_density, z1)
             rhc_main_velocity = u
 
-            rhc_c1 = eos_soundspeed_function(ie, rho1, 1.d0)
-            rhc_c2 = eos_soundspeed_function(ie, rho2, 0.d0)
+            rhc_c1 = eos_soundspeed_function(ie, rhc_density, 1.d0)
+            rhc_c2 = eos_soundspeed_function(ie, rhc_density, 0.d0)
         end associate
 
         ! # compute flux

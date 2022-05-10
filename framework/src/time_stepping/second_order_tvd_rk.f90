@@ -449,11 +449,16 @@ module second_order_tvd_rk_module
             residual_set(:, rhc_index) = residual_set(:, rhc_index) + element_lef_and_right_side(:, 2)
         end do
 
+        print *, "1st Stage: In: ", primitive_variables_set(:, 24907)
+
         do i = 1, n_cells, 1
             stage1_conservative_variables_set(:, i) = conservative_variables_set(:, i) &
                 + time_increment * residual_set(:, i)
             primitive_variables_set(:, i) = conservative_to_primitive_function(stage1_conservative_variables_set(:, i))
         end do
+
+        print *, "1st Stage: Res: ", residual_set(:, 24907)
+        print *, "1st Stage: Out: ", primitive_variables_set(:, 24907)
 
         err = set_boundary_condition_function( &
             primitive_variables_set   , &
