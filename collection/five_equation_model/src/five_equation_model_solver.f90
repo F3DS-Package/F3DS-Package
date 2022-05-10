@@ -159,10 +159,10 @@ program five_eq_model_solver
                         rho2 => primitive_variables_set(2, index), &
                         ie   => primitive_variables_set(6, index), &
                         z1   => primitive_variables_set(7, index))
-                        vtk_pressure       (vtk_index) = compute_pressure_mixture_stiffened_eos(ie, rho1 + rho2, z1)
-                        vtk_density        (vtk_index) = rho1 + rho2
+                        vtk_pressure       (vtk_index) = compute_pressure_mixture_stiffened_eos(ie, z1 * rho1 + (1.d0 - z1) * rho2, z1)
+                        vtk_density        (vtk_index) = z1 * rho1 + (1.d0 - z1) * rho2
                         vtk_volume_fruction(vtk_index) = z1
-                        vtk_internal_enargy(vtk_index) =ie
+                        vtk_internal_enargy(vtk_index) = ie
                     end associate
                     vtk_index = vtk_index + 1
                 end if

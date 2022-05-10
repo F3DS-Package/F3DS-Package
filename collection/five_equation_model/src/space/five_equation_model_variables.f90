@@ -31,7 +31,7 @@ module five_equation_model_variables_module
 
     contains
 
-    pure function conservative_to_primitive(primitive_variables_set) result(conservative_variables_set)
+    pure function primitive_to_conservative(primitive_variables_set) result(conservative_variables_set)
         real(real_kind), intent(in)  :: primitive_variables_set   (:)
         real(real_kind), allocatable :: conservative_variables_set(:)
 
@@ -54,12 +54,12 @@ module five_equation_model_variables_module
             conservative_variables_set(3) = u  * rho
             conservative_variables_set(4) = v  * rho
             conservative_variables_set(5) = w  * rho
-            conservative_variables_set(6) = ie * rho + 0.5d0 * (u**2.d0 + v**2.d0 + w**2.d0) * rho
+            conservative_variables_set(6) = ie * rho + 0.5d0 * (u**2.d0 + v**2.d0 + w**2.d0) ** rho
             conservative_variables_set(7) = z1
         end associate
-    end function conservative_to_primitive
+    end function primitive_to_conservative
 
-    pure function primitive_to_conservative(conservative_variables_set) result(primitive_variables_set)
+    pure function conservative_to_primitive(conservative_variables_set) result(primitive_variables_set)
         real(real_kind), intent(in)  :: conservative_variables_set(:)
         real(real_kind), allocatable :: primitive_variables_set   (:)
 
@@ -87,13 +87,17 @@ module five_equation_model_variables_module
                 primitive_variables_set(1) = rho1_z1 / z1
                 primitive_variables_set(2) = rho2_z2 / (1.d0 - z1)
             end if
-            primitive_variables_set(3) = rho_u / rho
-            primitive_variables_set(4) = rho_v / rho
-            primitive_variables_set(5) = rho_w / rho
-            primitive_variables_set(6) = e / rho - 0.5d0 * (rho_u**2.d0 + rho_v**2.d0 + rho_w**2.d0) / rho**2.d0
+            if (rho == 0.d0)then
+                primitive_variables_set(3:6) = 0.d0
+            else
+                primitive_variables_set(3) = rho_u / rho
+                primitive_variables_set(4) = rho_v / rho
+                primitive_variables_set(5) = rho_w / rho
+                primitive_variables_set(6) = (e - 0.5d0 * (rho_u**2.d0 + rho_v**2.d0 + rho_w**2.d0) / rho) / rho
+            end if
             primitive_variables_set(7) = z1
         end associate
-    end function primitive_to_conservative
+    end function conservative_to_primitive
 
     subroutine initialise_variables(num_cells)
         integer(int_kind), intent(in) :: num_cells
