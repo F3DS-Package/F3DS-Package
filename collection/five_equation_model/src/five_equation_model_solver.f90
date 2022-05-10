@@ -110,39 +110,6 @@ program five_eq_model_solver
 
     ! solver timestepping loop
     do timestep = 0, max_timestep, 1
-        print *, "step ", timestep
-
-        call compute_next_state_second_order_tvd_rk(   &
-            conservative_variables_set               , &
-            primitive_variables_set                  , &
-            cells_centor_position                    , & ! <- TODO: We remove arguments in a future. We make the solver module and compute_next_state() routine.
-            cells_volume                             , & ! <-
-            faces_reference_cell_index               , & ! <-
-            faces_normal_vector                      , & ! <-
-            faces_tangential1_vector                 , & ! <-
-            faces_tangential2_vector                 , & ! <-
-            faces_position                           , & ! <-
-            faces_area                               , & ! <-
-            outflow_face_indexs                      , & ! <-
-            slipwall_face_indexs                     , & ! <-
-            symmetric_face_indexs                    , & ! <-
-            get_number_of_cells()                    , & ! <-
-            get_number_of_faces()                    , & ! <-
-            get_number_of_ghost_cells()              , & ! <-
-            get_number_of_outflow_faces()            , &
-            get_number_of_slipwall_faces()           , &
-            get_number_of_symmetric_faces()          , &
-            time_increment                           , &
-            reconstruct_weno5                        , &
-            compute_space_element_five_equation_model, &
-            compute_flux_five_equation_model_hllc    , &
-            compute_pressure_mixture_stiffened_eos   , &
-            compute_soundspeed_mixture_stiffened_eos , &
-            primitive_to_conservative                , &
-            conservative_to_primitive                , &
-            five_equation_model_set_boundary_condition &
-        )
-
         if (.true.) then
             write(vtk_filename, "(a, i5.5, a)") "result/", file_output_counter, ".vtu"
             print *, "write vtk "//vtk_filename//"..."
@@ -176,6 +143,39 @@ program five_eq_model_solver
             vtk_error = a_vtk_file%finalize()
             file_output_counter = file_output_counter + 1
         end if
+
+        print *, "step ", timestep
+
+        call compute_next_state_second_order_tvd_rk(   &
+            conservative_variables_set               , &
+            primitive_variables_set                  , &
+            cells_centor_position                    , & ! <- TODO: We remove arguments in a future. We make the solver module and compute_next_state() routine.
+            cells_volume                             , & ! <-
+            faces_reference_cell_index               , & ! <-
+            faces_normal_vector                      , & ! <-
+            faces_tangential1_vector                 , & ! <-
+            faces_tangential2_vector                 , & ! <-
+            faces_position                           , & ! <-
+            faces_area                               , & ! <-
+            outflow_face_indexs                      , & ! <-
+            slipwall_face_indexs                     , & ! <-
+            symmetric_face_indexs                    , & ! <-
+            get_number_of_cells()                    , & ! <-
+            get_number_of_faces()                    , & ! <-
+            get_number_of_ghost_cells()              , & ! <-
+            get_number_of_outflow_faces()            , &
+            get_number_of_slipwall_faces()           , &
+            get_number_of_symmetric_faces()          , &
+            time_increment                           , &
+            reconstruct_weno5                        , &
+            compute_space_element_five_equation_model, &
+            compute_flux_five_equation_model_hllc    , &
+            compute_pressure_mixture_stiffened_eos   , &
+            compute_soundspeed_mixture_stiffened_eos , &
+            primitive_to_conservative                , &
+            conservative_to_primitive                , &
+            five_equation_model_set_boundary_condition &
+        )
     end do
 
     call finalize_boundary_reference()
