@@ -47,7 +47,7 @@ module vector_module
 
         rotated_vector(1) = multiply_vector(vector, normal_vector     )
         rotated_vector(2) = multiply_vector(vector, tangential1_vector)
-        rotated_vector(2) = multiply_vector(vector, tangential2_vector)
+        rotated_vector(3) = multiply_vector(vector, tangential2_vector)
     end function
 
     pure function reverse_vector(vector, normal_vector, tangential1_vector, tangential2_vector) result(reversed_vector)
