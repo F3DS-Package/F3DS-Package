@@ -18,7 +18,7 @@ module five_equation_model_variables_module
     ! Elm. 1) following variables are saved
     ! primitive_variables_set(1  , :)   : density of fluid1
     ! primitive_variables_set(2  , :)   : density of fluid2
-    ! primitive_variables_set(3:5, :) : velocity vector (u,v,w)
+    ! primitive_variables_set(3:5, :)   : velocity vector (u,v,w)
     ! primitive_variables_set(6  , :)   : specific internal energy (not energy density)
     ! primitive_variables_set(7  , :)   : volume fraction of fluid1
     ! Elm. 2) 1 : {@code num_cells}, cell index

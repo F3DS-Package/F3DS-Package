@@ -155,12 +155,12 @@ program five_eq_model_solver
             do index = 1, get_number_of_cells(), 1
                 if(cells_is_real_cell(index))then
                     associate(                                     &
-                        rho1 => primitive_variables_set(1, index), &
-                        rho2 => primitive_variables_set(2, index), &
-                        ie   => primitive_variables_set(6, index), &
-                        z1   => primitive_variables_set(7, index))
-                        vtk_pressure       (vtk_index) = compute_pressure_mixture_stiffened_eos(ie, z1 * rho1 + (1.d0 - z1) * rho2, z1)
-                        vtk_density        (vtk_index) = z1 * rho1 + (1.d0 - z1) * rho2
+                        rho1z1 => primitive_variables_set(1, index), &
+                        rho2z2 => primitive_variables_set(2, index), &
+                        ie     => primitive_variables_set(6, index), &
+                        z1     => primitive_variables_set(7, index))
+                        vtk_pressure       (vtk_index) = compute_pressure_mixture_stiffened_eos(ie, rho1z1 + rho2z2, z1)
+                        vtk_density        (vtk_index) = rho1z1 + rho2z2
                         vtk_volume_fruction(vtk_index) = z1
                         vtk_internal_enargy(vtk_index) = ie
                     end associate
