@@ -35,7 +35,7 @@ program five_eq_model_solver
     integer  (I4P)              :: vtk_error
     integer  (int_kind )        :: file_output_counter, vtk_index, cell_point_index
     character(16)               :: vtk_filename
-    integer  (I4P)              :: n_output_cells, n_output_points, n_cell_points
+    integer  (I4P)              :: n_output_cells, n_output_points, n_cell_points, offset_incriment
     real     (R4P), allocatable :: vtk_x(:), vtk_y(:), vtk_z(:)
     real     (R4P), allocatable :: vtk_scolar(:)
     integer  (I1P), allocatable :: vtk_cell_type(:)
@@ -71,6 +71,7 @@ program five_eq_model_solver
     ! VTK
     file_output_counter = 0
     n_output_cells = 0
+    offset_incriment=8_I4P
     do index = 1, get_number_of_cells(), 1
         if(cells_is_real_cell(index)) n_output_cells = n_output_cells + 1
     end do
@@ -85,6 +86,9 @@ program five_eq_model_solver
             do cell_point_index = 1, n_cell_points, 1
                 vtk_connect((vtk_index - 1) * 8 + cell_point_index) = cell_geometries(index)%get_point_id(cell_point_index)
             end do
+            vtk_cell_type(vtk_index) = 12_I1P
+            vtk_offset   (vtk_index) = offset_incriment
+            offset_incriment = offset_incriment + 8_I4P
             vtk_index = vtk_index + 1
         end if
     end do
@@ -105,36 +109,36 @@ program five_eq_model_solver
     do timestep = 0, max_timestep, 1
         print *, "step ", timestep
 
-        call compute_next_state_second_order_tvd_rk(   &
-            conservative_variables_set               , &
-            primitive_variables_set                  , &
-            cells_centor_position                    , & ! <- TODO: We remove arguments in a future. We make the solver module and compute_next_state() routine.
-            cells_volume                             , & ! <-
-            faces_reference_cell_index               , & ! <-
-            faces_normal_vector                      , & ! <-
-            faces_tangential1_vector                 , & ! <-
-            faces_tangential2_vector                 , & ! <-
-            faces_position                           , & ! <-
-            faces_area                               , & ! <-
-            outflow_face_indexs                      , & ! <-
-            slipwall_face_indexs                     , & ! <-
-            symmetric_face_indexs                    , & ! <-
-            get_number_of_cells()                    , & ! <-
-            get_number_of_faces()                    , & ! <-
-            get_number_of_ghost_cells()              , & ! <-
-            get_number_of_outflow_faces()            , &
-            get_number_of_slipwall_faces()           , &
-            get_number_of_symmetric_faces()          , &
-            time_increment                           , &
-            reconstruct_weno5                        , &
-            compute_space_element_five_equation_model, &
-            compute_flux_five_equation_model_hllc    , &
-            compute_pressure_mixture_stiffened_eos   , &
-            compute_soundspeed_mixture_stiffened_eos , &
-            primitive_to_conservative                , &
-            conservative_to_primitive                , &
-            five_equation_model_set_boundary_condition &
-        )
+        !call compute_next_state_second_order_tvd_rk(   &
+        !    conservative_variables_set               , &
+        !    primitive_variables_set                  , &
+        !    cells_centor_position                    , & ! <- TODO: We remove arguments in a future. We make the solver module and compute_next_state() routine.
+        !    cells_volume                             , & ! <-
+        !    faces_reference_cell_index               , & ! <-
+        !    faces_normal_vector                      , & ! <-
+        !    faces_tangential1_vector                 , & ! <-
+        !    faces_tangential2_vector                 , & ! <-
+        !    faces_position                           , & ! <-
+        !    faces_area                               , & ! <-
+        !    outflow_face_indexs                      , & ! <-
+        !    slipwall_face_indexs                     , & ! <-
+        !    symmetric_face_indexs                    , & ! <-
+        !    get_number_of_cells()                    , & ! <-
+        !    get_number_of_faces()                    , & ! <-
+        !    get_number_of_ghost_cells()              , & ! <-
+        !    get_number_of_outflow_faces()            , &
+        !    get_number_of_slipwall_faces()           , &
+        !    get_number_of_symmetric_faces()          , &
+        !    time_increment                           , &
+        !    reconstruct_weno5                        , &
+        !    compute_space_element_five_equation_model, &
+        !    compute_flux_five_equation_model_hllc    , &
+        !    compute_pressure_mixture_stiffened_eos   , &
+        !    compute_soundspeed_mixture_stiffened_eos , &
+        !    primitive_to_conservative                , &
+        !    conservative_to_primitive                , &
+        !    five_equation_model_set_boundary_condition &
+        !)
 
         if (.true.) then
             write(vtk_filename, "(a, i5.5, a)") "result/", file_output_counter, ".vtu"
@@ -143,7 +147,7 @@ program five_eq_model_solver
             vtk_error = a_vtk_file%xml_writer%write_piece       (np=n_output_points, nc=n_output_cells)
             vtk_error = a_vtk_file%xml_writer%write_geo         (np=n_output_points, nc=n_output_cells, x=vtk_x, y=vtk_y, z=vtk_z)
             vtk_error = a_vtk_file%xml_writer%write_connectivity(nc=n_output_cells, connectivity=vtk_connect, offset=vtk_offset, cell_type=vtk_cell_type)
-            vtk_error = a_vtk_file%xml_writer%write_dataarray   (location='node', action='open')
+            vtk_error = a_vtk_file%xml_writer%write_dataarray   (location='cell', action='open')
             vtk_index = 1
             do index = 1, get_number_of_cells(), 1
                 if(cells_is_real_cell(index))then
@@ -158,7 +162,7 @@ program five_eq_model_solver
                 end if
             end do
             vtk_error = a_vtk_file%xml_writer%write_dataarray   (data_name='pressure', x=vtk_scolar)
-            vtk_error = a_vtk_file%xml_writer%write_dataarray   (location='node', action='close')
+            vtk_error = a_vtk_file%xml_writer%write_dataarray   (location='cell', action='close')
             vtk_error = a_vtk_file%xml_writer%write_piece()
             vtk_error = a_vtk_file%finalize()
             file_output_counter = file_output_counter + 1

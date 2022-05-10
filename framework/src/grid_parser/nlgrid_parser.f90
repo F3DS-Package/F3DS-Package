@@ -1073,10 +1073,10 @@ module class_nlgrid_parser
 
     subroutine get_cell_geometries(self, points, cell_geometries)
         class  (nlgrid_parser), intent(in   ) :: self
-        integer(real_kind    ), intent(inout) :: points         (:, :)
+        real   (real_kind    ), intent(inout) :: points         (:, :)
         class  (point_id_list), intent(inout) :: cell_geometries(:)
 
-        integer(int_kind) :: i, j, k, n
+        integer(int_kind) :: i, j, k, n, n_assigned_point
         integer(int_kind) :: p(8)
 
         if(.not. self%parsed)then
@@ -1084,6 +1084,7 @@ module class_nlgrid_parser
         end if
 
         ! point index loop
+        n_assigned_point = 0
         do k = self%kmin - 1, self%kmax, 1
             do j = self%jmin - 1, self%jmax, 1
                 do i = self%imin - 1, self%imax, 1
@@ -1093,9 +1094,14 @@ module class_nlgrid_parser
                     points(1, n) = self%x_poss_cell_edge(i, j, k)
                     points(2, n) = self%y_poss_cell_edge(i, j, k)
                     points(3, n) = self%z_poss_cell_edge(i, j, k)
+                    n_assigned_point = n_assigned_point + 1
                 end do
             end do
         end do
+#ifdef _DEBUG
+        print *, "DEBUG: nlgrid parser:"
+        print *, "Points (", n_assigned_point, "/", self%get_number_of_points(), ") are assigned."
+#endif
 
         ! cell index loop
         do k = self%kmin, self%kmax, 1

@@ -24,7 +24,7 @@ module cell_geometries_module
 
     ! Elm. 1) 1:3 = x, y, z
     ! Elm. 2) 1:{@code num_points}
-    integer(real_kind), public, allocatable :: points(:, :)
+    real(real_kind), public, allocatable :: points(:, :)
 
     class(point_id_list), public, allocatable :: cell_geometries(:)
 

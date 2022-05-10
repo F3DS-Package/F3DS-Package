@@ -14,6 +14,8 @@ module class_point_id_list
 
         contains
 
+        procedure, public :: print_ids    => point_id_list_print_ids
+        procedure, public :: print_points => point_id_list_print_points
         procedure, public :: initialize   => point_id_list_initialize
         procedure, public :: set_point_id => point_id_list_set_point_id
         procedure, public :: get_point_id => point_id_list_get_point_id
@@ -22,11 +24,25 @@ module class_point_id_list
 
     contains
 
+    subroutine point_id_list_print_ids(self)
+        class  (point_id_list), intent(in) :: self
+        print *, self%num_points_, " points:", self%point_ids_
+    end subroutine point_id_list_print_ids
+
+    subroutine point_id_list_print_points(self, points)
+        class(point_id_list), intent(in) :: self
+        real (real_kind    ), intent(in) :: points(:,:)
+        integer(int_kind) :: n
+        do n = 1, self%num_points_, 1
+            print *, "Point # ", n, ": ", points(:,self%point_ids_(n))
+        end do
+    end subroutine point_id_list_print_points
+
     pure function point_id_list_get_number_of_points(self) result(n)
         class  (point_id_list), intent(in) :: self
         integer(int_kind     )             :: n
         n = self%num_points_
-    end function
+    end function point_id_list_get_number_of_points
 
     subroutine point_id_list_initialize(self, num_points)
         class  (point_id_list), intent(inout) :: self
