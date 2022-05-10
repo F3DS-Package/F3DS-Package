@@ -34,7 +34,7 @@ program five_eq_model_solver
     type(vtk_file)              :: a_vtk_file
     integer  (I4P)              :: vtk_error
     integer  (int_kind )        :: file_output_counter, vtk_index, cell_point_index
-    character(9)                :: vtk_filename
+    character(16)               :: vtk_filename
     integer  (I4P)              :: n_output_cells, n_output_points, n_cell_points
     real     (R4P), allocatable :: vtk_x(:), vtk_y(:), vtk_z(:)
     real     (R4P), allocatable :: vtk_scolar(:)
@@ -42,7 +42,7 @@ program five_eq_model_solver
     integer  (I4P), allocatable :: vtk_offset(:), vtk_connect(:)
 
     time_increment = 1.d0
-    max_timestep   = 100
+    max_timestep   = 5
 
     ! parse grid file
     call a_grid_parser%parse("grid.nlgrid")
@@ -81,9 +81,9 @@ program five_eq_model_solver
     vtk_index = 1
     do index = 1, get_number_of_cells(), 1
         if(cells_is_real_cell(index))then
-            n_cell_points = cell_geometries(vtk_index)%get_number_of_points()
+            n_cell_points = cell_geometries(index)%get_number_of_points()
             do cell_point_index = 1, n_cell_points, 1
-                vtk_connect((vtk_index - 1) * 8 + cell_point_index) = cell_geometries(vtk_index)%get_point_id(cell_point_index)
+                vtk_connect((vtk_index - 1) * 8 + cell_point_index) = cell_geometries(index)%get_point_id(cell_point_index)
             end do
             vtk_index = vtk_index + 1
         end if
@@ -136,16 +136,16 @@ program five_eq_model_solver
         )
 
         if (.true.) then
-            write(vtk_filename, "(i5, a)") file_output_counter, ".vtu"
+            write(vtk_filename, "(a, i5.5, a)") "result/", file_output_counter, ".vtu"
             print *, "write vtk "//vtk_filename//"..."
             vtk_error = a_vtk_file%initialize                   (format="binary", filename=vtk_filename, mesh_topology="UnstructuredGrid")
             vtk_error = a_vtk_file%xml_writer%write_piece       (np=n_output_points, nc=n_output_cells)
             vtk_error = a_vtk_file%xml_writer%write_geo         (np=n_output_points, nc=n_output_cells, x=vtk_x, y=vtk_y, z=vtk_z)
             vtk_error = a_vtk_file%xml_writer%write_connectivity(nc=n_output_cells, connectivity=vtk_connect, offset=vtk_offset, cell_type=vtk_cell_type)
             vtk_error = a_vtk_file%xml_writer%write_dataarray   (location='node', action='open')
-            vtk_index = 0
+            vtk_index = 1
             do index = 1, get_number_of_cells(), 1
-                if(.not. cells_is_real_cell(index))then
+                if(cells_is_real_cell(index))then
                     associate(                                     &
                         rho1 => primitive_variables_set(1, index), &
                         rho2 => primitive_variables_set(2, index), &
