@@ -54,7 +54,7 @@ module five_equation_model_variables_module
             conservative_variables_set(3) = u  * rho
             conservative_variables_set(4) = v  * rho
             conservative_variables_set(5) = w  * rho
-            conservative_variables_set(6) = ie * rho + 0.5d0 * (u**2.d0 + v**2.d0 + w**2.d0) ** rho
+            conservative_variables_set(6) = ie * rho + 0.5d0 * (u**2.d0 + v**2.d0 + w**2.d0) / rho
             conservative_variables_set(7) = z1
         end associate
     end function primitive_to_conservative

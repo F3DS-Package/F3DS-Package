@@ -244,7 +244,7 @@ module five_equation_model_boundary_condition_module
             face_tangential1_vectors  ( : , face_index      ), &
             face_tangential2_vectors  ( : , face_index      )  &
         )
-        local_ghost_vector(1) = min(0.d0, local_inner_vector(1))
+        local_ghost_vector(1) = -1.d0 * local_inner_vector(1)
         local_ghost_vector(2) = local_inner_vector(2)
         local_ghost_vector(3) = local_inner_vector(3)
         ghost_primitive_variables(3:5) = reverse_vector( &

@@ -155,7 +155,7 @@ module five_equation_space_model_module
                 ie   => local_coordinate_lhc_primitive(6), &
                 z1   => local_coordinate_lhc_primitive(7)  &
             )
-            lhc_density    = rho1 + rho2
+            lhc_density    = z1 * rho1 + (1.d0 - z1) * rho2
             lhc_pressure   = eos_pressure_function  (ie, lhc_density, z1)
             lhc_soundspeed = eos_soundspeed_function(ie, lhc_density, z1)
             lhc_main_velocity = u
@@ -172,7 +172,7 @@ module five_equation_space_model_module
                 ie   => local_coordinate_rhc_primitive(6), &
                 z1   => local_coordinate_rhc_primitive(7)  &
             )
-            rhc_density    = rho1 + rho2
+            rhc_density    = z1 * rho1 + (1.d0 - z1) * rho2
             rhc_pressure   = eos_pressure_function  (ie, rhc_density, z1)
             rhc_soundspeed = eos_soundspeed_function(ie, rhc_density, z1)
             rhc_main_velocity = u

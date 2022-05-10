@@ -453,6 +453,7 @@ module second_order_tvd_rk_module
             stage1_conservative_variables_set(:, i) = conservative_variables_set(:, i) &
                 + time_increment * residual_set(:, i)
             primitive_variables_set(:, i) = conservative_to_primitive_function(stage1_conservative_variables_set(:, i))
+            print *, "Cell ", i, " Primitives: ", primitive_variables_set(:, i)
         end do
 
         err = set_boundary_condition_function( &
