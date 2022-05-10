@@ -1112,21 +1112,22 @@ module class_nlgrid_parser
                         self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
                     call cell_geometries(n)%initialize(8)
 
-                    p(1) = convert_structure_index_to_unstructure_index(i, j, k, &
+                    ! Numbering is followed VTK format (https://vtk.org/wp-content/uploads/2015/04/file-formats.pdf)
+                    p(1) = convert_structure_index_to_unstructure_index(i-1, j-1, k-1, &
                         self%imin - 1, self%jmin - 1, self%kmin - 1, self%imax, self%jmax, self%kmax)
-                    p(2) = convert_structure_index_to_unstructure_index(i - 1, j, k, &
+                    p(2) = convert_structure_index_to_unstructure_index(i  , j-1, k-1, &
                         self%imin - 1, self%jmin - 1, self%kmin - 1, self%imax, self%jmax, self%kmax)
-                    p(3) = convert_structure_index_to_unstructure_index(i - 1, j - 1, k, &
+                    p(3) = convert_structure_index_to_unstructure_index(i  , j  , k-1, &
                         self%imin - 1, self%jmin - 1, self%kmin - 1, self%imax, self%jmax, self%kmax)
-                    p(4) = convert_structure_index_to_unstructure_index(i - 1, j, k - 1, &
+                    p(4) = convert_structure_index_to_unstructure_index(i-1, j  , k-1, &
                         self%imin - 1, self%jmin - 1, self%kmin - 1, self%imax, self%jmax, self%kmax)
-                    p(5) = convert_structure_index_to_unstructure_index(i, j - 1, k, &
+                    p(5) = convert_structure_index_to_unstructure_index(i-1, j-1, k  , &
                         self%imin - 1, self%jmin - 1, self%kmin - 1, self%imax, self%jmax, self%kmax)
-                    p(6) = convert_structure_index_to_unstructure_index(i, j - 1, k - 1, &
+                    p(6) = convert_structure_index_to_unstructure_index(i  , j-1, k  , &
                         self%imin - 1, self%jmin - 1, self%kmin - 1, self%imax, self%jmax, self%kmax)
-                    p(7) = convert_structure_index_to_unstructure_index(i, j, k - 1, &
+                    p(7) = convert_structure_index_to_unstructure_index(i  , j  , k  , &
                         self%imin - 1, self%jmin - 1, self%kmin - 1, self%imax, self%jmax, self%kmax)
-                    p(8) = convert_structure_index_to_unstructure_index(i - 1, j - 1, k - 1, &
+                    p(8) = convert_structure_index_to_unstructure_index(i-1, j  , k  , &
                         self%imin - 1, self%jmin - 1, self%kmin - 1, self%imax, self%jmax, self%kmax)
 
                     call cell_geometries(n)%set_point_id(1, p(1))
