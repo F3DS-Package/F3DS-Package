@@ -99,6 +99,7 @@ program five_eq_model_solver
     end do
 
     call initialize_second_order_tvd_rk(conservative_variables_set)
+    call initialize_mixture_stiffened_eos(1.4d0, 6.12d0, 0.d0, 3.43d8)
 
     ! solver timestepping loop
     do timestep = 0, max_timestep, 1

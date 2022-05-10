@@ -10,10 +10,23 @@ module mixture_stiffened_eos_module
     real(real_kind) :: reference_pressure_fluid1_
     real(real_kind) :: reference_pressure_fluid2_
 
+    public :: initialize_mixture_stiffened_eos
     public :: compute_pressure_mixture_stiffened_eos
     public :: compute_soundspeed_mixture_stiffened_eos
 
     contains
+
+    subroutine initialize_mixture_stiffened_eos(specific_heat_ratio_fluid1, specific_heat_ratio_fluid2, reference_pressure_fluid1, reference_pressure_fluid2)
+        real(real_kind), intent(in) :: specific_heat_ratio_fluid1
+        real(real_kind), intent(in) :: specific_heat_ratio_fluid2
+        real(real_kind), intent(in) :: reference_pressure_fluid1
+        real(real_kind), intent(in) :: reference_pressure_fluid2
+
+        specific_heat_ratio_fluid1_ = specific_heat_ratio_fluid1
+        specific_heat_ratio_fluid2_ = specific_heat_ratio_fluid2
+        reference_pressure_fluid1_  = reference_pressure_fluid1
+        reference_pressure_fluid2_  = reference_pressure_fluid2
+    end subroutine
 
     pure function compute_pressure_mixture_stiffened_eos(specific_internal_energy, density, volume_fruction) result(pressure)
         use typedef_module
