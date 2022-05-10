@@ -32,8 +32,15 @@ module second_order_tvd_rk_module
             face_tangential2_vectors                 , &
             face_centor_positions                    , &
             face_areas                               , &
+            outflow_face_indexs                      , &
+            slipwall_face_indexs                     , &
+            symmetric_face_indexs                    , &
             n_cells                                  , &
             n_faces                                  , &
+            n_ghost_cells                            , &
+            n_outflow_faces                          , &
+            n_slipwall_faces                         , &
+            n_symmetric_faces                        , &
             time_increment                           , &
             reconstruction_function                  , &
             integrated_element_function              , &
@@ -41,7 +48,8 @@ module second_order_tvd_rk_module
             eos_pressure_function                    , &
             eos_soundspeed_function                  , &
             primitive_to_conservative_function       , &
-            conservative_to_primitive_function         &
+            conservative_to_primitive_function       , &
+            set_boundary_condition_function            &
         )
 
         real   (real_kind), intent(inout) :: conservative_variables_set (:,:)
@@ -54,8 +62,15 @@ module second_order_tvd_rk_module
         real   (real_kind), intent(in   ) :: face_tangential2_vectors   (:,:)
         real   (real_kind), intent(in   ) :: face_centor_positions      (:,:)
         real   (real_kind), intent(in   ) :: face_areas                 (:)
+        integer(int_kind ), intent(in   ) :: outflow_face_indexs        (:)
+        integer(int_kind ), intent(in   ) :: slipwall_face_indexs       (:)
+        integer(int_kind ), intent(in   ) :: symmetric_face_indexs      (:)
         integer(int_kind ), intent(in   ) :: n_cells
         integer(int_kind ), intent(in   ) :: n_faces
+        integer(int_kind ), intent(in   ) :: n_ghost_cells
+        integer(int_kind ), intent(in   ) :: n_outflow_faces
+        integer(int_kind ), intent(in   ) :: n_slipwall_faces
+        integer(int_kind ), intent(in   ) :: n_symmetric_faces
         real   (real_kind), intent(in   ) :: time_increment
 
         interface
@@ -91,7 +106,7 @@ module second_order_tvd_rk_module
                 integer(int_kind ), intent(in ) :: face_index
                 integer(int_kind ), intent(in ) :: n_conservative_values
 
-                real   (real_kind)                           :: element_lef_and_right_side(n_conservative_values, 2)
+                real   (real_kind) :: element_lef_and_right_side(n_conservative_values, 2)
 
                 interface
                     pure function flux_function(       &
@@ -353,16 +368,61 @@ module second_order_tvd_rk_module
                 real(real_kind), intent(in)  :: conservative(:)
                 real(real_kind), allocatable :: primitive   (:)
             end function conservative_to_primitive_function
+
+            function set_boundary_condition_function( &
+                    primitive_variables_set   , &
+                    reference_cell_indexs_set , &
+                    face_normal_vectors       , &
+                    face_tangential1_vectors  , &
+                    face_tangential2_vectors  , &
+                    outflow_face_indexs       , &
+                    slipwall_face_indexs      , &
+                    symmetric_face_indexs     , &
+                    num_outflow_faces         , &
+                    num_slipwall_faces        , &
+                    num_symmetric_faces       , &
+                    n_ghost_cells               &
+                ) result(error)
+                use typedef_module
+                real   (real_kind), intent(inout) :: primitive_variables_set    (:,:)
+                integer(int_kind ), intent(in   ) :: reference_cell_indexs_set  (:,:)
+                real   (real_kind), intent(in   ) :: face_normal_vectors        (:,:)
+                real   (real_kind), intent(in   ) :: face_tangential1_vectors   (:,:)
+                real   (real_kind), intent(in   ) :: face_tangential2_vectors   (:,:)
+                integer(int_kind ), intent(in   ) :: outflow_face_indexs        (:)
+                integer(int_kind ), intent(in   ) :: slipwall_face_indexs       (:)
+                integer(int_kind ), intent(in   ) :: symmetric_face_indexs      (:)
+                integer(int_kind ), intent(in   ) :: num_outflow_faces
+                integer(int_kind ), intent(in   ) :: num_slipwall_faces
+                integer(int_kind ), intent(in   ) :: num_symmetric_faces
+                integer(int_kind ), intent(in   ) :: n_ghost_cells
+                logical                           :: error
+            end function
         end interface
 
         ! code
         integer(int_kind ) :: i, j
         integer(int_kind ) :: lhc_index, rhc_index
         integer(int_kind ) :: n_conservative_values
-        integer(int_kind ) :: n_ghost_cells = 3
         real   (real_kind) :: element_lef_and_right_side(size(conservative_variables_set(:,0)), 2)
+        logical :: err
 
         n_conservative_values = size(conservative_variables_set(:,0))
+
+        err = set_boundary_condition_function( &
+            primitive_variables_set   , &
+            reference_cell_indexs_set , &
+            face_normal_vectors       , &
+            face_tangential1_vectors  , &
+            face_tangential2_vectors  , &
+            outflow_face_indexs       , &
+            slipwall_face_indexs      , &
+            symmetric_face_indexs     , &
+            n_outflow_faces           , &
+            n_slipwall_faces          , &
+            n_symmetric_faces         , &
+            n_ghost_cells               &
+        )
 
         do j = 1, n_faces, 1
             element_lef_and_right_side = reconstruction_function( &
@@ -394,6 +454,21 @@ module second_order_tvd_rk_module
                 + time_increment * residual_set(:, i)
             primitive_variables_set(:, i) = conservative_to_primitive_function(stage1_conservative_variables_set(:, i))
         end do
+
+        err = set_boundary_condition_function( &
+            primitive_variables_set   , &
+            reference_cell_indexs_set , &
+            face_normal_vectors       , &
+            face_tangential1_vectors  , &
+            face_tangential2_vectors  , &
+            outflow_face_indexs       , &
+            slipwall_face_indexs      , &
+            symmetric_face_indexs     , &
+            n_outflow_faces           , &
+            n_slipwall_faces          , &
+            n_symmetric_faces         , &
+            n_ghost_cells               &
+        )
 
         do j = 1, n_faces, 1
             element_lef_and_right_side = reconstruction_function( &

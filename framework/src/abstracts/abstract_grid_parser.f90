@@ -109,9 +109,9 @@ module abstract_grid_parser
             use typedef_module
             import grid_parser
             class  (grid_parser), intent(in   ) :: self
-            integer(int_kind   ), intent(inout) :: outflow_face_indexs  (:,:)
-            integer(int_kind   ), intent(inout) :: slipwall_face_indexs (:,:)
-            integer(int_kind   ), intent(inout) :: symmetric_face_indexs(:,:)
+            integer(int_kind   ), intent(inout) :: outflow_face_indexs  (:)
+            integer(int_kind   ), intent(inout) :: slipwall_face_indexs (:)
+            integer(int_kind   ), intent(inout) :: symmetric_face_indexs(:)
         end subroutine get_boundaries_interface
 
         subroutine get_cell_geometries_interface(self, points, cell_geometries)

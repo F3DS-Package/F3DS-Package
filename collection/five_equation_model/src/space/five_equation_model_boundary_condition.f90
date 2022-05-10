@@ -1,0 +1,259 @@
+module five_equation_model_boundary_condition_module
+    use typedef_module
+    use vector_module
+
+    implicit none
+
+    private
+
+    public :: five_equation_model_set_boundary_condition
+
+    contains
+
+    function five_equation_model_set_boundary_condition( &
+            primitive_variables_set   , &
+            reference_cell_indexs_set , &
+            face_normal_vectors       , &
+            face_tangential1_vectors  , &
+            face_tangential2_vectors  , &
+            outflow_face_indexs       , &
+            slipwall_face_indexs      , &
+            symmetric_face_indexs     , &
+            num_outflow_faces         , &
+            num_slipwall_faces        , &
+            num_symmetric_faces       , &
+            n_ghost_cells               &
+        ) result(error)
+        real   (real_kind), intent(inout) :: primitive_variables_set    (:,:)
+        integer(int_kind ), intent(in   ) :: reference_cell_indexs_set  (:,:)
+        real   (real_kind), intent(in   ) :: face_normal_vectors        (:,:)
+        real   (real_kind), intent(in   ) :: face_tangential1_vectors   (:,:)
+        real   (real_kind), intent(in   ) :: face_tangential2_vectors   (:,:)
+        integer(int_kind ), intent(in   ) :: outflow_face_indexs        (:)
+        integer(int_kind ), intent(in   ) :: slipwall_face_indexs       (:)
+        integer(int_kind ), intent(in   ) :: symmetric_face_indexs      (:)
+        integer(int_kind ), intent(in   ) :: num_outflow_faces
+        integer(int_kind ), intent(in   ) :: num_slipwall_faces
+        integer(int_kind ), intent(in   ) :: num_symmetric_faces
+        integer(int_kind ), intent(in   ) :: n_ghost_cells
+        logical                           :: error
+
+        integer(int_kind ) :: bc_face_index
+
+        do bc_face_index = 1, num_outflow_faces, 1
+            associate( &
+                face_idx   => outflow_face_indexs(bc_face_index)                                            , &
+                ghost_idx1 => reference_cell_indexs_set(n_ghost_cells+1, outflow_face_indexs(bc_face_index)), &
+                ghost_idx2 => reference_cell_indexs_set(n_ghost_cells+2, outflow_face_indexs(bc_face_index)), &
+                ghost_idx3 => reference_cell_indexs_set(n_ghost_cells+3, outflow_face_indexs(bc_face_index)), &
+                inner_idx1 => reference_cell_indexs_set(n_ghost_cells+0, outflow_face_indexs(bc_face_index)), &
+                inner_idx2 => reference_cell_indexs_set(n_ghost_cells-1, outflow_face_indexs(bc_face_index)), &
+                inner_idx3 => reference_cell_indexs_set(n_ghost_cells-2, outflow_face_indexs(bc_face_index))  &
+            )
+                primitive_variables_set(:, ghost_idx1) = make_ghost_primitive_variables_outflow( &
+                    primitive_variables_set , &
+                    face_normal_vectors     , &
+                    face_tangential1_vectors, &
+                    face_tangential2_vectors, &
+                    face_idx                , &
+                    inner_idx1                &
+                )
+                primitive_variables_set(:, ghost_idx2) = make_ghost_primitive_variables_outflow( &
+                    primitive_variables_set , &
+                    face_normal_vectors     , &
+                    face_tangential1_vectors, &
+                    face_tangential2_vectors, &
+                    face_idx                , &
+                    inner_idx2                &
+                )
+                primitive_variables_set(:, ghost_idx3) = make_ghost_primitive_variables_outflow( &
+                    primitive_variables_set , &
+                    face_normal_vectors     , &
+                    face_tangential1_vectors, &
+                    face_tangential2_vectors, &
+                    face_idx                , &
+                    inner_idx3                &
+                )
+            end associate
+        end do
+
+        do bc_face_index = 1, num_slipwall_faces, 1
+            associate( &
+                face_idx   => slipwall_face_indexs(bc_face_index)                                            , &
+                ghost_idx1 => reference_cell_indexs_set(n_ghost_cells+1, slipwall_face_indexs(bc_face_index)), &
+                ghost_idx2 => reference_cell_indexs_set(n_ghost_cells+2, slipwall_face_indexs(bc_face_index)), &
+                ghost_idx3 => reference_cell_indexs_set(n_ghost_cells+3, slipwall_face_indexs(bc_face_index)), &
+                inner_idx1 => reference_cell_indexs_set(n_ghost_cells+0, slipwall_face_indexs(bc_face_index)), &
+                inner_idx2 => reference_cell_indexs_set(n_ghost_cells-1, slipwall_face_indexs(bc_face_index)), &
+                inner_idx3 => reference_cell_indexs_set(n_ghost_cells-2, slipwall_face_indexs(bc_face_index))  &
+            )
+                primitive_variables_set(:, ghost_idx1) = make_ghost_primitive_variables_slipwall( &
+                    primitive_variables_set , &
+                    face_normal_vectors     , &
+                    face_tangential1_vectors, &
+                    face_tangential2_vectors, &
+                    face_idx                , &
+                    inner_idx1                &
+                )
+                primitive_variables_set(:, ghost_idx2) = make_ghost_primitive_variables_slipwall( &
+                    primitive_variables_set , &
+                    face_normal_vectors     , &
+                    face_tangential1_vectors, &
+                    face_tangential2_vectors, &
+                    face_idx                , &
+                    inner_idx2                &
+                )
+                primitive_variables_set(:, ghost_idx3) = make_ghost_primitive_variables_slipwall( &
+                    primitive_variables_set , &
+                    face_normal_vectors     , &
+                    face_tangential1_vectors, &
+                    face_tangential2_vectors, &
+                    face_idx                , &
+                    inner_idx3                &
+                )
+            end associate
+        end do
+
+        do bc_face_index = 1, num_symmetric_faces, 1
+            associate( &
+                face_idx   => symmetric_face_indexs(bc_face_index)                                            , &
+                ghost_idx1 => reference_cell_indexs_set(n_ghost_cells+1, symmetric_face_indexs(bc_face_index)), &
+                ghost_idx2 => reference_cell_indexs_set(n_ghost_cells+2, symmetric_face_indexs(bc_face_index)), &
+                ghost_idx3 => reference_cell_indexs_set(n_ghost_cells+3, symmetric_face_indexs(bc_face_index)), &
+                inner_idx1 => reference_cell_indexs_set(n_ghost_cells+0, symmetric_face_indexs(bc_face_index)), &
+                inner_idx2 => reference_cell_indexs_set(n_ghost_cells-1, symmetric_face_indexs(bc_face_index)), &
+                inner_idx3 => reference_cell_indexs_set(n_ghost_cells-2, symmetric_face_indexs(bc_face_index))  &
+            )
+                primitive_variables_set(:, ghost_idx1) = make_ghost_primitive_variables_symmetric( &
+                    primitive_variables_set , &
+                    face_normal_vectors     , &
+                    face_tangential1_vectors, &
+                    face_tangential2_vectors, &
+                    face_idx                , &
+                    inner_idx1                &
+                )
+                primitive_variables_set(:, ghost_idx2) = make_ghost_primitive_variables_symmetric( &
+                    primitive_variables_set , &
+                    face_normal_vectors     , &
+                    face_tangential1_vectors, &
+                    face_tangential2_vectors, &
+                    face_idx                , &
+                    inner_idx2                &
+                )
+                primitive_variables_set(:, ghost_idx3) = make_ghost_primitive_variables_symmetric( &
+                    primitive_variables_set , &
+                    face_normal_vectors     , &
+                    face_tangential1_vectors, &
+                    face_tangential2_vectors, &
+                    face_idx                , &
+                    inner_idx3                &
+                )
+            end associate
+        end do
+
+        error = .false.
+    end function five_equation_model_set_boundary_condition
+
+    pure function make_ghost_primitive_variables_outflow( &
+            primitive_variables_set   , &
+            face_normal_vectors       , &
+            face_tangential1_vectors  , &
+            face_tangential2_vectors  , &
+            face_index                , &
+            inner_cell_index              ) result(ghost_primitive_variables)
+        real   (real_kind), intent(in   ) :: primitive_variables_set    (:,:)
+        real   (real_kind), intent(in   ) :: face_normal_vectors        (:,:)
+        real   (real_kind), intent(in   ) :: face_tangential1_vectors   (:,:)
+        real   (real_kind), intent(in   ) :: face_tangential2_vectors   (:,:)
+        integer(int_kind ), intent(in   ) :: face_index
+        integer(int_kind ), intent(in   ) :: inner_cell_index
+        real   (real_kind) :: ghost_primitive_variables(7)
+        real   (real_kind) :: local_inner_vector(3), local_ghost_vector(3)
+        ghost_primitive_variables(1:2) = primitive_variables_set(1:2, inner_cell_index)
+        local_inner_vector(:) = rotate_vector(           &
+            primitive_variables_set   (3:5, inner_cell_index), &
+            face_normal_vectors       ( : , face_index      ), &
+            face_tangential1_vectors  ( : , face_index      ), &
+            face_tangential2_vectors  ( : , face_index      )  &
+        )
+        local_ghost_vector(1) = min(0.d0, local_inner_vector(1))
+        local_ghost_vector(2) = local_inner_vector(2)
+        local_ghost_vector(3) = local_inner_vector(3)
+        ghost_primitive_variables(3:5) = reverse_vector( &
+            local_ghost_vector        (:)             , &
+            face_normal_vectors       (: , face_index  ), &
+            face_tangential1_vectors  (: , face_index  ), &
+            face_tangential2_vectors  (: , face_index  )  &
+        )
+        ghost_primitive_variables(6:7) = primitive_variables_set(6:7, inner_cell_index)
+    end function make_ghost_primitive_variables_outflow
+
+    pure function make_ghost_primitive_variables_slipwall( &
+            primitive_variables_set   , &
+            face_normal_vectors       , &
+            face_tangential1_vectors  , &
+            face_tangential2_vectors  , &
+            face_index                , &
+            inner_cell_index              ) result(ghost_primitive_variables)
+        real   (real_kind), intent(in   ) :: primitive_variables_set    (:,:)
+        real   (real_kind), intent(in   ) :: face_normal_vectors        (:,:)
+        real   (real_kind), intent(in   ) :: face_tangential1_vectors   (:,:)
+        real   (real_kind), intent(in   ) :: face_tangential2_vectors   (:,:)
+        integer(int_kind ), intent(in   ) :: face_index
+        integer(int_kind ), intent(in   ) :: inner_cell_index
+        real   (real_kind) :: ghost_primitive_variables(7)
+        real   (real_kind) :: local_inner_vector(3), local_ghost_vector(3)
+        ghost_primitive_variables(1:2) = primitive_variables_set(1:2, inner_cell_index)
+        local_inner_vector(:) = rotate_vector(           &
+            primitive_variables_set   (3:5, inner_cell_index), &
+            face_normal_vectors       ( : , face_index      ), &
+            face_tangential1_vectors  ( : , face_index      ), &
+            face_tangential2_vectors  ( : , face_index      )  &
+        )
+        local_ghost_vector(1) = -1.d0 * local_inner_vector(1)
+        local_ghost_vector(2) = local_inner_vector(2)
+        local_ghost_vector(3) = local_inner_vector(3)
+        ghost_primitive_variables(3:5) = reverse_vector( &
+            local_ghost_vector        (:)             , &
+            face_normal_vectors       (: , face_index  ), &
+            face_tangential1_vectors  (: , face_index  ), &
+            face_tangential2_vectors  (: , face_index  )  &
+        )
+        ghost_primitive_variables(6:7) = primitive_variables_set(6:7, inner_cell_index)
+    end function make_ghost_primitive_variables_slipwall
+
+    pure function make_ghost_primitive_variables_symmetric( &
+            primitive_variables_set   , &
+            face_normal_vectors       , &
+            face_tangential1_vectors  , &
+            face_tangential2_vectors  , &
+            face_index                , &
+            inner_cell_index              ) result(ghost_primitive_variables)
+        real   (real_kind), intent(in   ) :: primitive_variables_set    (:,:)
+        real   (real_kind), intent(in   ) :: face_normal_vectors        (:,:)
+        real   (real_kind), intent(in   ) :: face_tangential1_vectors   (:,:)
+        real   (real_kind), intent(in   ) :: face_tangential2_vectors   (:,:)
+        integer(int_kind ), intent(in   ) :: face_index
+        integer(int_kind ), intent(in   ) :: inner_cell_index
+        real   (real_kind) :: ghost_primitive_variables(7)
+        real   (real_kind) :: local_inner_vector(3), local_ghost_vector(3)
+        ghost_primitive_variables(1:2) = primitive_variables_set(1:2, inner_cell_index)
+        local_inner_vector(:) = rotate_vector(           &
+            primitive_variables_set   (3:5, inner_cell_index), &
+            face_normal_vectors       ( : , face_index      ), &
+            face_tangential1_vectors  ( : , face_index      ), &
+            face_tangential2_vectors  ( : , face_index      )  &
+        )
+        local_ghost_vector(1) = min(0.d0, local_inner_vector(1))
+        local_ghost_vector(2) = local_inner_vector(2)
+        local_ghost_vector(3) = local_inner_vector(3)
+        ghost_primitive_variables(3:5) = reverse_vector( &
+            local_ghost_vector        (:)             , &
+            face_normal_vectors       (: , face_index  ), &
+            face_tangential1_vectors  (: , face_index  ), &
+            face_tangential2_vectors  (: , face_index  )  &
+        )
+        ghost_primitive_variables(6:7) = primitive_variables_set(6:7, inner_cell_index)
+    end function make_ghost_primitive_variables_symmetric
+
+end module five_equation_model_boundary_condition_module

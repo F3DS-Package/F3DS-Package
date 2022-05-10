@@ -76,12 +76,7 @@ module class_nlgrid_parser
         procedure, private, pass(self) :: assign_lower_x_face
         procedure, private, pass(self) :: assign_lower_y_face
         procedure, private, pass(self) :: assign_lower_z_face
-        procedure, private, pass(self) :: assign_upper_x_boundary
-        procedure, private, pass(self) :: assign_upper_y_boundary
-        procedure, private, pass(self) :: assign_upper_z_boundary
-        procedure, private, pass(self) :: assign_lower_x_boundary
-        procedure, private, pass(self) :: assign_lower_y_boundary
-        procedure, private, pass(self) :: assign_lower_z_boundary
+        procedure, private, pass(self) :: assign_boundary
     end type nlgrid_parser
 
     contains
@@ -596,6 +591,10 @@ module class_nlgrid_parser
             call assign_upper_z_face(self, reference_cell_indexs, normal_vectors, tangential1_vectors, tangential2_vectors, positions, areas, face_index, i, self%jmax, self%kmax)
         end do
         call assign_upper_x_face(self, reference_cell_indexs, normal_vectors, tangential1_vectors, tangential2_vectors, positions, areas, face_index, self%imax, self%jmax, self%kmax)
+#ifdef _DEBUG
+        print *, "DEBUG: nlgrid parser:"
+        print *, "Faces (", face_index-1, "/", self%get_number_of_faces(), ") are assigned."
+#endif
     end subroutine get_faces
 
     subroutine assign_upper_z_face(self, reference_cell_indexs, normal_vectors, tangential1_vectors, tangential2_vectors, positions, areas, &
@@ -789,22 +788,22 @@ module class_nlgrid_parser
             + self%z_poss_cell_edge(i - 1, j - 1, k    ) &
             + self%z_poss_cell_edge(i - 1, j    , k - 1) &
             + self%z_poss_cell_edge(i - 1, j - 1, k - 1) )
-        reference_cell_indexs(1, face_index) = convert_structure_index_to_unstructure_index(i - 3, j, k,&
+        reference_cell_indexs(1, face_index) = convert_structure_index_to_unstructure_index(i + 2, j, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(2, face_index) = convert_structure_index_to_unstructure_index(i - 2, j, k,&
+        reference_cell_indexs(2, face_index) = convert_structure_index_to_unstructure_index(i + 1, j, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(3, face_index) = convert_structure_index_to_unstructure_index(i - 1, j, k,&
+        reference_cell_indexs(3, face_index) = convert_structure_index_to_unstructure_index(i + 0, j, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(4, face_index) = convert_structure_index_to_unstructure_index(i, j, k,&
+        reference_cell_indexs(4, face_index) = convert_structure_index_to_unstructure_index(i - 1, j, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(5, face_index) = convert_structure_index_to_unstructure_index(i + 1, j, k,&
+        reference_cell_indexs(5, face_index) = convert_structure_index_to_unstructure_index(i - 2, j, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(6, face_index) = convert_structure_index_to_unstructure_index(i + 2, j, k,&
+        reference_cell_indexs(6, face_index) = convert_structure_index_to_unstructure_index(i - 3, j, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
         face_index = face_index + 1
@@ -842,22 +841,22 @@ module class_nlgrid_parser
             + self%z_poss_cell_edge(i - 1, j - 1, k    ) &
             + self%z_poss_cell_edge(i    , j - 1, k - 1) &
             + self%z_poss_cell_edge(i - 1, j - 1, k - 1) )
-        reference_cell_indexs(1, face_index) = convert_structure_index_to_unstructure_index(i, j - 3, k,&
+        reference_cell_indexs(1, face_index) = convert_structure_index_to_unstructure_index(i, j + 2, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(2, face_index) = convert_structure_index_to_unstructure_index(i, j - 2, k,&
+        reference_cell_indexs(2, face_index) = convert_structure_index_to_unstructure_index(i, j + 1, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(3, face_index) = convert_structure_index_to_unstructure_index(i, j - 1, k,&
+        reference_cell_indexs(3, face_index) = convert_structure_index_to_unstructure_index(i, j + 0, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(4, face_index) = convert_structure_index_to_unstructure_index(i, j, k,&
+        reference_cell_indexs(4, face_index) = convert_structure_index_to_unstructure_index(i, j - 1, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(5, face_index) = convert_structure_index_to_unstructure_index(i, j + 1, k,&
+        reference_cell_indexs(5, face_index) = convert_structure_index_to_unstructure_index(i, j - 2, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(6, face_index) = convert_structure_index_to_unstructure_index(i, j + 2, k,&
+        reference_cell_indexs(6, face_index) = convert_structure_index_to_unstructure_index(i, j - 3, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
         face_index = face_index + 1
@@ -895,22 +894,22 @@ module class_nlgrid_parser
             + self%z_poss_cell_edge(i - 1, j    , k - 1) &
             + self%z_poss_cell_edge(i    , j - 1, k - 1) &
             + self%z_poss_cell_edge(i - 1, j - 1, k - 1) )
-        reference_cell_indexs(1, face_index) = convert_structure_index_to_unstructure_index(i, j, k - 3,&
+        reference_cell_indexs(1, face_index) = convert_structure_index_to_unstructure_index(i, j, k + 2,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(2, face_index) = convert_structure_index_to_unstructure_index(i, j, k - 2,&
+        reference_cell_indexs(2, face_index) = convert_structure_index_to_unstructure_index(i, j, k + 1,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(3, face_index) = convert_structure_index_to_unstructure_index(i, j, k - 1,&
+        reference_cell_indexs(3, face_index) = convert_structure_index_to_unstructure_index(i, j, k + 0,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(4, face_index) = convert_structure_index_to_unstructure_index(i, j, k,&
+        reference_cell_indexs(4, face_index) = convert_structure_index_to_unstructure_index(i, j, k - 1,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(5, face_index) = convert_structure_index_to_unstructure_index(i, j, k + 1,&
+        reference_cell_indexs(5, face_index) = convert_structure_index_to_unstructure_index(i, j, k - 2,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(6, face_index) = convert_structure_index_to_unstructure_index(i, j, k + 2,&
+        reference_cell_indexs(6, face_index) = convert_structure_index_to_unstructure_index(i, j, k - 3,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
         face_index = face_index + 1
@@ -918,12 +917,12 @@ module class_nlgrid_parser
 
     subroutine get_boundaries(self, outflow_face_indexs, slipwall_face_indexs, symmetric_face_indexs)
         class  (nlgrid_parser), intent(in   ) :: self
-        integer(int_kind     ), intent(inout) :: outflow_face_indexs  (:,:)
-        integer(int_kind     ), intent(inout) :: slipwall_face_indexs (:,:)
-        integer(int_kind     ), intent(inout) :: symmetric_face_indexs(:,:)
+        integer(int_kind     ), intent(inout) :: outflow_face_indexs  (:)
+        integer(int_kind     ), intent(inout) :: slipwall_face_indexs (:)
+        integer(int_kind     ), intent(inout) :: symmetric_face_indexs(:)
 
         integer(int_kind) :: i, j, k
-        integer(int_kind) :: outflow_index, slipwall_index, symmetric_index
+        integer(int_kind) :: outflow_index, slipwall_index, symmetric_index, face_index
 
         if(.not. self%parsed)then
             call call_error("'parse' method of nlgrid_parser is not called yet. But you call 'get_boundaries' method.")
@@ -933,289 +932,144 @@ module class_nlgrid_parser
         slipwall_index  = 1
         symmetric_index = 1
 
-        ! x+
-        if(self%x_puls_direction == outflow_boundary_type)then
-            do k = self%kmin, self%kmax, 1
-                do j = self%jmin, self%jmax, 1
-                    call assign_upper_x_boundary(self, outflow_face_indexs, outflow_index, self%imax, j, k)
-                end do
-            end do
-        else if(self%x_puls_direction == symmetric_boundary_type)then
-            do k = self%kmin, self%kmax, 1
-                do j = self%jmin, self%jmax, 1
-                    call assign_upper_x_boundary(self, symmetric_face_indexs, symmetric_index, self%imax, j, k)
-                end do
-            end do
-        else if(self%x_puls_direction == slipwall_boundary_type)then
-            do k = self%kmin, self%kmax, 1
-                do j = self%jmin, self%jmax, 1
-                    call assign_upper_x_boundary(self, slipwall_face_indexs, slipwall_index, self%imax, j, k)
-                end do
-            end do
-        end if
-        ! x-
-        if(self%x_muinus_direction == outflow_boundary_type)then
-            do k = self%kmin, self%kmax, 1
-                do j = self%jmin, self%jmax, 1
-                    call assign_lower_x_boundary(self, outflow_face_indexs, outflow_index, self%imin, j, k)
-                end do
-            end do
-        else if(self%x_muinus_direction == symmetric_boundary_type)then
-            do k = self%kmin, self%kmax, 1
-                do j = self%jmin, self%jmax, 1
-                    call assign_lower_x_boundary(self, symmetric_face_indexs, symmetric_index, self%imin, j, k)
-                end do
-            end do
-        else if(self%x_muinus_direction == slipwall_boundary_type)then
-            do k = self%kmin, self%kmax, 1
-                do j = self%jmin, self%jmax, 1
-                    call assign_lower_x_boundary(self, slipwall_face_indexs, slipwall_index, self%imin, j, k)
-                end do
-            end do
-        end if
-        ! y+
-        if(self%y_puls_direction == outflow_boundary_type)then
-            do k = self%kmin, self%kmax, 1
+        face_index = 1
+        do k = self%kmin, self%kmax - 1, 1
+            do j = self%jmin, self%jmax - 1, 1
                 do i = self%imin, self%imax, 1
-                    call assign_upper_y_boundary(self, outflow_face_indexs, outflow_index, i, self%jmax, k)
+                    if(i == self%imin)then
+                        if(self%x_muinus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
+                        if(self%x_muinus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
+                        if(self%x_muinus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                    end if
+                    face_index = face_index + 1
+                    if(j == self%jmin)then
+                        if(self%y_muinus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
+                        if(self%y_muinus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
+                        if(self%y_muinus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                    end if
+                    face_index = face_index + 1
+                    if(k == self%kmin)then
+                        if(self%z_muinus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
+                        if(self%z_muinus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
+                        if(self%z_muinus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                    end if
+                    face_index = face_index + 1
                 end do
+                ! # imax boundary cells
+                if(self%x_puls_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
+                if(self%x_puls_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
+                if(self%x_puls_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                face_index = face_index + 1
             end do
-        else if(self%y_puls_direction == symmetric_boundary_type)then
-            do k = self%kmin, self%kmax, 1
-                do i = self%imin, self%imax, 1
-                    call assign_upper_y_boundary(self, symmetric_face_indexs, symmetric_index, i, self%jmax, k)
-                end do
+            ! # jmax boundary cells
+            do i = self%imin, self%imax, 1
+                if(i == self%imin)then
+                    if(self%x_muinus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
+                    if(self%x_muinus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
+                    if(self%x_muinus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                end if
+                face_index = face_index + 1
+                if(self%jmin == self%jmax)then
+                    if(self%y_muinus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
+                    if(self%y_muinus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
+                    if(self%y_muinus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                end if
+                face_index = face_index + 1
+                if(k == self%kmin)then
+                    if(self%z_muinus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
+                    if(self%z_muinus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
+                    if(self%z_muinus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                end if
+                face_index = face_index + 1
+                if(self%y_puls_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
+                if(self%y_puls_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
+                if(self%y_puls_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                face_index = face_index + 1
             end do
-        else if(self%y_puls_direction == slipwall_boundary_type)then
-            do k = self%kmin, self%kmax, 1
-                do i = self%imin, self%imax, 1
-                    call assign_upper_y_boundary(self, slipwall_face_indexs, slipwall_index, i, self%jmax, k)
-                end do
+            if(self%x_puls_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
+            if(self%x_puls_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
+            if(self%x_puls_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+            face_index = face_index + 1
+        end do
+        ! # kmax boundary cells
+        do j = self%jmin, self%jmax - 1, 1
+            do i = self%imin, self%imax, 1
+                if(i == self%imin)then
+                    if(self%x_muinus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
+                    if(self%x_muinus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
+                    if(self%x_muinus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+                end if
+                face_index = face_index + 1
+                if(j == self%jmin)then
+                    if(self%y_muinus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
+                    if(self%y_muinus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
+                    if(self%y_muinus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+                end if
+                face_index = face_index + 1
+                if(self%kmin == self%kmax)then
+                    if(self%z_muinus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
+                    if(self%z_muinus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
+                    if(self%z_muinus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                end if
+                face_index = face_index + 1
+                if(self%z_puls_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
+                if(self%z_puls_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
+                if(self%z_puls_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+                face_index = face_index + 1
             end do
-        end if
-        ! y-
-        if(self%y_muinus_direction == outflow_boundary_type)then
-            do k = self%kmin, self%kmax, 1
-                do i = self%imin, self%imax, 1
-                    call assign_lower_y_boundary(self, outflow_face_indexs, outflow_index, i, self%jmin, k)
-                end do
-            end do
-        else if(self%y_muinus_direction == symmetric_boundary_type)then
-            do k = self%kmin, self%kmax, 1
-                do i = self%imin, self%imax, 1
-                    call assign_lower_y_boundary(self, symmetric_face_indexs, symmetric_index, i, self%jmin, k)
-                end do
-            end do
-        else if(self%y_muinus_direction == slipwall_boundary_type)then
-            do k = self%kmin, self%kmax, 1
-                do i = self%imin, self%imax, 1
-                    call assign_lower_y_boundary(self, slipwall_face_indexs, slipwall_index, i, self%jmin, k)
-                end do
-            end do
-        end if
-        ! z+
-        if(self%z_puls_direction == outflow_boundary_type)then
-            do j = self%jmin, self%jmax, 1
-                do i = self%imin, self%imax, 1
-                    call assign_upper_z_boundary(self, outflow_face_indexs, outflow_index, i, j, self%kmax)
-                end do
-            end do
-        else if(self%z_puls_direction == symmetric_boundary_type)then
-            do j = self%jmin, self%jmax, 1
-                do i = self%imin, self%imax, 1
-                    call assign_upper_z_boundary(self, symmetric_face_indexs, symmetric_index, i, j, self%kmax)
-                end do
-            end do
-        else if(self%z_puls_direction == slipwall_boundary_type)then
-            do j = self%jmin, self%jmax, 1
-                do i = self%imin, self%imax, 1
-                    call assign_upper_z_boundary(self, slipwall_face_indexs, slipwall_index, i, j, self%kmax)
-                end do
-            end do
-        end if
-        ! z-
-        if(self%z_muinus_direction == outflow_boundary_type)then
-            do j = self%jmin, self%jmax, 1
-                do i = self%imin, self%imax, 1
-                    call assign_lower_z_boundary(self, outflow_face_indexs, outflow_index, i, j, self%kmin)
-                end do
-            end do
-        else if(self%z_muinus_direction == symmetric_boundary_type)then
-            do j = self%jmin, self%jmax, 1
-                do i = self%imin, self%imax, 1
-                    call assign_lower_z_boundary(self, symmetric_face_indexs, symmetric_index, i, j, self%kmin)
-                end do
-            end do
-        else if(self%z_muinus_direction == slipwall_boundary_type)then
-            do j = self%jmin, self%jmax, 1
-                do i = self%imin, self%imax, 1
-                    call assign_lower_z_boundary(self, slipwall_face_indexs, slipwall_index, i, j, self%kmin)
-                end do
-            end do
-        end if
+            if(self%x_puls_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
+            if(self%x_puls_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
+            if(self%x_puls_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+            face_index = face_index + 1
+        end do
+        do i = self%imin, self%imax, 1
+            if(i == self%imin)then
+                if(self%x_muinus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
+                if(self%x_muinus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
+                if(self%x_muinus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+            end if
+            face_index = face_index + 1
+            if(self%jmin == self%jmax)then
+                if(self%y_muinus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
+                if(self%y_muinus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
+                if(self%y_muinus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+            end if
+            face_index = face_index + 1
+            if(self%kmin == self%kmax)then
+                if(self%z_muinus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
+                if(self%z_muinus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
+                if(self%z_muinus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+            end if
+            face_index = face_index + 1
+            if(self%y_puls_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
+            if(self%y_puls_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
+            if(self%y_puls_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+            face_index = face_index + 1
+            if(self%z_puls_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
+            if(self%z_puls_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
+            if(self%z_puls_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+            face_index = face_index + 1
+        end do
+        if(self%x_puls_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
+        if(self%x_puls_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
+        if(self%x_puls_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+#ifdef _DEBUG
+        print *, "DEBUG: nlgrid parser:"
+        print *, "Outflow-faces   (", outflow_index  -1, "/", self%get_number_of_outflow_faces  (), ") are assigned."
+        print *, "Symmetric-faces (", symmetric_index-1, "/", self%get_number_of_symmetric_faces(), ") are assigned."
+        print *, "Slipwall-faces  (", slipwall_index -1, "/", self%get_number_of_slipwall_faces (), ") are assigned."
+#endif
     end subroutine get_boundaries
 
-    subroutine assign_lower_x_boundary(self, boundary_reference, boundary_index, i, j, k)
-        class(nlgrid_parser), intent(in   ) :: self
-        integer(int_kind     ), intent(inout) :: boundary_reference(:,:)
+    subroutine assign_boundary(self, boundary_face_indexs, boundary_index, face_index)
+        class  (nlgrid_parser), intent(in   ) :: self
+        integer(int_kind     ), intent(inout) :: boundary_face_indexs(:)
         integer(int_kind     ), intent(inout) :: boundary_index
-        integer(int_kind     ), intent(in   ) :: i, j, k
+        integer(int_kind     ), intent(in   ) :: face_index
 
-        boundary_reference(1, boundary_index) = convert_structure_index_to_unstructure_index(i - 3, j, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(2, boundary_index) = convert_structure_index_to_unstructure_index(i - 2, j, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(3, boundary_index) = convert_structure_index_to_unstructure_index(i - 1, j, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(4, boundary_index) = convert_structure_index_to_unstructure_index(i, j, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(5, boundary_index) = convert_structure_index_to_unstructure_index(i + 1, j, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(6, boundary_index) = convert_structure_index_to_unstructure_index(i + 2, j, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
+        boundary_face_indexs(boundary_index) = face_index
         boundary_index = boundary_index + 1
-    end subroutine assign_lower_x_boundary
-
-    subroutine assign_lower_y_boundary(self, boundary_reference, boundary_index, i, j, k)
-        class(nlgrid_parser), intent(in   ) :: self
-        integer(int_kind     ), intent(inout) :: boundary_reference(:,:)
-        integer(int_kind     ), intent(inout) :: boundary_index
-        integer(int_kind     ), intent(in   ) :: i, j, k
-
-        boundary_reference(1, boundary_index) = convert_structure_index_to_unstructure_index(i, j - 3, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(2, boundary_index) = convert_structure_index_to_unstructure_index(i, j - 2, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(3, boundary_index) = convert_structure_index_to_unstructure_index(i, j - 1, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(4, boundary_index) = convert_structure_index_to_unstructure_index(i, j, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(5, boundary_index) = convert_structure_index_to_unstructure_index(i, j + 1, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(6, boundary_index) = convert_structure_index_to_unstructure_index(i, j + 2, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_index = boundary_index + 1
-    end subroutine assign_lower_y_boundary
-
-    subroutine assign_lower_z_boundary(self, boundary_reference, boundary_index, i, j, k)
-        class(nlgrid_parser), intent(in   ) :: self
-        integer(int_kind     ), intent(inout) :: boundary_reference(:,:)
-        integer(int_kind     ), intent(inout) :: boundary_index
-        integer(int_kind     ), intent(in   ) :: i, j, k
-
-        boundary_reference(1, boundary_index) = convert_structure_index_to_unstructure_index(i, j, k - 3,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(2, boundary_index) = convert_structure_index_to_unstructure_index(i, j, k - 2,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(3, boundary_index) = convert_structure_index_to_unstructure_index(i, j, k - 1,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(4, boundary_index) = convert_structure_index_to_unstructure_index(i, j, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(5, boundary_index) = convert_structure_index_to_unstructure_index(i, j, k + 1,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(6, boundary_index) = convert_structure_index_to_unstructure_index(i, j, k + 2,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_index = boundary_index + 1
-    end subroutine assign_lower_z_boundary
-
-    subroutine assign_upper_x_boundary(self, boundary_reference, boundary_index, i, j, k)
-        class(nlgrid_parser), intent(in   ) :: self
-        integer(int_kind     ), intent(inout) :: boundary_reference(:,:)
-        integer(int_kind     ), intent(inout) :: boundary_index
-        integer(int_kind     ), intent(in   ) :: i, j, k
-
-        boundary_reference(1, boundary_index) = convert_structure_index_to_unstructure_index(i - 2, j, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(2, boundary_index) = convert_structure_index_to_unstructure_index(i - 1, j, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(3, boundary_index) = convert_structure_index_to_unstructure_index(i, j, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(4, boundary_index) = convert_structure_index_to_unstructure_index(i + 1, j, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(5, boundary_index) = convert_structure_index_to_unstructure_index(i + 2, j, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(6, boundary_index) = convert_structure_index_to_unstructure_index(i + 3, j, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_index = boundary_index + 1
-    end subroutine assign_upper_x_boundary
-
-    subroutine assign_upper_y_boundary(self, boundary_reference, boundary_index, i, j, k)
-        class(nlgrid_parser), intent(in   ) :: self
-        integer(int_kind     ), intent(inout) :: boundary_reference(:,:)
-        integer(int_kind     ), intent(inout) :: boundary_index
-        integer(int_kind     ), intent(in   ) :: i, j, k
-
-        boundary_reference(1, boundary_index) = convert_structure_index_to_unstructure_index(i, j - 2, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(2, boundary_index) = convert_structure_index_to_unstructure_index(i, j - 1, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(3, boundary_index) = convert_structure_index_to_unstructure_index(i, j, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(4, boundary_index) = convert_structure_index_to_unstructure_index(i, j + 1, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(5, boundary_index) = convert_structure_index_to_unstructure_index(i, j + 2, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(6, boundary_index) = convert_structure_index_to_unstructure_index(i, j + 3, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_index = boundary_index + 1
-    end subroutine assign_upper_y_boundary
-
-    subroutine assign_upper_z_boundary(self, boundary_reference, boundary_index, i, j, k)
-        class(nlgrid_parser), intent(in   ) :: self
-        integer(int_kind     ), intent(inout) :: boundary_reference(:,:)
-        integer(int_kind     ), intent(inout) :: boundary_index
-        integer(int_kind     ), intent(in   ) :: i, j, k
-
-        boundary_reference(1, boundary_index) = convert_structure_index_to_unstructure_index(i, j, k - 2,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(2, boundary_index) = convert_structure_index_to_unstructure_index(i, j, k - 1,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(3, boundary_index) = convert_structure_index_to_unstructure_index(i, j, k,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(4, boundary_index) = convert_structure_index_to_unstructure_index(i, j, k + 1,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(5, boundary_index) = convert_structure_index_to_unstructure_index(i, j, k + 2,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_reference(6, boundary_index) = convert_structure_index_to_unstructure_index(i, j, k + 3,&
-            self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
-            self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        boundary_index = boundary_index + 1
-    end subroutine assign_upper_z_boundary
+    end subroutine assign_boundary
 
     subroutine get_cell_geometries(self, points, cell_geometries)
         class  (nlgrid_parser), intent(in   ) :: self

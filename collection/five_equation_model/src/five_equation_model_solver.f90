@@ -19,6 +19,8 @@ program five_eq_model_solver
     ! Result file output
     use penf
     use vtk_fortran, only : vtk_file
+    ! BC
+    use five_equation_model_boundary_condition_module
 
     implicit none
 
@@ -53,7 +55,7 @@ program five_eq_model_solver
     ! get grid data
     call a_grid_parser%get_cells          (cells_centor_position, cells_volume, cells_is_real_cell)
     call a_grid_parser%get_faces          (faces_reference_cell_index, faces_normal_vector, faces_tangential1_vector, faces_tangential2_vector, faces_position, faces_area)
-    call a_grid_parser%get_boundaries     (outflow_face_indexs, slipwall_face_indexs, symetric_face_indexs)
+    call a_grid_parser%get_boundaries     (outflow_face_indexs, slipwall_face_indexs, symmetric_face_indexs)
     call a_grid_parser%get_cell_geometries(points, cell_geometries)
     ! close file
     call a_grid_parser%close()
@@ -113,8 +115,15 @@ program five_eq_model_solver
             faces_tangential2_vector                 , & ! <-
             faces_position                           , & ! <-
             faces_area                               , & ! <-
+            outflow_face_indexs                      , & ! <-
+            slipwall_face_indexs                     , & ! <-
+            symmetric_face_indexs                    , & ! <-
             get_number_of_cells()                    , & ! <-
             get_number_of_faces()                    , & ! <-
+            get_number_of_ghost_cells()              , & ! <-
+            get_number_of_outflow_faces()            , &
+            get_number_of_slipwall_faces()           , &
+            get_number_of_symmetric_faces()          , &
             time_increment                           , &
             reconstruct_weno5                        , &
             compute_space_element_five_equation_model, &
@@ -122,7 +131,8 @@ program five_eq_model_solver
             compute_pressure_mixture_stiffened_eos   , &
             compute_soundspeed_mixture_stiffened_eos , &
             primitive_to_conservative                , &
-            conservative_to_primitive                  &
+            conservative_to_primitive                , &
+            five_equation_model_set_boundary_condition &
         )
 
         if (.true.) then

@@ -19,8 +19,9 @@ module faces_module
     ! (cell index) ->  |    1    |    2    |    3    |    4    |    5    |    6    |
     !                  *---------*---------*---------*---------*---------*---------*
     !
-    !                                                |
-    !                                       (target face index)
+    !   (inner cells) ______|_________|_________|    |    |_________|_________|________ (ghost cells)
+    !                                                |             *If fase is boundary, ghost cells are stored right-side.
+    !                                         (boundary face)
     !
     ! Elm. 2) -Number of ghost cells + 1: Number of ghost cells , Local cell index
     ! Elm. 3) 1 : Number of faces                               , Face number
