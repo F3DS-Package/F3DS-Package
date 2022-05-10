@@ -37,7 +37,7 @@ program five_eq_model_solver
     character(16)               :: vtk_filename
     integer  (I4P)              :: n_output_cells, n_output_points, n_cell_points, offset_incriment
     real     (R4P), allocatable :: vtk_x(:), vtk_y(:), vtk_z(:)
-    real     (R4P), allocatable :: vtk_scolar(:)
+    real     (R4P), allocatable :: vtk_pressure(:), vtk_density(:), vtk_volume_fruction(:), vtk_internal_enargy(:)
     integer  (I1P), allocatable :: vtk_cell_type(:)
     integer  (I4P), allocatable :: vtk_offset(:), vtk_connect(:)
 
@@ -75,7 +75,10 @@ program five_eq_model_solver
     do index = 1, get_number_of_cells(), 1
         if(cells_is_real_cell(index)) n_output_cells = n_output_cells + 1
     end do
-    allocate(vtk_scolar   (n_output_cells    ))
+    allocate(vtk_pressure       (n_output_cells    ))
+    allocate(vtk_density        (n_output_cells    ))
+    allocate(vtk_volume_fruction(n_output_cells    ))
+    allocate(vtk_internal_enargy(n_output_cells    ))
     allocate(vtk_cell_type(n_output_cells    ))
     allocate(vtk_offset   (n_output_cells    ))
     allocate(vtk_connect  (n_output_cells * 8))
@@ -103,7 +106,7 @@ program five_eq_model_solver
     end do
 
     call initialize_second_order_tvd_rk(conservative_variables_set)
-    call initialize_mixture_stiffened_eos(1.4d0, 6.12d0, 0.d0, 3.43d8)
+    call initialize_mixture_stiffened_eos(1.4d0, 6.12d0, 0.d0, 2.450d3)
 
     ! solver timestepping loop
     do timestep = 0, max_timestep, 1
@@ -156,12 +159,18 @@ program five_eq_model_solver
                         rho2 => primitive_variables_set(2, index), &
                         ie   => primitive_variables_set(6, index), &
                         z1   => primitive_variables_set(7, index))
-                        vtk_scolar(vtk_index) = compute_pressure_mixture_stiffened_eos(ie, rho1 + rho2, z1)
+                        vtk_pressure       (vtk_index) = compute_pressure_mixture_stiffened_eos(ie, rho1 + rho2, z1)
+                        vtk_density        (vtk_index) = rho1 + rho2
+                        vtk_volume_fruction(vtk_index) = z1
+                        vtk_internal_enargy(vtk_index) =ie
                     end associate
                     vtk_index = vtk_index + 1
                 end if
             end do
-            vtk_error = a_vtk_file%xml_writer%write_dataarray   (data_name='pressure', x=vtk_scolar)
+            vtk_error = a_vtk_file%xml_writer%write_dataarray   (data_name='pressure', x=vtk_pressure)
+            vtk_error = a_vtk_file%xml_writer%write_dataarray   (data_name='density', x=vtk_density)
+            vtk_error = a_vtk_file%xml_writer%write_dataarray   (data_name='volume fruction', x=vtk_volume_fruction)
+            vtk_error = a_vtk_file%xml_writer%write_dataarray   (data_name='internal enargy', x=vtk_internal_enargy)
             vtk_error = a_vtk_file%xml_writer%write_dataarray   (location='cell', action='close')
             vtk_error = a_vtk_file%xml_writer%write_piece()
             vtk_error = a_vtk_file%finalize()
