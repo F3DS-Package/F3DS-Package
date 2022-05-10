@@ -15,6 +15,6 @@ module grid_utils_module
         integer(int_kind), intent(in) :: imax, jmax, kmax
         integer(int_kind)             :: n
 
-        n = (i - imin) + (j - jmin) * (imax - imin) + (k - kmin) * (imax - imin) * (jmax - jmin) + 1
+        n = (i - imin) + (j - jmin) * (imax - imin + 1) + (k - kmin) * (imax - imin + 1) * (jmax - jmin + 1) + 1
     end function convert_structure_index_to_unstructure_index
 end module grid_utils_module
