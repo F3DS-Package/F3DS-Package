@@ -45,7 +45,7 @@ module mixture_stiffened_eos_module
         real(real_kind), intent(in) :: volume_fruction
         real(real_kind)             :: soundspeed
 
-        soundspeed = specific_internal_energy / compute_gamma(volume_fruction)
+        soundspeed = sqrt(specific_internal_energy / compute_gamma(volume_fruction))
     end function compute_soundspeed_mixture_stiffened_eos
 
     pure function compute_gamma(volume_fruction) result(g)
