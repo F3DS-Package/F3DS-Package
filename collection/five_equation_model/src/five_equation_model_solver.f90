@@ -8,7 +8,7 @@ program five_eq_model_solver
     use five_equation_model_variables_module
     ! Scheme
     use second_order_tvd_rk_module
-    use weno5_module
+    use jiang_weno5_module
     use five_equation_space_model_module
     use five_equation_model_hllc_module
     ! Model
@@ -40,7 +40,7 @@ program five_eq_model_solver
     integer  (I1P), allocatable :: vtk_cell_type(:)
     integer  (I4P), allocatable :: vtk_offset(:), vtk_connect(:)
 
-    time_increment = 1.d0
+    time_increment = 1.d-4
     max_timestep   = 5
 
     ! parse grid file
@@ -158,7 +158,7 @@ program five_eq_model_solver
             get_number_of_slipwall_faces()           , &
             get_number_of_symmetric_faces()          , &
             time_increment                           , &
-            reconstruct_weno5                        , &
+            reconstruct_jiang_weno5                  , &
             compute_space_element_five_equation_model, &
             compute_flux_five_equation_model_hllc    , &
             compute_pressure_mixture_stiffened_eos   , &

@@ -95,7 +95,7 @@ module five_equation_space_model_module
         real(real_kind) :: lhc_soundspeed, lhc_pressure, lhc_density, lhc_main_velocity
         real(real_kind) :: rhc_soundspeed, rhc_pressure, rhc_density, rhc_main_velocity
         ! # for computing (- alpha1 - K) * div(u) using HLLC
-        real(real_kind) :: lhc_rho, rhc_rho
+        real(real_kind) :: lhc_rho1, rhc_rho1, lhc_rho2, rhc_rho2
         real(real_kind) :: ave_vel, ave_c
         ! ## HLLC wave speeds
         real(real_kind) :: s_mid
@@ -106,8 +106,8 @@ module five_equation_space_model_module
         ! ## 
         real(real_kind) :: numerical_velocity(3)
         ! ## soundspeed (c) in each cells
-        real(real_kind) :: lhc_c1, lhc_c2
-        real(real_kind) :: rhc_c1, rhc_c2
+        real(real_kind) :: lhc_c1, lhc_c2, lhc_wood_c
+        real(real_kind) :: rhc_c1, rhc_c2, rhc_wood_c
         ! ## kapila`s factor
         real(real_kind) :: lhc_kapila, rhc_kapila
 
@@ -204,14 +204,14 @@ module five_equation_space_model_module
         )
 
         ! # integrate nonviscosity-flux
-        element_lef_and_right_side(:, 1) = (-1.d0 / leftside_cell_volume ) * nonviscosity_flux * face_area
-        element_lef_and_right_side(:, 2) = (+1.d0 / rightside_cell_volume) * nonviscosity_flux * face_area
+        element_lef_and_right_side(:, 1) = (-1.d0 / leftside_cell_volume ) * nonviscosity_flux(:) * face_area
+        element_lef_and_right_side(:, 2) = (+1.d0 / rightside_cell_volume) * nonviscosity_flux(:) * face_area
 
         ! # Compute (- alpha1 - K) * div(u) according to [Schmidmayer 2020, JCP] using HLLC.
         ! # If you choice other Riemann solver, term (- alpha1 - K) * div(u) is computed by HLLC forcely. Sorry.
         associate(                                               &
-            lhc_rho1    => local_coordinate_lhc_primitive(1)   , &
-            lhc_rho2    => local_coordinate_lhc_primitive(2)   , &
+            lhc_rho1_z1 => local_coordinate_lhc_primitive(1)   , &
+            lhc_rho2_z2 => local_coordinate_lhc_primitive(2)   , &
             lhc_u       => local_coordinate_lhc_primitive(3)   , &
             lhc_v       => local_coordinate_lhc_primitive(4)   , &
             lhc_w       => local_coordinate_lhc_primitive(5)   , &
@@ -219,8 +219,8 @@ module five_equation_space_model_module
             lhc_rho     => lhc_density                         , &
             lhc_p       => lhc_pressure                        , &
             lhc_c       => lhc_soundspeed                      , &
-            rhc_rho1    => local_coordinate_rhc_primitive(1)   , &
-            rhc_rho2    => local_coordinate_rhc_primitive(2)   , &
+            rhc_rho1_z1 => local_coordinate_rhc_primitive(1)   , &
+            rhc_rho2_z2 => local_coordinate_rhc_primitive(2)   , &
             rhc_u       => local_coordinate_rhc_primitive(3)   , &
             rhc_v       => local_coordinate_rhc_primitive(4)   , &
             rhc_w       => local_coordinate_rhc_primitive(5)   , &
@@ -254,13 +254,41 @@ module five_equation_space_model_module
                 face_tangential2_vector           &
             )
         ! ## Compute kapira
-            lhc_kapila = (lhc_rho2 * lhc_c2**2 - lhc_rho1 * lhc_c1**2) &
-                / ((lhc_rho2 * lhc_c2**2) / (1.d0 - lhc_z1 + 1.d-8) + (lhc_rho1 * lhc_c1**2) / (lhc_z1 + 1.d-8))
-            rhc_kapila = (rhc_rho2 * rhc_c2**2 - rhc_rho1 * rhc_c1**2) &
-                / ((rhc_rho2 * rhc_c2**2) / (1.d0 - rhc_z1 + 1.d-8) + (rhc_rho1 * rhc_c1**2) / (rhc_z1 + 1.d-8))
+            if(lhc_z1 < 0.d0 + 1.d-8)then
+                lhc_rho1 = 0.d0
+                lhc_rho2 = lhc_rho2_z2
+                lhc_wood_c = 1.d0 / (lhc_rho2 * lhc_c2**2)
+                lhc_kapila = (lhc_rho2 * lhc_c2**2) * lhc_wood_c
+            else if (1.d0 - 1.d-8 < lhc_z1)then
+                lhc_rho1 = lhc_rho1_z1
+                lhc_rho2 = 0.d0
+                lhc_wood_c = lhc_z1 / (lhc_rho1 * lhc_c1**2)
+                lhc_kapila = (lhc_rho1 * lhc_c1**2) * lhc_wood_c
+            else
+                lhc_rho1 = lhc_rho1_z1 / lhc_z1
+                lhc_rho2 = lhc_rho2_z2 / (1.d0 - lhc_z1)
+                lhc_wood_c = lhc_z1 / (lhc_rho1 * lhc_c1**2) + (1.d0 - lhc_z1) / (lhc_rho2 * lhc_c2**2)
+                lhc_kapila = (lhc_rho2 * lhc_c2**2 - lhc_rho1 * lhc_c1**2) * lhc_wood_c
+            endif
+            if(rhc_z1 < 0.d0 + 1.d-8)then
+                rhc_rho1 = 0.d0
+                rhc_rho2 = rhc_rho2_z2
+                rhc_wood_c = 1.d0 / (rhc_rho2 * rhc_c2**2)
+                rhc_kapila = (rhc_rho2 * rhc_c2**2) * rhc_wood_c
+            else if (1.d0 - 1.d-8 < rhc_z1)then
+                rhc_rho1 = rhc_rho1_z1
+                rhc_rho2 = 0.d0
+                rhc_wood_c = rhc_z1 / (rhc_rho1 * rhc_c1**2)
+                rhc_kapila = (rhc_rho1 * rhc_c1**2) * rhc_wood_c
+            else
+                rhc_rho1 = rhc_rho1_z1 / rhc_z1
+                rhc_rho2 = rhc_rho2_z2 / (1.d0 - rhc_z1)
+                rhc_wood_c = rhc_z1 / (rhc_rho1 * rhc_c1**2) + (1.d0 - rhc_z1) / (rhc_rho2 * rhc_c2**2)
+                rhc_kapila = (rhc_rho2 * rhc_c2**2 - rhc_rho1 * rhc_c1**2) * rhc_wood_c
+            endif
         ! ## Integrate (- alpha1 - K) * div(u)
-            element_lef_and_right_side(7, 1) = (-1.d0 / leftside_cell_volume ) * (-lhc_z1 - lhc_kapila) * multiply_vector(numerical_velocity, face_normal_vector) * face_area
-            element_lef_and_right_side(7, 2) = (+1.d0 / rightside_cell_volume) * (-rhc_z1 - rhc_kapila) * multiply_vector(numerical_velocity, face_normal_vector) * face_area
+            element_lef_and_right_side(7, 1) = (1.d0 / leftside_cell_volume ) * (-lhc_z1 - lhc_kapila) * multiply_vector(numerical_velocity, face_normal_vector) * face_area
+            element_lef_and_right_side(7, 2) = (1.d0 / rightside_cell_volume) * (-rhc_z1 - rhc_kapila) * multiply_vector(numerical_velocity, face_normal_vector) * face_area
         end associate
     end function compute_space_element_five_equation_model
 end module five_equation_space_model_module

@@ -426,6 +426,8 @@ module second_order_tvd_rk_module
         residual_set(:,:) = 0.d0
 
         do j = 1, n_faces, 1
+            lhc_index = reference_cell_indexs_set(n_ghost_cells+0, j)
+            rhc_index = reference_cell_indexs_set(n_ghost_cells+1, j)
             element_lef_and_right_side = reconstruction_function( &
                 primitive_variables_set            , &
                 cell_centor_positions              , &
@@ -444,22 +446,15 @@ module second_order_tvd_rk_module
                 primitive_to_conservative_function , &
                 integrated_element_function          &
             )
-            lhc_index = reference_cell_indexs_set(n_ghost_cells+0, j)
-            rhc_index = reference_cell_indexs_set(n_ghost_cells+1, j)
-            if((lhc_index == 162840) .or. (rhc_index == 162840))then
-                lhc_index = 162840
-            end if
             residual_set(:, lhc_index) = residual_set(:, lhc_index) + element_lef_and_right_side(:, 1)
             residual_set(:, rhc_index) = residual_set(:, rhc_index) + element_lef_and_right_side(:, 2)
         end do
-
 
         do i = 1, n_cells, 1
             stage1_conservative_variables_set(:, i) = conservative_variables_set(:, i) &
                 + time_increment * residual_set(:, i)
             primitive_variables_set(:, i) = conservative_to_primitive_function(stage1_conservative_variables_set(:, i))
         end do
-
 
         err = set_boundary_condition_function( &
             primitive_variables_set   , &
@@ -478,6 +473,8 @@ module second_order_tvd_rk_module
         residual_set(:,:) = 0.d0
 
         do j = 1, n_faces, 1
+            lhc_index = reference_cell_indexs_set(n_ghost_cells+0, j)
+            rhc_index = reference_cell_indexs_set(n_ghost_cells+1, j)
             element_lef_and_right_side = reconstruction_function( &
                 primitive_variables_set            , &
                 cell_centor_positions              , &
@@ -496,15 +493,12 @@ module second_order_tvd_rk_module
                 primitive_to_conservative_function , &
                 integrated_element_function          &
             )
-            lhc_index = reference_cell_indexs_set(n_ghost_cells+0, j)
-            rhc_index = reference_cell_indexs_set(n_ghost_cells+1, j)
             residual_set(:, lhc_index) = residual_set(:, lhc_index) + element_lef_and_right_side(:, 1)
             residual_set(:, rhc_index) = residual_set(:, rhc_index) + element_lef_and_right_side(:, 2)
         end do
 
         do i = 1, n_cells, 1
-            conservative_variables_set(:, i) = conservative_variables_set(:, i) &
-                + 0.5d0 * (stage1_conservative_variables_set(:, i) + time_increment * residual_set(:, i))
+            conservative_variables_set(:, i) = 0.5d0 * (conservative_variables_set(:, i) + stage1_conservative_variables_set(:, i) + time_increment * residual_set(:, i))
             primitive_variables_set(:, i) = conservative_to_primitive_function(conservative_variables_set(:, i))
         end do
 
