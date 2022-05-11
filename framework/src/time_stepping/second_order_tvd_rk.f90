@@ -423,6 +423,7 @@ module second_order_tvd_rk_module
             n_symmetric_faces         , &
             n_ghost_cells               &
         )
+        residual_set(:,:) = 0.d0
 
         do j = 1, n_faces, 1
             element_lef_and_right_side = reconstruction_function( &
@@ -445,11 +446,13 @@ module second_order_tvd_rk_module
             )
             lhc_index = reference_cell_indexs_set(n_ghost_cells+0, j)
             rhc_index = reference_cell_indexs_set(n_ghost_cells+1, j)
+            if((lhc_index == 162840) .or. (rhc_index == 162840))then
+                lhc_index = 162840
+            end if
             residual_set(:, lhc_index) = residual_set(:, lhc_index) + element_lef_and_right_side(:, 1)
             residual_set(:, rhc_index) = residual_set(:, rhc_index) + element_lef_and_right_side(:, 2)
         end do
 
-        print *, "1st Stage: In: ", primitive_variables_set(:, 24907)
 
         do i = 1, n_cells, 1
             stage1_conservative_variables_set(:, i) = conservative_variables_set(:, i) &
@@ -457,8 +460,6 @@ module second_order_tvd_rk_module
             primitive_variables_set(:, i) = conservative_to_primitive_function(stage1_conservative_variables_set(:, i))
         end do
 
-        print *, "1st Stage: Res: ", residual_set(:, 24907)
-        print *, "1st Stage: Out: ", primitive_variables_set(:, 24907)
 
         err = set_boundary_condition_function( &
             primitive_variables_set   , &
@@ -474,6 +475,7 @@ module second_order_tvd_rk_module
             n_symmetric_faces         , &
             n_ghost_cells               &
         )
+        residual_set(:,:) = 0.d0
 
         do j = 1, n_faces, 1
             element_lef_and_right_side = reconstruction_function( &

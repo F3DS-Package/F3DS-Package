@@ -204,8 +204,8 @@ module five_equation_space_model_module
         )
 
         ! # integrate nonviscosity-flux
-        element_lef_and_right_side(:, 1) = (+1.d0 / leftside_cell_volume ) * nonviscosity_flux * face_area
-        element_lef_and_right_side(:, 2) = (-1.d0 / rightside_cell_volume) * nonviscosity_flux * face_area
+        element_lef_and_right_side(:, 1) = (-1.d0 / leftside_cell_volume ) * nonviscosity_flux * face_area
+        element_lef_and_right_side(:, 2) = (+1.d0 / rightside_cell_volume) * nonviscosity_flux * face_area
 
         ! # Compute (- alpha1 - K) * div(u) according to [Schmidmayer 2020, JCP] using HLLC.
         ! # If you choice other Riemann solver, term (- alpha1 - K) * div(u) is computed by HLLC forcely. Sorry.
@@ -259,8 +259,8 @@ module five_equation_space_model_module
             rhc_kapila = (rhc_rho2 * rhc_c2**2 - rhc_rho1 * rhc_c1**2) &
                 / ((rhc_rho2 * rhc_c2**2) / (1.d0 - rhc_z1 + 1.d-8) + (rhc_rho1 * rhc_c1**2) / (rhc_z1 + 1.d-8))
         ! ## Integrate (- alpha1 - K) * div(u)
-            element_lef_and_right_side(7, 1) = ( 1.d0 / leftside_cell_volume ) * (-lhc_z1 - lhc_kapila) * multiply_vector(numerical_velocity, face_normal_vector) * face_area
-            element_lef_and_right_side(7, 2) = (-1.d0 / rightside_cell_volume) * (-rhc_z1 - rhc_kapila) * multiply_vector(numerical_velocity, face_normal_vector) * face_area
+            element_lef_and_right_side(7, 1) = (-1.d0 / leftside_cell_volume ) * (-lhc_z1 - lhc_kapila) * multiply_vector(numerical_velocity, face_normal_vector) * face_area
+            element_lef_and_right_side(7, 2) = (+1.d0 / rightside_cell_volume) * (-rhc_z1 - rhc_kapila) * multiply_vector(numerical_velocity, face_normal_vector) * face_area
         end associate
     end function compute_space_element_five_equation_model
 end module five_equation_space_model_module

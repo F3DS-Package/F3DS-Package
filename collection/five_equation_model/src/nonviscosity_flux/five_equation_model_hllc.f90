@@ -113,7 +113,7 @@ module five_equation_model_hllc_module
             c_star_left = (s_left - lhc_u) / (s_left - s_mid)
             q_star_left(1) = c_star_left * lhc_rho1_z1
             q_star_left(2) = c_star_left * lhc_rho2_z2
-            q_star_left(3) = c_star_left * lhc_rho * s_left
+            q_star_left(3) = c_star_left * lhc_rho * s_mid
             q_star_left(4) = c_star_left * lhc_rho_v
             q_star_left(5) = c_star_left * lhc_rho_w
             q_star_left(6) = c_star_left * (lhc_e + (s_mid - lhc_u) * (lhc_rho * s_mid + lhc_p / (s_left - lhc_u)))
@@ -122,7 +122,7 @@ module five_equation_model_hllc_module
             c_star_right = (s_right - rhc_u) / (s_right - s_mid)
             q_star_right(1) = c_star_right * rhc_rho1_z1
             q_star_right(2) = c_star_right * rhc_rho2_z2
-            q_star_right(3) = c_star_right * rhc_rho * s_right
+            q_star_right(3) = c_star_right * rhc_rho * s_mid
             q_star_right(4) = c_star_right * rhc_rho_v
             q_star_right(5) = c_star_right * rhc_rho_w
             q_star_right(6) = c_star_right * (rhc_e + (s_mid - rhc_u) * (rhc_rho * s_mid + rhc_p / (s_right - rhc_u)))

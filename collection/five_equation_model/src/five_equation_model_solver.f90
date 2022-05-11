@@ -36,8 +36,7 @@ program five_eq_model_solver
     integer  (int_kind )        :: file_output_counter, vtk_index, cell_point_index
     character(16)               :: vtk_filename
     integer  (I4P)              :: n_output_cells, n_output_points, n_cell_points, offset_incriment
-    real     (R4P), allocatable :: vtk_x(:), vtk_y(:), vtk_z(:)
-    real     (R4P), allocatable :: vtk_pressure(:), vtk_density(:), vtk_volume_fruction(:), vtk_internal_enargy(:), vtk_cell_id(:)
+    real     (R4P), allocatable :: vtk_pressure(:), vtk_density(:), vtk_cell_id(:)
     integer  (I1P), allocatable :: vtk_cell_type(:)
     integer  (I4P), allocatable :: vtk_offset(:), vtk_connect(:)
 
@@ -77,8 +76,6 @@ program five_eq_model_solver
     end do
     allocate(vtk_pressure       (n_output_cells    ))
     allocate(vtk_density        (n_output_cells    ))
-    allocate(vtk_volume_fruction(n_output_cells    ))
-    allocate(vtk_internal_enargy(n_output_cells    ))
     allocate(vtk_cell_id        (n_output_cells    ))
     allocate(vtk_cell_type(n_output_cells    ))
     allocate(vtk_offset   (n_output_cells    ))
@@ -97,14 +94,6 @@ program five_eq_model_solver
         end if
     end do
     n_output_points = get_number_of_points()
-    allocate(vtk_x(n_output_points))
-    allocate(vtk_y(n_output_points))
-    allocate(vtk_z(n_output_points))
-    do index = 1, get_number_of_points(), 1
-        vtk_x(index) = points(1, index)
-        vtk_y(index) = points(2, index)
-        vtk_z(index) = points(3, index)
-    end do
 
     call initialize_second_order_tvd_rk(conservative_variables_set)
     call initialize_mixture_stiffened_eos(1.4d0, 6.12d0, 0.d0, 2.450d3)
@@ -116,7 +105,7 @@ program five_eq_model_solver
             print *, "write vtk "//vtk_filename//"..."
             vtk_error = a_vtk_file%initialize                   (format="binary", filename=vtk_filename, mesh_topology="UnstructuredGrid")
             vtk_error = a_vtk_file%xml_writer%write_piece       (np=n_output_points, nc=n_output_cells)
-            vtk_error = a_vtk_file%xml_writer%write_geo         (np=n_output_points, nc=n_output_cells, x=vtk_x, y=vtk_y, z=vtk_z)
+            vtk_error = a_vtk_file%xml_writer%write_geo         (np=n_output_points, nc=n_output_cells, x=points(1, :), y=points(2, :), z=points(3, :))
             vtk_error = a_vtk_file%xml_writer%write_connectivity(nc=n_output_cells, connectivity=vtk_connect, offset=vtk_offset, cell_type=vtk_cell_type)
             vtk_error = a_vtk_file%xml_writer%write_dataarray   (location='cell', action='open')
             vtk_index = 1
@@ -129,19 +118,18 @@ program five_eq_model_solver
                         z1     => primitive_variables_set(7, index))
                         vtk_pressure       (vtk_index) = compute_pressure_mixture_stiffened_eos(ie, rho1z1 + rho2z2, z1)
                         vtk_density        (vtk_index) = rho1z1 + rho2z2
-                        vtk_volume_fruction(vtk_index) = z1
-                        vtk_internal_enargy(vtk_index) = ie
                         vtk_cell_id        (vtk_index) = index
                     end associate
                     vtk_index = vtk_index + 1
                 end if
             end do
-            vtk_error = a_vtk_file%xml_writer%write_dataarray   (data_name='pressure', x=vtk_pressure)
-            vtk_error = a_vtk_file%xml_writer%write_dataarray   (data_name='density', x=vtk_density)
-            vtk_error = a_vtk_file%xml_writer%write_dataarray   (data_name='volume fruction', x=vtk_volume_fruction)
-            vtk_error = a_vtk_file%xml_writer%write_dataarray   (data_name='internal enargy', x=vtk_internal_enargy)
-            vtk_error = a_vtk_file%xml_writer%write_dataarray   (data_name='cell id', x=vtk_cell_id)
-            vtk_error = a_vtk_file%xml_writer%write_dataarray   (location='cell', action='close')
+            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='pressure', x=vtk_pressure)
+            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='density', x=vtk_density)
+            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='velocity', x=pack(primitive_variables_set(3, :), mask=cells_is_real_cell), y=pack(primitive_variables_set(4, :), mask=cells_is_real_cell), z=pack(primitive_variables_set(5, :), mask=cells_is_real_cell))
+            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='internal enargy', x=pack(primitive_variables_set(6, :), mask=cells_is_real_cell))
+            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='volume fruction', x=pack(primitive_variables_set(7, :), mask=cells_is_real_cell))
+            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='cell id', x=vtk_cell_id)
+            vtk_error = a_vtk_file%xml_writer%write_dataarray(location='cell', action='close')
             vtk_error = a_vtk_file%xml_writer%write_piece()
             vtk_error = a_vtk_file%finalize()
             file_output_counter = file_output_counter + 1
