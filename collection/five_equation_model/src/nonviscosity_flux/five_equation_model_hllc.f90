@@ -86,10 +86,10 @@ module five_equation_model_hllc_module
             ave_vel = 0.5d0 * (lhc_u + rhc_u)
             ave_c   = 0.5d0 * (lhc_c + rhc_c)
 
-            s_muinus = min(0.d0, lhc_c)
-            s_puls   = max(0.d0, rhc_c)
             s_left   = min(ave_vel - ave_c, lhc_u - lhc_c)
             s_right  = max(ave_vel + ave_c, rhc_u + rhc_c)
+            s_muinus = min(0.d0, s_left)
+            s_puls   = max(0.d0, s_right)
             s_mid    = (rhc_p - lhc_p + lhc_rho * lhc_u * (s_left  - lhc_u)  &
                                       - rhc_rho * rhc_u * (s_right - rhc_u)) &
                      / (lhc_rho * (s_left  - lhc_u) - rhc_rho * (s_right - rhc_u))
@@ -116,7 +116,7 @@ module five_equation_model_hllc_module
             q_star_left(3) = c_star_left * lhc_rho * s_left
             q_star_left(4) = c_star_left * lhc_rho_v
             q_star_left(5) = c_star_left * lhc_rho_w
-            q_star_left(6) = c_star_left * lhc_e + (s_mid - lhc_u) * (lhc_rho * s_mid + lhc_p / (s_left - lhc_u))
+            q_star_left(6) = c_star_left * (lhc_e + (s_mid - lhc_u) * (lhc_rho * s_mid + lhc_p / (s_left - lhc_u)))
             q_star_left(7) = c_star_left * lhc_z1
 
             c_star_right = (s_right - rhc_u) / (s_right - s_mid)
@@ -125,13 +125,13 @@ module five_equation_model_hllc_module
             q_star_right(3) = c_star_right * rhc_rho * s_right
             q_star_right(4) = c_star_right * rhc_rho_v
             q_star_right(5) = c_star_right * rhc_rho_w
-            q_star_right(6) = c_star_right * rhc_e + (s_mid - rhc_u) * (rhc_rho * s_mid + rhc_p / (s_right - rhc_u))
+            q_star_right(6) = c_star_right * (rhc_e + (s_mid - rhc_u) * (rhc_rho * s_mid + rhc_p / (s_right - rhc_u)))
             q_star_right(7) = c_star_right * rhc_z1
 
-            flux = 0.5d0 * (1.d0 + sign(1.d0, s_mid))                      &
-                 * (f_left + s_muinus * (q_star_left - left_conservative)) &
-                 + 0.5d0 * (1.d0 - sign(1.d0, s_mid))                      &
-                 * (f_right + s_puls * (q_star_right - right_conservative))
+            flux(:) = 0.5d0 * (1.d0 + sign(1.d0, s_mid))                      &
+                    * (f_left(:) + s_muinus * (q_star_left(:) - left_conservative(:))) &
+                    + 0.5d0 * (1.d0 - sign(1.d0, s_mid))                      &
+                    * (f_right(:) + s_puls * (q_star_right(:) - right_conservative(:)))
         end associate
     end function compute_flux_five_equation_model_hllc
 end module five_equation_model_hllc_module
