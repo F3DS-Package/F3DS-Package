@@ -19,6 +19,8 @@ module second_order_tvd_rk_module
 
         allocate(residual_set                     , source=conservative_variables_set)
         allocate(stage1_conservative_variables_set, source=conservative_variables_set)
+
+        residual_set(:,:) = 0.d0
     end subroutine initialize_second_order_tvd_rk
 
     subroutine compute_next_state_second_order_tvd_rk( &
@@ -423,7 +425,6 @@ module second_order_tvd_rk_module
             n_symmetric_faces         , &
             n_ghost_cells               &
         )
-        residual_set(:,:) = 0.d0
 
         do j = 1, n_faces, 1
             lhc_index = reference_cell_indexs_set(n_ghost_cells+0, j)
@@ -454,6 +455,7 @@ module second_order_tvd_rk_module
             stage1_conservative_variables_set(:, i) = conservative_variables_set(:, i) &
                 + time_increment * residual_set(:, i)
             primitive_variables_set(:, i) = conservative_to_primitive_function(stage1_conservative_variables_set(:, i))
+            residual_set(:,i) = 0.d0
         end do
 
         err = set_boundary_condition_function( &
@@ -470,7 +472,6 @@ module second_order_tvd_rk_module
             n_symmetric_faces         , &
             n_ghost_cells               &
         )
-        residual_set(:,:) = 0.d0
 
         do j = 1, n_faces, 1
             lhc_index = reference_cell_indexs_set(n_ghost_cells+0, j)
@@ -500,6 +501,7 @@ module second_order_tvd_rk_module
         do i = 1, n_cells, 1
             conservative_variables_set(:, i) = 0.5d0 * (conservative_variables_set(:, i) + stage1_conservative_variables_set(:, i) + time_increment * residual_set(:, i))
             primitive_variables_set(:, i) = conservative_to_primitive_function(conservative_variables_set(:, i))
+            residual_set(:,i) = 0.d0
         end do
 
     end subroutine compute_next_state_second_order_tvd_rk
