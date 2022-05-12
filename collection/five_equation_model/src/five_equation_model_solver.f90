@@ -1,4 +1,5 @@
 program five_eq_model_solver
+    !$ use omp_lib
     ! Utils
     use typedef_module
     ! Cell system
@@ -42,7 +43,9 @@ program five_eq_model_solver
     integer  (I4P), allocatable :: vtk_offset(:), vtk_connect(:)
 
     time_increment = 1.d-4
-    max_timestep   = 5
+    max_timestep   = 3*10**2
+
+    call omp_set_num_threads(16)
 
     ! parse grid file
     call a_grid_parser%parse("grid.nlgrid")
@@ -101,7 +104,7 @@ program five_eq_model_solver
 
     ! solver timestepping loop
     do timestep = 0, max_timestep, 1
-        if (.true.) then
+        if (mod(timestep, 10) == 0) then
             write(vtk_filename, "(a, i5.5, a)") "result/", file_output_counter, ".vtu"
             print *, "write vtk "//vtk_filename//"..."
             vtk_error = a_vtk_file%initialize                   (format="binary", filename=vtk_filename, mesh_topology="UnstructuredGrid")

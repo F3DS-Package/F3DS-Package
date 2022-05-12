@@ -426,6 +426,7 @@ module second_order_tvd_rk_module
             n_ghost_cells               &
         )
 
+!$omp parallel do private(j, lhc_index, rhc_index, element_lef_and_right_side)
         do j = 1, n_faces, 1
             lhc_index = reference_cell_indexs_set(n_ghost_cells+0, j)
             rhc_index = reference_cell_indexs_set(n_ghost_cells+1, j)
@@ -451,6 +452,7 @@ module second_order_tvd_rk_module
             residual_set(:, rhc_index) = residual_set(:, rhc_index) + element_lef_and_right_side(:, 2)
         end do
 
+!$omp parallel do private(i)
         do i = 1, n_cells, 1
             stage1_conservative_variables_set(:, i) = conservative_variables_set(:, i) &
                 + time_increment * residual_set(:, i)
@@ -473,6 +475,7 @@ module second_order_tvd_rk_module
             n_ghost_cells               &
         )
 
+!$omp parallel do private(j, lhc_index, rhc_index, element_lef_and_right_side)
         do j = 1, n_faces, 1
             lhc_index = reference_cell_indexs_set(n_ghost_cells+0, j)
             rhc_index = reference_cell_indexs_set(n_ghost_cells+1, j)
@@ -498,6 +501,7 @@ module second_order_tvd_rk_module
             residual_set(:, rhc_index) = residual_set(:, rhc_index) + element_lef_and_right_side(:, 2)
         end do
 
+!$omp parallel do private(i)
         do i = 1, n_cells, 1
             conservative_variables_set(:, i) = 0.5d0 * (conservative_variables_set(:, i) + stage1_conservative_variables_set(:, i) + time_increment * residual_set(:, i))
             primitive_variables_set(:, i) = conservative_to_primitive_function(conservative_variables_set(:, i))
