@@ -137,13 +137,13 @@ module five_equation_space_model_module
         )
         local_coordinate_rhc_primitive(6:7) = reconstructed_rightside_primitive(6:7)
 
-        !! # sanity check
-        !! ## left-hand cell
-        !if(local_coordinate_lhc_primitive(7) > 1.d0) local_coordinate_lhc_primitive(7) = 1.d0
-        !if(local_coordinate_lhc_primitive(7) < 0.d0) local_coordinate_lhc_primitive(7) = 0.d0
-        !! ## right-hand cell
-        !if(local_coordinate_rhc_primitive(7) > 1.d0) local_coordinate_rhc_primitive(7) = 1.d0
-        !if(local_coordinate_rhc_primitive(7) < 0.d0) local_coordinate_rhc_primitive(7) = 0.d0
+        ! # sanity check
+        ! ## left-hand cell
+        if(local_coordinate_lhc_primitive(7) > 1.d0) local_coordinate_lhc_primitive(7) = 1.d0
+        if(local_coordinate_lhc_primitive(7) < 0.d0) local_coordinate_lhc_primitive(7) = 0.d0
+        ! ## right-hand cell
+        if(local_coordinate_rhc_primitive(7) > 1.d0) local_coordinate_rhc_primitive(7) = 1.d0
+        if(local_coordinate_rhc_primitive(7) < 0.d0) local_coordinate_rhc_primitive(7) = 0.d0
 
         ! # compute conservative-variables
         lhc_conservative = primitive_to_conservative_function( &
