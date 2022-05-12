@@ -137,6 +137,14 @@ module five_equation_space_model_module
         )
         local_coordinate_rhc_primitive(6:7) = reconstructed_rightside_primitive(6:7)
 
+        !! # sanity check
+        !! ## left-hand cell
+        !if(local_coordinate_lhc_primitive(7) > 1.d0) local_coordinate_lhc_primitive(7) = 1.d0
+        !if(local_coordinate_lhc_primitive(7) < 0.d0) local_coordinate_lhc_primitive(7) = 0.d0
+        !! ## right-hand cell
+        !if(local_coordinate_rhc_primitive(7) > 1.d0) local_coordinate_rhc_primitive(7) = 1.d0
+        !if(local_coordinate_rhc_primitive(7) < 0.d0) local_coordinate_rhc_primitive(7) = 0.d0
+
         ! # compute conservative-variables
         lhc_conservative = primitive_to_conservative_function( &
             local_coordinate_lhc_primitive                     &
@@ -254,41 +262,41 @@ module five_equation_space_model_module
                 face_tangential2_vector           &
             )
         ! ## Compute kapira
-            if(lhc_z1 < 0.d0 + 1.d-8)then
-                lhc_rho1 = 0.d0
-                lhc_rho2 = lhc_rho2_z2
-                lhc_wood_c = 1.d0 / (lhc_rho2 * lhc_c2**2)
-                lhc_kapila = (lhc_rho2 * lhc_c2**2) * lhc_wood_c
-            else if (1.d0 - 1.d-8 < lhc_z1)then
-                lhc_rho1 = lhc_rho1_z1
-                lhc_rho2 = 0.d0
-                lhc_wood_c = lhc_z1 / (lhc_rho1 * lhc_c1**2)
-                lhc_kapila = (lhc_rho1 * lhc_c1**2) * lhc_wood_c
-            else
-                lhc_rho1 = lhc_rho1_z1 / lhc_z1
-                lhc_rho2 = lhc_rho2_z2 / (1.d0 - lhc_z1)
-                lhc_wood_c = lhc_z1 / (lhc_rho1 * lhc_c1**2) + (1.d0 - lhc_z1) / (lhc_rho2 * lhc_c2**2)
-                lhc_kapila = (lhc_rho2 * lhc_c2**2 - lhc_rho1 * lhc_c1**2) * lhc_wood_c
-            endif
-            if(rhc_z1 < 0.d0 + 1.d-8)then
-                rhc_rho1 = 0.d0
-                rhc_rho2 = rhc_rho2_z2
-                rhc_wood_c = 1.d0 / (rhc_rho2 * rhc_c2**2)
-                rhc_kapila = (rhc_rho2 * rhc_c2**2) * rhc_wood_c
-            else if (1.d0 - 1.d-8 < rhc_z1)then
-                rhc_rho1 = rhc_rho1_z1
-                rhc_rho2 = 0.d0
-                rhc_wood_c = rhc_z1 / (rhc_rho1 * rhc_c1**2)
-                rhc_kapila = (rhc_rho1 * rhc_c1**2) * rhc_wood_c
-            else
-                rhc_rho1 = rhc_rho1_z1 / rhc_z1
-                rhc_rho2 = rhc_rho2_z2 / (1.d0 - rhc_z1)
-                rhc_wood_c = rhc_z1 / (rhc_rho1 * rhc_c1**2) + (1.d0 - rhc_z1) / (rhc_rho2 * rhc_c2**2)
-                rhc_kapila = (rhc_rho2 * rhc_c2**2 - rhc_rho1 * rhc_c1**2) * rhc_wood_c
-            endif
+            !if(lhc_z1 < 0.d0 + 1.d-8)then
+            !    lhc_rho1 = 0.d0
+            !    lhc_rho2 = lhc_rho2_z2
+            !    lhc_wood_c = 1.d0 / (lhc_rho2 * lhc_c2**2)
+            !    lhc_kapila = (lhc_rho2 * lhc_c2**2) * lhc_wood_c
+            !else if (1.d0 - 1.d-8 < lhc_z1)then
+            !    lhc_rho1 = lhc_rho1_z1
+            !    lhc_rho2 = 0.d0
+            !    lhc_wood_c = lhc_z1 / (lhc_rho1 * lhc_c1**2)
+            !    lhc_kapila = (lhc_rho1 * lhc_c1**2) * lhc_wood_c
+            !else
+            !    lhc_rho1 = lhc_rho1_z1 / lhc_z1
+            !    lhc_rho2 = lhc_rho2_z2 / (1.d0 - lhc_z1)
+            !    lhc_wood_c = lhc_z1 / (lhc_rho1 * lhc_c1**2) + (1.d0 - lhc_z1) / (lhc_rho2 * lhc_c2**2)
+            !    lhc_kapila = (lhc_rho2 * lhc_c2**2 - lhc_rho1 * lhc_c1**2) * lhc_wood_c
+            !endif
+            !if(rhc_z1 < 0.d0 + 1.d-8)then
+            !    rhc_rho1 = 0.d0
+            !    rhc_rho2 = rhc_rho2_z2
+            !    rhc_wood_c = 1.d0 / (rhc_rho2 * rhc_c2**2)
+            !    rhc_kapila = (rhc_rho2 * rhc_c2**2) * rhc_wood_c
+            !else if (1.d0 - 1.d-8 < rhc_z1)then
+            !    rhc_rho1 = rhc_rho1_z1
+            !    rhc_rho2 = 0.d0
+            !    rhc_wood_c = rhc_z1 / (rhc_rho1 * rhc_c1**2)
+            !    rhc_kapila = (rhc_rho1 * rhc_c1**2) * rhc_wood_c
+            !else
+            !    rhc_rho1 = rhc_rho1_z1 / rhc_z1
+            !    rhc_rho2 = rhc_rho2_z2 / (1.d0 - rhc_z1)
+            !    rhc_wood_c = rhc_z1 / (rhc_rho1 * rhc_c1**2) + (1.d0 - rhc_z1) / (rhc_rho2 * rhc_c2**2)
+            !    rhc_kapila = (rhc_rho2 * rhc_c2**2 - rhc_rho1 * rhc_c1**2) * rhc_wood_c
+            !endif
         ! ## Integrate (- alpha1 - K) * div(u)
-            element_lef_and_right_side(7, 1) = (1.d0 / leftside_cell_volume ) * (-lhc_z1 - lhc_kapila) * multiply_vector(numerical_velocity, face_normal_vector) * face_area
-            element_lef_and_right_side(7, 2) = (1.d0 / rightside_cell_volume) * (-rhc_z1 - rhc_kapila) * multiply_vector(numerical_velocity, face_normal_vector) * face_area
+            element_lef_and_right_side(7, 1) = (1.d0 / leftside_cell_volume ) * (-lhc_z1) * multiply_vector(numerical_velocity, face_normal_vector) * face_area
+            element_lef_and_right_side(7, 2) = (1.d0 / rightside_cell_volume) * (-rhc_z1) * multiply_vector(numerical_velocity, face_normal_vector) * face_area
         end associate
     end function compute_space_element_five_equation_model
 end module five_equation_space_model_module

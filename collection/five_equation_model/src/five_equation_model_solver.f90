@@ -8,6 +8,7 @@ program five_eq_model_solver
     use five_equation_model_variables_module
     ! Scheme
     use second_order_tvd_rk_module
+    use third_order_tvd_rk_module
     use jiang_weno5_module
     use five_equation_space_model_module
     use five_equation_model_hllc_module
@@ -129,6 +130,7 @@ program five_eq_model_solver
             vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='internal enargy', x=pack(primitive_variables_set(6, :), mask=cells_is_real_cell))
             vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='volume fruction', x=pack(primitive_variables_set(7, :), mask=cells_is_real_cell))
             vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='cell id', x=vtk_cell_id)
+            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='cell position', x=pack(cells_centor_position(1,:), mask=cells_is_real_cell), y=pack(cells_centor_position(2,:), mask=cells_is_real_cell), z=pack(cells_centor_position(3,:), mask=cells_is_real_cell))
             vtk_error = a_vtk_file%xml_writer%write_dataarray(location='cell', action='close')
             vtk_error = a_vtk_file%xml_writer%write_piece()
             vtk_error = a_vtk_file%finalize()
