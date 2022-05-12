@@ -138,7 +138,7 @@ module five_equation_model_boundary_condition_module
                     face_tangential1_vectors, &
                     face_tangential2_vectors, &
                     face_idx                , &
-                    inner_idx2                &
+                    inner_idx1                &
                 )
                 primitive_variables_set(:, ghost_idx3) = make_ghost_primitive_variables_symmetric( &
                     primitive_variables_set , &
@@ -146,7 +146,7 @@ module five_equation_model_boundary_condition_module
                     face_tangential1_vectors, &
                     face_tangential2_vectors, &
                     face_idx                , &
-                    inner_idx3                &
+                    inner_idx1                &
                 )
             end associate
         end do
