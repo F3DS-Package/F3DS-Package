@@ -40,6 +40,7 @@ module five_equation_model_boundary_condition_module
 
         integer(int_kind ) :: bc_face_index
 
+        !$omp parallel do private(bc_face_index)
         do bc_face_index = 1, num_outflow_faces, 1
             associate( &
                 face_idx   => outflow_face_indexs(bc_face_index)                                            , &
@@ -77,6 +78,7 @@ module five_equation_model_boundary_condition_module
             end associate
         end do
 
+        !$omp parallel do private(bc_face_index)
         do bc_face_index = 1, num_slipwall_faces, 1
             associate( &
                 face_idx   => slipwall_face_indexs(bc_face_index)                                            , &
@@ -114,6 +116,7 @@ module five_equation_model_boundary_condition_module
             end associate
         end do
 
+        !$omp parallel do private(bc_face_index)
         do bc_face_index = 1, num_symmetric_faces, 1
             associate( &
                 face_idx   => symmetric_face_indexs(bc_face_index)                                            , &
