@@ -4,7 +4,7 @@ FC=gfortran
 #FCFLAGS=-O0 -g -pg -ffree-line-length-none -cpp -Wall -Wextra -Warray-temporaries -Wconversion -fimplicit-none -fbacktrace -fcheck=all -ffpe-trap=invalid,zero,overflow,underflow -finit-real=nan -D_DEBUG # for debug build (gfortran)
 FCFLAGS=-O3 -march=native -ffree-line-length-none -fopenmp -cpp # for release build (gfortran)
 #FCFLAGS=-g -check all -fpe0 -warn -traceback -debug extended # for debug build (ifort)
-#FCFLAGS=-fast -qopenmp
+#FCFLAGS=-fast -openmp # for release build (ifort) NOTE: Cannot use release build-mode by ifort
 
 OBJDIR=objs
 MODDIR=mods
