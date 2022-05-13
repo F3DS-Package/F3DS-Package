@@ -35,7 +35,7 @@ module five_equation_space_model_module
         real   (real_kind), intent(in ) :: face_tangential2_vector           (3)
         real   (real_kind), intent(in ) :: face_area
         integer(int_kind ), intent(in ) :: n_conservative_values
-        real   (real_kind)              :: element_lef_and_right_side        (n_conservative_values, 2) ! 1 -> left, 2-> right
+        real   (real_kind)              :: element_lef_and_right_side        (2, n_conservative_values) ! 1 -> left, 2-> right
 
         interface
             pure function flux_function(       &
@@ -212,8 +212,8 @@ module five_equation_space_model_module
         )
 
         ! # integrate nonviscosity-flux
-        element_lef_and_right_side(:, 1) = (-1.d0 / leftside_cell_volume ) * nonviscosity_flux(:) * face_area
-        element_lef_and_right_side(:, 2) = (+1.d0 / rightside_cell_volume) * nonviscosity_flux(:) * face_area
+        element_lef_and_right_side(1, :) = (-1.d0 / leftside_cell_volume ) * nonviscosity_flux(:) * face_area
+        element_lef_and_right_side(2, :) = (+1.d0 / rightside_cell_volume) * nonviscosity_flux(:) * face_area
 
         ! # Compute (- alpha1 - K) * div(u) according to [Schmidmayer 2020, JCP] using HLLC.
         ! # If you choice other Riemann solver, term (- alpha1 - K) * div(u) is computed by HLLC forcely. Sorry.
@@ -295,8 +295,10 @@ module five_equation_space_model_module
             !    rhc_kapila = (rhc_rho2 * rhc_c2**2 - rhc_rho1 * rhc_c1**2) * rhc_wood_c
             !endif
         ! ## Integrate (- alpha1 - K) * div(u)
-            element_lef_and_right_side(7, 1) = (1.d0 / leftside_cell_volume ) * (-lhc_z1) * multiply_vector(numerical_velocity, face_normal_vector) * face_area
-            element_lef_and_right_side(7, 2) = (1.d0 / rightside_cell_volume) * (-rhc_z1) * multiply_vector(numerical_velocity, face_normal_vector) * face_area
+            element_lef_and_right_side(1, 7) = element_lef_and_right_side(1, 7) &
+                                             + (1.d0 / leftside_cell_volume ) * (-lhc_z1) * multiply_vector(numerical_velocity, face_normal_vector) * face_area
+            element_lef_and_right_side(2, 7) = element_lef_and_right_side(2, 7) &
+                                             + (1.d0 / rightside_cell_volume) * (-rhc_z1) * multiply_vector(numerical_velocity, face_normal_vector) * face_area
         end associate
     end function compute_space_element_five_equation_model
 end module five_equation_space_model_module

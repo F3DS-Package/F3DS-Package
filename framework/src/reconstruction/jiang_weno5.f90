@@ -71,27 +71,27 @@ module jiang_weno5_module
         real   (real_kind), intent(in) :: cell_positions            (:, :)
         real   (real_kind), intent(in) :: face_positions            (:, :)
         integer(int_kind ), intent(in) :: face_index
-        real   (real_kind)             :: reconstructed_primitive   (size(primitive_values_set(:,0)))
+        real   (real_kind)             :: reconstructed_primitive   (size(primitive_values_set(1, :)))
 
         integer(int_kind ) :: n_primitives, i
         real   (real_kind) :: w(3), p(3), cell_pos_l(3), cell_pos_r(3), face_pos(3)
         real   (real_kind) :: cell_cell_distance, cell_face_distanse, s
 
-        n_primitives = size(primitive_values_set(:,0))
+        n_primitives = size(primitive_values_set(1, :))
 
         do i = 1, n_primitives, 1
-            cell_pos_l(1:3) = cell_positions(1:3, reference_cell_indexs_set(num_ghost_cells_+0, face_index))
-            cell_pos_r(1:3) = cell_positions(1:3, reference_cell_indexs_set(num_ghost_cells_+1, face_index))
-            face_pos  (1:3) = face_positions(1:3, face_index)
+            cell_pos_l(1:3) = cell_positions(reference_cell_indexs_set(face_index, num_ghost_cells_+0), 1:3)
+            cell_pos_r(1:3) = cell_positions(reference_cell_indexs_set(face_index, num_ghost_cells_+1), 1:3)
+            face_pos  (1:3) = face_positions(face_index, 1:3)
             cell_cell_distance = vector_distance(cell_pos_l, cell_pos_r)
             cell_face_distanse = vector_distance(cell_pos_l, face_pos  )
             s = cell_face_distanse / cell_cell_distance
             associate(                                                                                              &
-                v_m2       => primitive_values_set(i  , reference_cell_indexs_set(num_ghost_cells_-2, face_index)), &
-                v_m1       => primitive_values_set(i  , reference_cell_indexs_set(num_ghost_cells_-1, face_index)), &
-                v          => primitive_values_set(i  , reference_cell_indexs_set(num_ghost_cells_+0, face_index)), &
-                v_p1       => primitive_values_set(i  , reference_cell_indexs_set(num_ghost_cells_+1, face_index)), &
-                v_p2       => primitive_values_set(i  , reference_cell_indexs_set(num_ghost_cells_+2, face_index))  &
+                v_m2 => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_-2), i), &
+                v_m1 => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_-1), i), &
+                v    => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_+0), i), &
+                v_p1 => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_+1), i), &
+                v_p2 => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_+2), i)  &
             )
                 w(1:3) = compute_weights    (s, v_m2, v_m1, v, v_p1, v_p2)
                 p(1:3) = compute_polynomials(s, v_m2, v_m1, v, v_p1, v_p2)
@@ -112,27 +112,27 @@ module jiang_weno5_module
         real   (real_kind), intent(in) :: cell_positions            (:, :)
         real   (real_kind), intent(in) :: face_positions            (:, :)
         integer(int_kind ), intent(in) :: face_index
-        real   (real_kind)             :: reconstructed_primitive   (size(primitive_values_set(:,0)))
+        real   (real_kind)             :: reconstructed_primitive   (size(primitive_values_set(1, :)))
 
         integer(int_kind ) :: n_primitives, i
         real   (real_kind) :: w(3), p(3), cell_pos_l(3), cell_pos_r(3), face_pos(3)
         real   (real_kind) :: cell_cell_distance, cell_face_distanse, s
 
-        n_primitives = size(primitive_values_set(:,0))
+        n_primitives = size(primitive_values_set(0, :))
 
         do i = 1, n_primitives, 1
-            cell_pos_l(1:3) = cell_positions(1:3, reference_cell_indexs_set(num_ghost_cells_+0, face_index))
-            cell_pos_r(1:3) = cell_positions(1:3, reference_cell_indexs_set(num_ghost_cells_+1, face_index))
-            face_pos  (1:3) = face_positions(1:3, face_index)
+            cell_pos_l(1:3) = cell_positions(reference_cell_indexs_set(face_index, num_ghost_cells_+0), 1:3)
+            cell_pos_r(1:3) = cell_positions(reference_cell_indexs_set(face_index, num_ghost_cells_+1), 1:3)
+            face_pos  (1:3) = face_positions(face_index, 1:3)
             cell_cell_distance = vector_distance(cell_pos_l, cell_pos_r)
             cell_face_distanse = vector_distance(cell_pos_l, face_pos  )
             s = - 1.d0 * cell_face_distanse / cell_cell_distance
             associate(                                                                                              &
-                v_m2       => primitive_values_set(i  , reference_cell_indexs_set(num_ghost_cells_-1, face_index)), &
-                v_m1       => primitive_values_set(i  , reference_cell_indexs_set(num_ghost_cells_+0, face_index)), &
-                v          => primitive_values_set(i  , reference_cell_indexs_set(num_ghost_cells_+1, face_index)), &
-                v_p1       => primitive_values_set(i  , reference_cell_indexs_set(num_ghost_cells_+2, face_index)), &
-                v_p2       => primitive_values_set(i  , reference_cell_indexs_set(num_ghost_cells_+3, face_index))  &
+                v_m2       => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_-1), i), &
+                v_m1       => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_+0), i), &
+                v          => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_+1), i), &
+                v_p1       => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_+2), i), &
+                v_p2       => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_+3), i)  &
             )
                 w(1:3) = compute_weights    (s, v_m2, v_m1, v, v_p1, v_p2)
                 p(1:3) = compute_polynomials(s, v_m2, v_m1, v, v_p1, v_p2)
@@ -171,7 +171,7 @@ module jiang_weno5_module
         integer(int_kind ), intent(in ) :: face_index
         integer(int_kind ), intent(in ) :: n_conservative_values
 
-        real   (real_kind)                           :: element_lef_and_right_side(n_conservative_values, 2)
+        real   (real_kind)              :: element_lef_and_right_side(2, n_conservative_values)
 
         interface
             pure function flux_function(       &
@@ -248,7 +248,7 @@ module jiang_weno5_module
                 real   (real_kind), intent(in ) :: face_tangential2_vector           (3)
                 real   (real_kind), intent(in ) :: face_area
                 integer(int_kind ), intent(in ) :: n_conservative_values
-                real   (real_kind)              :: element_lef_and_right_side        (n_conservative_values, 2)
+                real   (real_kind)              :: element_lef_and_right_side        (2, n_conservative_values)
 
                 interface
                     pure function flux_function(       &
@@ -306,8 +306,8 @@ module jiang_weno5_module
         real   (real_kind), allocatable :: lhc_primitive   (:)
         real   (real_kind), allocatable :: rhc_primitive   (:)
 
-        lhc_index = reference_cell_indexs_set(num_ghost_cells_+0, face_index)
-        rhc_index = reference_cell_indexs_set(num_ghost_cells_+1, face_index)
+        lhc_index = reference_cell_indexs_set(face_index, num_ghost_cells_+0)
+        rhc_index = reference_cell_indexs_set(face_index, num_ghost_cells_+1)
 
         lhc_primitive = reconstruct_leftside_jiang_weno5(      &
             primitive_values_set                       , &
@@ -329,9 +329,9 @@ module jiang_weno5_module
             rhc_primitive                            , &
             cell_volumes(lhc_index)                  , &
             cell_volumes(rhc_index)                  , &
-            face_normal_vectors     (1:3, face_index), &
-            face_tangential1_vectors(1:3, face_index), &
-            face_tangential2_vectors(1:3, face_index), &
+            face_normal_vectors     (face_index, 1:3), &
+            face_tangential1_vectors(face_index, 1:3), &
+            face_tangential2_vectors(face_index, 1:3), &
             face_areas              (face_index)     , &
             n_conservative_values                    , &
             flux_function                            , &

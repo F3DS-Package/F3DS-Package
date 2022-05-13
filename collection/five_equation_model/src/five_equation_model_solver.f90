@@ -65,7 +65,7 @@ program five_eq_model_solver
     call a_init_parser%get_conservative_variables_set(conservative_variables_set)
     call a_init_parser%close()
     do index = 1, get_number_of_cells(), 1
-        primitive_variables_set(:, index) = conservative_to_primitive(conservative_variables_set(:, index))
+        primitive_variables_set(index, :) = conservative_to_primitive(conservative_variables_set(index, :))
     end do
 
     ! VTK
@@ -75,9 +75,9 @@ program five_eq_model_solver
     do index = 1, get_number_of_cells(), 1
         if(cells_is_real_cell(index)) n_output_cells = n_output_cells + 1
     end do
-    allocate(vtk_pressure       (n_output_cells    ))
-    allocate(vtk_density        (n_output_cells    ))
-    allocate(vtk_cell_id        (n_output_cells    ))
+    allocate(vtk_pressure (n_output_cells    ))
+    allocate(vtk_density  (n_output_cells    ))
+    allocate(vtk_cell_id  (n_output_cells    ))
     allocate(vtk_cell_type(n_output_cells    ))
     allocate(vtk_offset   (n_output_cells    ))
     allocate(vtk_connect  (n_output_cells * 8))
@@ -106,17 +106,17 @@ program five_eq_model_solver
             print *, "write vtk "//vtk_filename//"..."
             vtk_error = a_vtk_file%initialize                   (format="binary", filename=vtk_filename, mesh_topology="UnstructuredGrid")
             vtk_error = a_vtk_file%xml_writer%write_piece       (np=n_output_points, nc=n_output_cells)
-            vtk_error = a_vtk_file%xml_writer%write_geo         (np=n_output_points, nc=n_output_cells, x=points(1, :), y=points(2, :), z=points(3, :))
+            vtk_error = a_vtk_file%xml_writer%write_geo         (np=n_output_points, nc=n_output_cells, x=points(:, 1), y=points(:, 2), z=points(:, 3))
             vtk_error = a_vtk_file%xml_writer%write_connectivity(nc=n_output_cells, connectivity=vtk_connect, offset=vtk_offset, cell_type=vtk_cell_type)
             vtk_error = a_vtk_file%xml_writer%write_dataarray   (location='cell', action='open')
             vtk_index = 1
             do index = 1, get_number_of_cells(), 1
                 if(cells_is_real_cell(index))then
                     associate(                                     &
-                        rho1z1 => primitive_variables_set(1, index), &
-                        rho2z2 => primitive_variables_set(2, index), &
-                        ie     => primitive_variables_set(6, index), &
-                        z1     => primitive_variables_set(7, index))
+                        rho1z1 => primitive_variables_set(index, 1), &
+                        rho2z2 => primitive_variables_set(index, 2), &
+                        ie     => primitive_variables_set(index, 6), &
+                        z1     => primitive_variables_set(index, 7))
                         vtk_pressure       (vtk_index) = compute_pressure_mixture_stiffened_eos(ie, rho1z1 + rho2z2, z1)
                         vtk_density        (vtk_index) = rho1z1 + rho2z2
                         vtk_cell_id        (vtk_index) = index
@@ -126,11 +126,11 @@ program five_eq_model_solver
             end do
             vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='pressure', x=vtk_pressure)
             vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='density', x=vtk_density)
-            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='velocity', x=pack(primitive_variables_set(3, :), mask=cells_is_real_cell), y=pack(primitive_variables_set(4, :), mask=cells_is_real_cell), z=pack(primitive_variables_set(5, :), mask=cells_is_real_cell))
-            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='internal enargy', x=pack(primitive_variables_set(6, :), mask=cells_is_real_cell))
-            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='volume fruction', x=pack(primitive_variables_set(7, :), mask=cells_is_real_cell))
+            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='velocity', x=pack(primitive_variables_set(:, 3), mask=cells_is_real_cell), y=pack(primitive_variables_set(:, 4), mask=cells_is_real_cell), z=pack(primitive_variables_set(:, 5), mask=cells_is_real_cell))
+            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='internal enargy', x=pack(primitive_variables_set(:, 6), mask=cells_is_real_cell))
+            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='volume fruction', x=pack(primitive_variables_set(:, 7), mask=cells_is_real_cell))
             vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='cell id', x=vtk_cell_id)
-            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='cell position', x=pack(cells_centor_position(1,:), mask=cells_is_real_cell), y=pack(cells_centor_position(2,:), mask=cells_is_real_cell), z=pack(cells_centor_position(3,:), mask=cells_is_real_cell))
+            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='cell position', x=pack(cells_centor_position(:, 1), mask=cells_is_real_cell), y=pack(cells_centor_position(:, 2), mask=cells_is_real_cell), z=pack(cells_centor_position(:, 3), mask=cells_is_real_cell))
             vtk_error = a_vtk_file%xml_writer%write_dataarray(location='cell', action='close')
             vtk_error = a_vtk_file%xml_writer%write_piece()
             vtk_error = a_vtk_file%finalize()
