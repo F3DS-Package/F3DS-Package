@@ -110,7 +110,7 @@ module third_order_tvd_rk_module
                 integer(int_kind ), intent(in ) :: face_index
                 integer(int_kind ), intent(in ) :: n_conservative_values
 
-                real   (real_kind) :: element_lef_and_right_side(n_conservative_values, 2)
+                real   (real_kind) :: element_lef_and_right_side(2, n_conservative_values)
 
                 interface
                     pure function flux_function(       &
@@ -186,7 +186,7 @@ module third_order_tvd_rk_module
                         real   (real_kind), intent(in ) :: face_tangential2_vector           (3)
                         real   (real_kind), intent(in ) :: face_area
                         integer(int_kind ), intent(in ) :: n_conservative_values
-                        real   (real_kind)              :: element_lef_and_right_side        (n_conservative_values, 2)
+                        real   (real_kind)              :: element_lef_and_right_side        (2, n_conservative_values)
 
                         interface
                             pure function flux_function(       &
@@ -266,7 +266,7 @@ module third_order_tvd_rk_module
                 real   (real_kind), intent(in ) :: face_tangential2_vector           (3)
                 real   (real_kind), intent(in ) :: face_area
                 integer(int_kind ), intent(in ) :: n_conservative_values
-                real   (real_kind)              :: element_lef_and_right_side        (n_conservative_values, 2)
+                real   (real_kind)              :: element_lef_and_right_side        (2, n_conservative_values)
 
                 interface
                     pure function flux_function(       &
@@ -408,7 +408,7 @@ module third_order_tvd_rk_module
         integer(int_kind ) :: i, j
         integer(int_kind ) :: lhc_index, rhc_index
         integer(int_kind ) :: n_conservative_values
-        real   (real_kind) :: element_lef_and_right_side(size(conservative_variables_set(:,0)), 2)
+        real   (real_kind) :: element_lef_and_right_side(2, size(conservative_variables_set(:,0)))
         logical :: err
 
         n_conservative_values = size(conservative_variables_set(:,0))
@@ -429,8 +429,8 @@ module third_order_tvd_rk_module
         )
 
         do j = 1, n_faces, 1
-            lhc_index = reference_cell_indexs_set(n_ghost_cells+0, j)
-            rhc_index = reference_cell_indexs_set(n_ghost_cells+1, j)
+            lhc_index = reference_cell_indexs_set(j, n_ghost_cells+0)
+            rhc_index = reference_cell_indexs_set(j, n_ghost_cells+1)
             element_lef_and_right_side = reconstruction_function( &
                 primitive_variables_set            , &
                 cell_centor_positions              , &
@@ -449,15 +449,15 @@ module third_order_tvd_rk_module
                 primitive_to_conservative_function , &
                 integrated_element_function          &
             )
-            residual_set(:, lhc_index) = residual_set(:, lhc_index) + element_lef_and_right_side(:, 1)
-            residual_set(:, rhc_index) = residual_set(:, rhc_index) + element_lef_and_right_side(:, 2)
+            residual_set(lhc_index, :) = residual_set(lhc_index, :) + element_lef_and_right_side(1, :)
+            residual_set(rhc_index, :) = residual_set(rhc_index, :) + element_lef_and_right_side(2, :)
         end do
 
         do i = 1, n_cells, 1
-            stage1_conservative_variables_set(:, i) = conservative_variables_set(:, i) &
-                + time_increment * residual_set(:, i)
-            primitive_variables_set(:, i) = conservative_to_primitive_function(stage1_conservative_variables_set(:, i))
-            residual_set(:,i) = 0.d0
+            stage1_conservative_variables_set(i, :) = conservative_variables_set(i, :) &
+                + time_increment * residual_set(i, :)
+            primitive_variables_set(i, :) = conservative_to_primitive_function(stage1_conservative_variables_set(i, :))
+            residual_set(i, :) = 0.d0
         end do
 
         err = set_boundary_condition_function( &
@@ -476,8 +476,8 @@ module third_order_tvd_rk_module
         )
 
         do j = 1, n_faces, 1
-            lhc_index = reference_cell_indexs_set(n_ghost_cells+0, j)
-            rhc_index = reference_cell_indexs_set(n_ghost_cells+1, j)
+            lhc_index = reference_cell_indexs_set(j, n_ghost_cells+0)
+            rhc_index = reference_cell_indexs_set(j, n_ghost_cells+1)
             element_lef_and_right_side = reconstruction_function( &
                 primitive_variables_set            , &
                 cell_centor_positions              , &
@@ -496,14 +496,14 @@ module third_order_tvd_rk_module
                 primitive_to_conservative_function , &
                 integrated_element_function          &
             )
-            residual_set(:, lhc_index) = residual_set(:, lhc_index) + element_lef_and_right_side(:, 1)
-            residual_set(:, rhc_index) = residual_set(:, rhc_index) + element_lef_and_right_side(:, 2)
+            residual_set(lhc_index, :) = residual_set(lhc_index, :) + element_lef_and_right_side(1, :)
+            residual_set(rhc_index, :) = residual_set(rhc_index, :) + element_lef_and_right_side(2, :)
         end do
 
         do i = 1, n_cells, 1
-            stage2_conservative_variables_set(:, i) = 0.75d0 * conservative_variables_set(:, i) + 0.25d0 * (stage1_conservative_variables_set(:, i) + time_increment * residual_set(:, i))
-            primitive_variables_set(:, i) = conservative_to_primitive_function(stage2_conservative_variables_set(:, i))
-            residual_set(:,i) = 0.d0
+            stage2_conservative_variables_set(i, :) = 0.75d0 * conservative_variables_set(i, :) + 0.25d0 * (stage1_conservative_variables_set(i, :) + time_increment * residual_set(i, :))
+            primitive_variables_set(i, :) = conservative_to_primitive_function(stage2_conservative_variables_set(i, :))
+            residual_set(i, :) = 0.d0
         end do
 
         err = set_boundary_condition_function( &
@@ -522,8 +522,8 @@ module third_order_tvd_rk_module
         )
 
         do j = 1, n_faces, 1
-            lhc_index = reference_cell_indexs_set(n_ghost_cells+0, j)
-            rhc_index = reference_cell_indexs_set(n_ghost_cells+1, j)
+            lhc_index = reference_cell_indexs_set(j, n_ghost_cells+0)
+            rhc_index = reference_cell_indexs_set(j, n_ghost_cells+1)
             element_lef_and_right_side = reconstruction_function( &
                 primitive_variables_set            , &
                 cell_centor_positions              , &
@@ -542,14 +542,14 @@ module third_order_tvd_rk_module
                 primitive_to_conservative_function , &
                 integrated_element_function          &
             )
-            residual_set(:, lhc_index) = residual_set(:, lhc_index) + element_lef_and_right_side(:, 1)
-            residual_set(:, rhc_index) = residual_set(:, rhc_index) + element_lef_and_right_side(:, 2)
+            residual_set(lhc_index, :) = residual_set(lhc_index, :) + element_lef_and_right_side(1, :)
+            residual_set(rhc_index, :) = residual_set(rhc_index, :) + element_lef_and_right_side(2, :)
         end do
 
         do i = 1, n_cells, 1
-            conservative_variables_set(:, i) = (1.d0/3.d0) * conservative_variables_set(:, i) + (2.d0/3.d0) * (stage2_conservative_variables_set(:, i) + time_increment * residual_set(:, i))
-            primitive_variables_set(:, i) = conservative_to_primitive_function(conservative_variables_set(:, i))
-            residual_set(:,i) = 0.d0
+            conservative_variables_set(i, :) = (1.d0/3.d0) * conservative_variables_set(i, :) + (2.d0/3.d0) * (stage2_conservative_variables_set(i, :) + time_increment * residual_set(i, :))
+            primitive_variables_set(i, :) = conservative_to_primitive_function(conservative_variables_set(i, :))
+            residual_set(i, :) = 0.d0
         end do
 
     end subroutine compute_next_state_third_order_tvd_rk

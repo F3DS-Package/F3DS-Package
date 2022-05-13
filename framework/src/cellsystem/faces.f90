@@ -85,27 +85,27 @@ module faces_module
         if(allocated(faces_reference_cell_index))then
             call call_error("Array faces_reference_cell_index is already allocated. But you call the initialiser for faces module.")
         end if
-        allocate(faces_reference_cell_index(-num_local_cells + 1:num_local_cells, num_faces))
+        allocate(faces_reference_cell_index(num_faces, -num_local_cells + 1:num_local_cells))
 
         if(allocated(faces_normal_vector))then
             call call_error("Array faces_normal_vector is already allocated. But you call the initialiser for faces module.")
         end if
-        allocate(faces_normal_vector(3, num_faces))
+        allocate(faces_normal_vector(num_faces, 3))
 
         if(allocated(faces_tangential1_vector))then
             call call_error("Array faces_tangential1_vector is already allocated. But you call the initialiser for faces module.")
         end if
-        allocate(faces_tangential1_vector(3, num_faces))
+        allocate(faces_tangential1_vector(num_faces, 3))
 
         if(allocated(faces_tangential2_vector))then
             call call_error("Array faces_tangential2_vector is already allocated. But you call the initialiser for faces module.")
         end if
-        allocate(faces_tangential2_vector(3, num_faces))
+        allocate(faces_tangential2_vector(num_faces, 3))
 
         if(allocated(faces_position))then
             call call_error("Array faces_position is already allocated. But you call the initialiser for faces module.")
         end if
-        allocate(faces_position(3, num_faces))
+        allocate(faces_position(num_faces, 3))
 
         if(allocated(faces_area))then
             call call_error("Array faces_area is already allocated. But you call the initialiser for faces module.")

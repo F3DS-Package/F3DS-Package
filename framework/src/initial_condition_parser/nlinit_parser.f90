@@ -79,7 +79,7 @@ module class_nlinit_parser
             call call_error("'parse' method of nlinit_parser is not called. But you call 'get_conservative_variables_set' method.")
         end if
 
-        if(.not. (size(conservative_variables_set(:,1)) == self%n_conservative_variables))then
+        if(.not. (size(conservative_variables_set(1, :)) == self%n_conservative_variables))then
             call call_error("Conservative-variables size you parse is not matched.")
         end if
 
@@ -90,7 +90,7 @@ module class_nlinit_parser
                         self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
                         self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
                     do variables_index = 1, self%n_conservative_variables, 1
-                        conservative_variables_set(variables_index, n) = self%conservative_variables_set_(i, j, k, variables_index)
+                        conservative_variables_set(n, variables_index) = self%conservative_variables_set_(i, j, k, variables_index)
                     end do
                 end do
             end do

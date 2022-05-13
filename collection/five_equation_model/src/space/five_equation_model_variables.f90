@@ -7,20 +7,20 @@ module five_equation_model_variables_module
     private
 
     ! Elm. 1) following variables are saved
-    ! conservative_variables_set(1  , :)   = Z1*rho1   : Z1*density of fluid1
-    ! conservative_variables_set(2  , :)   = Z2*rho2   : Z2*density of fluid2
-    ! conservative_variables_set(3:5, :) = rho*v     : momentum vector
-    ! conservative_variables_set(6  , :)   = e         : energy density
-    ! conservative_variables_set(7  , :)   = Z1        : volume fraction of fluid1
+    ! conservative_variables_set(:, 1  )   = Z1*rho1   : Z1*density of fluid1
+    ! conservative_variables_set(:, 2  )   = Z2*rho2   : Z2*density of fluid2
+    ! conservative_variables_set(:, 3:5) = rho*v     : momentum vector
+    ! conservative_variables_set(:, 6  )   = e         : energy density
+    ! conservative_variables_set(:, 7  )   = Z1        : volume fraction of fluid1
     ! Elm. 2) 1 : {@code num_cells}, cell index
     real(real_kind), public, allocatable :: conservative_variables_set(:,:)
 
     ! Elm. 1) following variables are saved
-    ! primitive_variables_set(1  , :)   : volume fraction * density of fluid1
-    ! primitive_variables_set(2  , :)   : volume fraction * density of fluid2
-    ! primitive_variables_set(3:5, :)   : velocity vector (u,v,w)
-    ! primitive_variables_set(6  , :)   : specific internal energy (not energy density)
-    ! primitive_variables_set(7  , :)   : volume fraction of fluid1
+    ! primitive_variables_set(:, 1  )   : volume fraction * density of fluid1
+    ! primitive_variables_set(:, 2  )   : volume fraction * density of fluid2
+    ! primitive_variables_set(:, 3:5)   : velocity vector (u,v,w)
+    ! primitive_variables_set(:, 6  )   : specific internal energy (not energy density)
+    ! primitive_variables_set(:, 7  )   : volume fraction of fluid1
     ! Elm. 2) 1 : {@code num_cells}, cell index
     real(real_kind), public, allocatable :: primitive_variables_set(:,:)
 
@@ -97,12 +97,12 @@ module five_equation_model_variables_module
         if(allocated(conservative_variables_set))then
             call call_error("Array conservative_variables_set is already allocated. But you call the initialiser for variables module.")
         end if
-        allocate(conservative_variables_set(7, num_cells))
+        allocate(conservative_variables_set(num_cells, 7))
 
         if(allocated(primitive_variables_set))then
             call call_error("Array primitive_variables_set is already allocated. But you call the initialiser for variables module.")
         end if
-        allocate(primitive_variables_set(7, num_cells))
+        allocate(primitive_variables_set(num_cells, 7))
     end subroutine initialise_variables
 
     subroutine finalize_variables()

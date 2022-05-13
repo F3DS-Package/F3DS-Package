@@ -61,22 +61,22 @@ module cell_geometries_module
         if(allocated(cells_centor_position))then
             call call_error("Array cells_centor_position is already allocated. But you call the initialiser for cell_geometries_module.")
         end if
-        allocate(cells_centor_position(3, num_cells))
+        allocate(cells_centor_position(num_cells_, 3))
 
         if(allocated(cells_volume))then
             call call_error("Array cells_volume is already allocated. But you call the initialiser for cell_geometries_module.")
         end if
-        allocate(cells_volume(num_cells))
+        allocate(cells_volume(num_cells_))
 
         if(allocated(cells_is_real_cell))then
             call call_error("Array cells_is_real_cell is already allocated. But you call the initialiser for cell_geometries_module.")
         end if
-        allocate(cells_is_real_cell(num_cells))
+        allocate(cells_is_real_cell(num_cells_))
 
         if(allocated(points))then
             call call_error("Array points is already allocated. But you call the initialiser for cell_geometries_module.")
         end if
-        allocate(points(3, num_points_))
+        allocate(points(num_points_, 3))
 
         if(allocated(cell_geometries))then
             call call_error("Array cell_geometries is already allocated. But you call the initialiser for cell_geometries_module.")
