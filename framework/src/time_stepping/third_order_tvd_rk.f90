@@ -408,10 +408,10 @@ module third_order_tvd_rk_module
         integer(int_kind ) :: i, j
         integer(int_kind ) :: lhc_index, rhc_index
         integer(int_kind ) :: n_conservative_values
-        real   (real_kind) :: element_lef_and_right_side(2, size(conservative_variables_set(:,0)))
+        real   (real_kind) :: element_lef_and_right_side(2, size(conservative_variables_set(0,:)))
         logical :: err
 
-        n_conservative_values = size(conservative_variables_set(:,0))
+        n_conservative_values = size(conservative_variables_set(0,:))
 
         err = set_boundary_condition_function( &
             primitive_variables_set   , &
