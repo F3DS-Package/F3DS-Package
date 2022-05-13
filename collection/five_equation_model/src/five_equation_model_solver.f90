@@ -45,7 +45,9 @@ program five_eq_model_solver
     time_increment = 1.d-4
     max_timestep   = 100
 
+#ifdef _OPENMP
     call omp_set_num_threads(16)
+#endif
 
     ! parse grid file
     call a_grid_parser%parse("grid.nlgrid")
