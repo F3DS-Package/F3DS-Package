@@ -240,10 +240,10 @@ module five_equation_space_model_module
         ! ## Compute HLLC valiables and numerical velocity
             ave_vel  = 0.5d0 * (lhc_u + rhc_u)
             ave_c    = 0.5d0 * (lhc_c + rhc_c)
-            s_muinus = min(0.d0, lhc_c)
-            s_puls   = max(0.d0, rhc_c)
             s_left   = min(ave_vel - ave_c, lhc_u - lhc_c)
             s_right  = max(ave_vel + ave_c, rhc_u + rhc_c)
+            s_muinus = min(0.d0, s_left )
+            s_puls   = max(0.d0, s_right)
             s_mid    = (rhc_p - lhc_p + lhc_rho * lhc_u * (s_left  - lhc_u)  &
                                       - rhc_rho * rhc_u * (s_right - rhc_u)) &
                      / (lhc_rho * (s_left  - lhc_u) - rhc_rho * (s_right - rhc_u))
