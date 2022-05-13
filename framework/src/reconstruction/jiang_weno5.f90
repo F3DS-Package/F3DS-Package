@@ -12,10 +12,35 @@ module jiang_weno5_module
     private
 
     integer(int_kind) :: num_ghost_cells_ = 3
+    real(real_kind) :: acm_coef_ = 33.d0
 
     public :: reconstruct_jiang_weno5
 
     contains
+
+    pure function minmod(v1, v2) result(s)
+        real(real_kind), intent(in) :: v1, v2
+        real(real_kind)             :: s
+        s = 0.5d0 * (sign(1.d0, v1) + sign(1.d0, v2)) * min(abs(v1), abs(v2))
+    end function
+
+    pure function acm_parameter(v_m1, v, v_p1) result(a)
+        real(real_kind), intent(in) :: v_m1, v, v_p1
+        real(real_kind)             :: a
+        a = acm_coef_ * (abs(v_p1 - 2.d0 * v + v_p1) / (abs(v_p1 - v) + abs(v - v_m1)))
+    end function
+
+    pure function compute_acm_delta(vl, vr, v_m1, v, v_p1) result(delta)
+        real(real_kind), intent(in) :: vl, vr, v_m1, v, v_p1
+        real(real_kind)             :: delta
+        delta = minmod(0.5d0 * acm_parameter(v_m1, v, v_p1) * (vr - vl), (v_p1 - vr))
+    end function
+
+    pure function compute_delta(vl, vr, v_m1, v, v_p1) result(delta)
+        real(real_kind), intent(in) :: vl, vr, v_m1, v, v_p1
+        real(real_kind)             :: delta
+        delta = minmod(vl - v, v_p1 - vr)
+    end function
 
     pure function compute_weights(s, v_m2, v_m1, v, v_p1, v_p2) result(w)
         real(real_kind), intent(in) :: s, v_m2, v_m1, v, v_p1, v_p2
@@ -118,7 +143,7 @@ module jiang_weno5_module
         real   (real_kind) :: w(3), p(3), cell_pos_l(3), cell_pos_r(3), face_pos(3)
         real   (real_kind) :: cell_cell_distance, cell_face_distanse, s
 
-        n_primitives = size(primitive_values_set(0, :))
+        n_primitives = size(primitive_values_set(1, :))
 
         do i = 1, n_primitives, 1
             cell_pos_l(1:3) = cell_positions(reference_cell_indexs_set(face_index, num_ghost_cells_+0), 1:3)
@@ -305,6 +330,8 @@ module jiang_weno5_module
         integer(int_kind )              :: lhc_index, rhc_index
         real   (real_kind), allocatable :: lhc_primitive   (:)
         real   (real_kind), allocatable :: rhc_primitive   (:)
+        integer(int_kind )              :: n_primitives, i
+        real   (real_kind)              :: delta
 
         lhc_index = reference_cell_indexs_set(face_index, num_ghost_cells_+0)
         rhc_index = reference_cell_indexs_set(face_index, num_ghost_cells_+1)
@@ -323,6 +350,21 @@ module jiang_weno5_module
             face_centor_positions                      , &
             face_index                                   &
         )
+
+        n_primitives = size(primitive_values_set(1, :))
+        do i = 1, n_primitives, 1
+            associate(                                                                                            &
+                v_m1 => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_-1), i), &
+                v    => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_+0), i), &
+                v_p1 => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_+1), i), &
+                vl   => lhc_primitive(i), &
+                vr   => rhc_primitive(i)  &
+            )
+                delta = compute_delta(vl, vr, v_m1, v, v_p1)
+                lhc_primitive(i) = lhc_primitive(i) + delta
+                rhc_primitive(i) = rhc_primitive(i) - delta
+            end associate
+        end do
 
         element_lef_and_right_side = integrated_element_function(  &
             lhc_primitive                            , &
