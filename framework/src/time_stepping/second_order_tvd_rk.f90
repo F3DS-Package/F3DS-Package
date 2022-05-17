@@ -26,6 +26,7 @@ module second_order_tvd_rk_module
     subroutine compute_next_state_second_order_tvd_rk( &
             conservative_variables_set               , &
             primitive_variables_set                  , &
+            derivative_variables_set                 , &
             cell_centor_positions                    , &
             cell_volumes                             , &
             reference_cell_indexs_set                , &
@@ -56,6 +57,7 @@ module second_order_tvd_rk_module
 
         real   (real_kind), intent(inout) :: conservative_variables_set (:,:)
         real   (real_kind), intent(inout) :: primitive_variables_set    (:,:)
+        real   (real_kind), intent(inout) :: derivative_variables_set   (:,:)
         real   (real_kind), intent(in   ) :: cell_centor_positions      (:,:)
         real   (real_kind), intent(in   ) :: cell_volumes               (:)
         integer(int_kind ), intent(in   ) :: reference_cell_indexs_set  (:,:)
@@ -88,6 +90,7 @@ module second_order_tvd_rk_module
                 face_areas                        , &
                 face_index                        , &
                 n_conservative_values             , &
+                n_derivative_values               , &
                 flux_function                     , &
                 eos_pressure_function             , &
                 eos_soundspeed_function           , &
@@ -107,8 +110,9 @@ module second_order_tvd_rk_module
                 real   (real_kind), intent(in ) :: face_areas               (:)
                 integer(int_kind ), intent(in ) :: face_index
                 integer(int_kind ), intent(in ) :: n_conservative_values
+                integer(int_kind ), intent(in ) :: n_derivative_values
 
-                real   (real_kind) :: element_lef_and_right_side(2, n_conservative_values)
+                real   (real_kind) :: element_lef_and_right_side(2, n_conservative_values+n_derivative_values)
 
                 interface
                     pure function flux_function(       &
@@ -169,6 +173,7 @@ module second_order_tvd_rk_module
                         face_tangential2_vector           , &
                         face_area                         , &
                         n_conservative_values             , &
+                        n_derivative_values               , &
                         flux_function                     , &
                         eos_pressure_function             , &
                         eos_soundspeed_function           , &
@@ -184,7 +189,8 @@ module second_order_tvd_rk_module
                         real   (real_kind), intent(in ) :: face_tangential2_vector           (3)
                         real   (real_kind), intent(in ) :: face_area
                         integer(int_kind ), intent(in ) :: n_conservative_values
-                        real   (real_kind)              :: element_lef_and_right_side        (2, n_conservative_values)
+                        integer(int_kind ), intent(in ) :: n_derivative_values
+                        real   (real_kind)              :: element_lef_and_right_side        (2, n_conservative_values+n_derivative_values)
 
                         interface
                             pure function flux_function(       &
@@ -249,6 +255,7 @@ module second_order_tvd_rk_module
                 face_tangential2_vector           , &
                 face_area                         , &
                 n_conservative_values             , &
+                n_derivative_values               , &
                 flux_function                     , &
                 eos_pressure_function             , &
                 eos_soundspeed_function           , &
@@ -264,7 +271,8 @@ module second_order_tvd_rk_module
                 real   (real_kind), intent(in ) :: face_tangential2_vector           (3)
                 real   (real_kind), intent(in ) :: face_area
                 integer(int_kind ), intent(in ) :: n_conservative_values
-                real   (real_kind)              :: element_lef_and_right_side        (2, n_conservative_values)
+                integer(int_kind ), intent(in ) :: n_derivative_values
+                real   (real_kind)              :: element_lef_and_right_side        (2, n_conservative_values+n_derivative_values)
 
                 interface
                     pure function flux_function(       &
@@ -406,10 +414,14 @@ module second_order_tvd_rk_module
         integer(int_kind ) :: i, j
         integer(int_kind ) :: lhc_index, rhc_index
         integer(int_kind ) :: n_conservative_values
-        real   (real_kind) :: element_lef_and_right_side(2, size(conservative_variables_set(0, :)))
+        integer(int_kind ) :: n_derivative_values
+        real   (real_kind) :: element_lef_and_right_side(2, size(conservative_variables_set(1,:)) + size(derivative_variables_set(1,:)))
         logical :: err
 
-        n_conservative_values = size(conservative_variables_set(0,:))
+        n_conservative_values = size(conservative_variables_set(1,:))
+        n_derivative_values   = size(derivative_variables_set  (1,:))
+
+        derivative_variables_set(:, :) = 0.d0
 
         err = set_boundary_condition_function( &
             primitive_variables_set   , &
@@ -442,22 +454,27 @@ module second_order_tvd_rk_module
                 face_areas                         , &
                 j                                  , &
                 n_conservative_values              , &
+                n_derivative_values                , &
                 flux_function                      , &
                 eos_pressure_function              , &
                 eos_soundspeed_function            , &
                 primitive_to_conservative_function , &
                 integrated_element_function          &
             )
-            residual_set(lhc_index, :) = residual_set(lhc_index, :) + element_lef_and_right_side(1, :)
-            residual_set(rhc_index, :) = residual_set(rhc_index, :) + element_lef_and_right_side(2, :)
+            residual_set(lhc_index, :) = residual_set(lhc_index, :) + element_lef_and_right_side(1, 1:n_conservative_values)
+            residual_set(rhc_index, :) = residual_set(rhc_index, :) + element_lef_and_right_side(2, 1:n_conservative_values)
+            derivative_variables_set(lhc_index, :) = derivative_variables_set(lhc_index, :) + element_lef_and_right_side(1, n_conservative_values+1:n_conservative_values+n_derivative_values)
+            derivative_variables_set(rhc_index, :) = derivative_variables_set(rhc_index, :) + element_lef_and_right_side(2, n_conservative_values+1:n_conservative_values+n_derivative_values)
         end do
 
 !$omp parallel do private(i)
         do i = 1, n_cells, 1
+            residual_set(i, 7) = residual_set(i, 7) - primitive_variables_set(i, 7) * derivative_variables_set(i, 1)
             stage1_conservative_variables_set(i, :) = conservative_variables_set(i, :) &
                 + time_increment * residual_set(i, :)
             primitive_variables_set(i, :) = conservative_to_primitive_function(stage1_conservative_variables_set(i, :))
             residual_set(i, :) = 0.d0
+            derivative_variables_set(i, :) = 0.d0
         end do
 
         err = set_boundary_condition_function( &
@@ -491,18 +508,22 @@ module second_order_tvd_rk_module
                 face_areas                         , &
                 j                                  , &
                 n_conservative_values              , &
+                n_derivative_values                , &
                 flux_function                      , &
                 eos_pressure_function              , &
                 eos_soundspeed_function            , &
                 primitive_to_conservative_function , &
                 integrated_element_function          &
             )
-            residual_set(lhc_index, :) = residual_set(lhc_index, :) + element_lef_and_right_side(1, :)
-            residual_set(rhc_index, :) = residual_set(rhc_index, :) + element_lef_and_right_side(2, :)
+            residual_set(lhc_index, :) = residual_set(lhc_index, :) + element_lef_and_right_side(1, 1:n_conservative_values)
+            residual_set(rhc_index, :) = residual_set(rhc_index, :) + element_lef_and_right_side(2, 1:n_conservative_values)
+            derivative_variables_set(lhc_index, :) = derivative_variables_set(lhc_index, :) + element_lef_and_right_side(1, n_conservative_values+1:n_conservative_values+n_derivative_values)
+            derivative_variables_set(rhc_index, :) = derivative_variables_set(rhc_index, :) + element_lef_and_right_side(2, n_conservative_values+1:n_conservative_values+n_derivative_values)
         end do
 
 !$omp parallel do private(i)
         do i = 1, n_cells, 1
+            residual_set(i, 7) = residual_set(i, 7) - primitive_variables_set(i, 7) * derivative_variables_set(i, 1)
             conservative_variables_set(i, :) = 0.5d0 * (conservative_variables_set(i, :) + stage1_conservative_variables_set(i, :) + time_increment * residual_set(i, :))
             primitive_variables_set(i, :) = conservative_to_primitive_function(conservative_variables_set(i, :))
             residual_set(i, :) = 0.d0

@@ -11,6 +11,7 @@ program five_eq_model_solver
     use second_order_tvd_rk_module
     use third_order_tvd_rk_module
     use jiang_weno5_module
+    use muscl_module
     use five_equation_space_model_module
     use five_equation_model_hllc_module
     ! Model
@@ -43,7 +44,7 @@ program five_eq_model_solver
     integer  (I4P), allocatable :: vtk_offset(:), vtk_connect(:)
 
     time_increment = 1.d-4
-    max_timestep   = 100
+    max_timestep   = 13*10**3
 
 #ifdef _OPENMP
     call omp_set_num_threads(16)
@@ -106,7 +107,7 @@ program five_eq_model_solver
 
     ! solver timestepping loop
     do timestep = 0, max_timestep, 1
-        if (mod(timestep, 100) == 0) then
+        if (mod(timestep, 10**2) == 0) then
             write(vtk_filename, "(a, i5.5, a)") "result/", file_output_counter, ".vtu"
             print *, "write vtk "//vtk_filename//"..."
             vtk_error = a_vtk_file%initialize                   (format="binary", filename=vtk_filename, mesh_topology="UnstructuredGrid")
@@ -134,6 +135,7 @@ program five_eq_model_solver
             vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='velocity', x=pack(primitive_variables_set(:, 3), mask=cells_is_real_cell), y=pack(primitive_variables_set(:, 4), mask=cells_is_real_cell), z=pack(primitive_variables_set(:, 5), mask=cells_is_real_cell))
             vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='internal enargy', x=pack(primitive_variables_set(:, 6), mask=cells_is_real_cell))
             vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='volume fruction', x=pack(primitive_variables_set(:, 7), mask=cells_is_real_cell))
+            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='div(u)', x=pack(derivative_variables_set(:, 1), mask=cells_is_real_cell))
             vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='cell id', x=vtk_cell_id)
             vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='cell position', x=pack(cells_centor_position(:, 1), mask=cells_is_real_cell), y=pack(cells_centor_position(:, 2), mask=cells_is_real_cell), z=pack(cells_centor_position(:, 3), mask=cells_is_real_cell))
             vtk_error = a_vtk_file%xml_writer%write_dataarray(location='cell', action='close')
@@ -147,6 +149,7 @@ program five_eq_model_solver
         call compute_next_state_second_order_tvd_rk(   &
             conservative_variables_set               , &
             primitive_variables_set                  , &
+            derivative_variables_set                 , &
             cells_centor_position                    , & ! <- TODO: We remove arguments in a future. We make the solver module and compute_next_state() routine.
             cells_volume                             , & ! <-
             faces_reference_cell_index               , & ! <-
@@ -165,7 +168,7 @@ program five_eq_model_solver
             get_number_of_slipwall_faces()           , &
             get_number_of_symmetric_faces()          , &
             time_increment                           , &
-            reconstruct_jiang_weno5                  , &
+            reconstruct_muscl                        , &
             compute_space_element_five_equation_model, &
             compute_flux_five_equation_model_hllc    , &
             compute_pressure_mixture_stiffened_eos   , &

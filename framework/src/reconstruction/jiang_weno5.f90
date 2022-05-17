@@ -12,35 +12,10 @@ module jiang_weno5_module
     private
 
     integer(int_kind) :: num_ghost_cells_ = 3
-    real(real_kind) :: acm_coef_ = 33.d0
 
     public :: reconstruct_jiang_weno5
 
     contains
-
-    pure function minmod(v1, v2) result(s)
-        real(real_kind), intent(in) :: v1, v2
-        real(real_kind)             :: s
-        s = 0.5d0 * (sign(1.d0, v1) + sign(1.d0, v2)) * min(abs(v1), abs(v2))
-    end function
-
-    pure function acm_parameter(v_m1, v, v_p1) result(a)
-        real(real_kind), intent(in) :: v_m1, v, v_p1
-        real(real_kind)             :: a
-        a = acm_coef_ * (abs(v_p1 - 2.d0 * v + v_p1) / (abs(v_p1 - v) + abs(v - v_m1)))
-    end function
-
-    pure function compute_acm_delta(vl, vr, v_m1, v, v_p1) result(delta)
-        real(real_kind), intent(in) :: vl, vr, v_m1, v, v_p1
-        real(real_kind)             :: delta
-        delta = minmod(0.5d0 * acm_parameter(v_m1, v, v_p1) * (vr - vl), (v_p1 - vr))
-    end function
-
-    pure function compute_delta(vl, vr, v_m1, v, v_p1) result(delta)
-        real(real_kind), intent(in) :: vl, vr, v_m1, v, v_p1
-        real(real_kind)             :: delta
-        delta = minmod(vl - v, v_p1 - vr)
-    end function
 
     pure function compute_weights(s, v_m2, v_m1, v, v_p1, v_p2) result(w)
         real(real_kind), intent(in) :: s, v_m2, v_m1, v, v_p1, v_p2
@@ -48,12 +23,15 @@ module jiang_weno5_module
         real(real_kind)             :: b(3), g(3)
         real(real_kind)             :: total_w
 
-        g(1) = (80.d0 * s**4.d0 - 160.d0 * s**3.d0 - 120.d0 * s**2.d0 + 200.d0 * s + 9.d0) &
-                 / (80.d0 * (12.d0 * s**2.d0 + 12.d0 * s - 1.d0))
-        g(2) = -1.d0 * (960.d0 * s**6.d0 - 5360 * s**4.d0 + 4548.d0 * s**2 - 49.d0) &
-                 / (40.d0 * (12.d0 * s**2 - 12.d0 * s - 1.d0) * (12.d0 ** 2 + 12.d0 * s - 1.d0))
-        g(3) = (80.d0 * s**4 + 160.d0 * s**3 - 120.d0 * s**2 - 200.d0 * s + 9.d0) &
-                 / 80.d0 * (12.d0 * s**2 - 12.d0 * s - 1.d0)
+        if(s>0)then ! left-side
+            g(1) = 0.1d0
+            g(2) = 0.6d0
+            g(3) = 0.3d0
+        else
+            g(1) = 0.3d0
+            g(2) = 0.6d0
+            g(3) = 0.1d0
+        endif
         b(1) = (13.d0 / 12.d0) * (v_m2 - 2.d0 * v_m1 + v)**2.d0 &
              + (1.d0  / 4.d0 ) * (v_m2 - 4.d0 * v_m1 + 3.d0 * v)**2.d0
         b(2) = (13.d0 / 12.d0) * (v_m1 - 2.d0 * v + v_p1)**2.d0 &
@@ -73,15 +51,15 @@ module jiang_weno5_module
         real(real_kind), intent(in) :: s, v_m2, v_m1, v, v_p1, v_p2
         real(real_kind)             :: p(3)
 
-        p(1) = (1.d0 / 24.d0) * (12.d0 * s**2.d0 + 36.d0 * s + 23.d0) * v    &
-             - (1.d0 / 12.d0) * (12.d0 * s**2.d0 + 24.d0 * s - 1.d0 ) * v_m1 &
-             + (1.d0 / 24.d0) * (12.d0 * s**2.d0 + 12.d0 * s - 1.d0 ) * v_m2
-        p(2) = (1.d0 / 24.d0) * (12.d0 * s**2.d0 + 12.d0 * s - 1.d0 ) * v_p1 &
-             - (1.d0 / 12.d0) * (12.d0 * s**2.d0             - 13.d0) * v    &
-             + (1.d0 / 24.d0) * (12.d0 * s**2.d0 - 12.d0 * s - 1.d0 ) * v_m1
-        p(3) = (1.d0 / 24.d0) * (12.d0 * s**2.d0 - 12.d0 * s - 1.d0 ) * v_p2 &
-             - (1.d0 / 12.d0) * (12.d0 * s**2.d0 - 24.d0 * s - 1.d0 ) * v_p1 &
-             + (1.d0 / 24.d0) * (12.d0 * s**2.d0 - 36.d0 * s + 23.d0) * v
+        if(s>0)then ! left-side
+            p(1) =  1.d0 / 3.d0 * v_m2 - 7.d0 / 6.d0 * v_m1 + 11.d0 / 6.d0 * v
+            p(2) = -1.d0 / 6.d0 * v_m1 + 5.d0 / 6.d0 * v    + 1.d0  / 3.d0 * v_p1
+            p(3) =  1.d0 / 3.d0 * v    + 5.d0 / 6.d0 * v_p1 - 1.d0  / 6.d0 * v_p2
+        else
+            p(1) = -1.d0  / 6.d0 * v_m2 + 5.d0 / 6.d0 * v_m1 + 1.d0 / 3.d0 * v
+            p(2) =  1.d0  / 3.d0 * v_m1 + 5.d0 / 6.d0 * v    - 1.d0 / 6.d0 * v_p1
+            p(3) =  11.d0 / 6.d0 * v    - 7.d0 / 6.d0 * v_p1 + 1.d0 / 3.d0 * v_p2
+        endif
     end function compute_polynomials
 
     pure function reconstruct_leftside_jiang_weno5( &
@@ -110,7 +88,7 @@ module jiang_weno5_module
             face_pos  (1:3) = face_positions(face_index, 1:3)
             cell_cell_distance = vector_distance(cell_pos_l, cell_pos_r)
             cell_face_distanse = vector_distance(cell_pos_l, face_pos  )
-            s = cell_face_distanse / cell_cell_distance
+            s = 1.d0!cell_face_distanse / cell_cell_distance
             associate(                                                                                              &
                 v_m2 => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_-2), i), &
                 v_m1 => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_-1), i), &
@@ -151,7 +129,7 @@ module jiang_weno5_module
             face_pos  (1:3) = face_positions(face_index, 1:3)
             cell_cell_distance = vector_distance(cell_pos_l, cell_pos_r)
             cell_face_distanse = vector_distance(cell_pos_l, face_pos  )
-            s = - 1.d0 * cell_face_distanse / cell_cell_distance
+            s = - 1.d0! * cell_face_distanse / cell_cell_distance
             associate(                                                                                              &
                 v_m2       => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_-1), i), &
                 v_m1       => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_+0), i), &
@@ -166,7 +144,7 @@ module jiang_weno5_module
         end do
     end function reconstruct_rightside_jiang_weno5
 
-    pure function reconstruct_jiang_weno5(        &
+    pure function reconstruct_jiang_weno5(  &
         primitive_values_set              , &
         cell_centor_positions             , &
         cell_volumes                      , &
@@ -178,6 +156,7 @@ module jiang_weno5_module
         face_areas                        , &
         face_index                        , &
         n_conservative_values             , &
+        n_derivative_values              , &
         flux_function                     , &
         eos_pressure_function             , &
         eos_soundspeed_function           , &
@@ -195,8 +174,9 @@ module jiang_weno5_module
         real   (real_kind), intent(in ) :: face_areas               (:)
         integer(int_kind ), intent(in ) :: face_index
         integer(int_kind ), intent(in ) :: n_conservative_values
+        integer(int_kind ), intent(in ) :: n_derivative_values
 
-        real   (real_kind)              :: element_lef_and_right_side(2, n_conservative_values)
+        real   (real_kind)              :: element_lef_and_right_side(2, n_conservative_values+n_derivative_values)
 
         interface
             pure function flux_function(       &
@@ -257,6 +237,7 @@ module jiang_weno5_module
                 face_tangential2_vector           , &
                 face_area                         , &
                 n_conservative_values             , &
+                n_derivative_values              , &
                 flux_function                     , &
                 eos_pressure_function             , &
                 eos_soundspeed_function           , &
@@ -273,7 +254,8 @@ module jiang_weno5_module
                 real   (real_kind), intent(in ) :: face_tangential2_vector           (3)
                 real   (real_kind), intent(in ) :: face_area
                 integer(int_kind ), intent(in ) :: n_conservative_values
-                real   (real_kind)              :: element_lef_and_right_side        (2, n_conservative_values)
+                integer(int_kind ), intent(in ) :: n_derivative_values
+                real   (real_kind)              :: element_lef_and_right_side        (2, n_conservative_values+n_derivative_values)
 
                 interface
                     pure function flux_function(       &
@@ -351,21 +333,6 @@ module jiang_weno5_module
             face_index                                   &
         )
 
-        n_primitives = size(primitive_values_set(1, :))
-        do i = 1, n_primitives, 1
-            associate(                                                                                            &
-                v_m1 => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_-1), i), &
-                v    => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_+0), i), &
-                v_p1 => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_+1), i), &
-                vl   => lhc_primitive(i), &
-                vr   => rhc_primitive(i)  &
-            )
-                delta = compute_delta(vl, vr, v_m1, v, v_p1)
-                lhc_primitive(i) = lhc_primitive(i) + delta
-                rhc_primitive(i) = rhc_primitive(i) - delta
-            end associate
-        end do
-
         element_lef_and_right_side = integrated_element_function(  &
             lhc_primitive                            , &
             rhc_primitive                            , &
@@ -376,6 +343,7 @@ module jiang_weno5_module
             face_tangential2_vectors(face_index, 1:3), &
             face_areas              (face_index)     , &
             n_conservative_values                    , &
+            n_derivative_values                      , &
             flux_function                            , &
             eos_pressure_function                    , &
             eos_soundspeed_function                  , &

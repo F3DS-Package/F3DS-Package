@@ -152,6 +152,7 @@ module weno5_module
         face_areas                        , &
         face_index                        , &
         n_conservative_values             , &
+        n_derivative_values              , &
         flux_function                     , &
         eos_pressure_function             , &
         eos_soundspeed_function           , &
@@ -169,8 +170,9 @@ module weno5_module
         real   (real_kind), intent(in ) :: face_areas               (:)
         integer(int_kind ), intent(in ) :: face_index
         integer(int_kind ), intent(in ) :: n_conservative_values
+        integer(int_kind ), intent(in ) :: n_derivative_values
 
-        real   (real_kind)                           :: element_lef_and_right_side(2, n_conservative_values)
+        real   (real_kind)              :: element_lef_and_right_side(2, n_conservative_values+n_derivative_values)
 
         interface
             pure function flux_function(       &
@@ -231,6 +233,7 @@ module weno5_module
                 face_tangential2_vector           , &
                 face_area                         , &
                 n_conservative_values             , &
+                n_derivative_values              , &
                 flux_function                     , &
                 eos_pressure_function             , &
                 eos_soundspeed_function           , &
@@ -247,7 +250,8 @@ module weno5_module
                 real   (real_kind), intent(in ) :: face_tangential2_vector           (3)
                 real   (real_kind), intent(in ) :: face_area
                 integer(int_kind ), intent(in ) :: n_conservative_values
-                real   (real_kind)              :: element_lef_and_right_side        (2, n_conservative_values)
+                integer(int_kind ), intent(in ) :: n_derivative_values
+                real   (real_kind)              :: element_lef_and_right_side        (2, n_conservative_values+n_derivative_values)
 
                 interface
                     pure function flux_function(       &
@@ -333,6 +337,7 @@ module weno5_module
             face_tangential2_vectors(face_index, 1:3), &
             face_areas              (face_index)     , &
             n_conservative_values                    , &
+            n_derivative_values                      , &
             flux_function                            , &
             eos_pressure_function                    , &
             eos_soundspeed_function                  , &
