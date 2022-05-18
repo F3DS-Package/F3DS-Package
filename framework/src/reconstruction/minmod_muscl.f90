@@ -25,13 +25,13 @@ module minmod_muscl_module
 
     pure function reconstruct_leftside_minmod_muscl( &
         primitive_values_set             , &
-        reference_cell_indexs_set        , &
+        face_to_cell_index        , &
         cell_positions                   , &
         face_positions                   , &
         face_index                          ) result(reconstructed_primitive)
 
         real   (real_kind), intent(in) :: primitive_values_set      (:, :)
-        integer(int_kind ), intent(in) :: reference_cell_indexs_set (:, :)
+        integer(int_kind ), intent(in) :: face_to_cell_index        (:, :)
         real   (real_kind), intent(in) :: cell_positions            (:, :)
         real   (real_kind), intent(in) :: face_positions            (:, :)
         integer(int_kind ), intent(in) :: face_index
@@ -45,27 +45,31 @@ module minmod_muscl_module
 
         do i = 1, n_primitives, 1
             associate(                                                                                      &
-                v_m1 => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_-1), i), &
-                v    => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_+0), i), &
-                v_p1 => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_+1), i)  &
+                v_m1 => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_-1), i), &
+                v    => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_+0), i), &
+                v_p1 => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_+1), i)  &
             )
-                s = (v - v_m1) / (v_p1 - v)
-                reconstructed_primitive(i) = v &
-                                           + 0.25d0 * (1.d0 - kappa_) * minmod(1.d0 / s) * (v    - v_m1) &
-                                           + 0.25d0 * (1.d0 - kappa_) * minmod(       s) * (v_p1 - v   )
+                if((v - v_m1) == 0.d0 .or. (v_p1 - v) == 0.d0)then
+                    reconstructed_primitive(i) = v
+                else
+                    s = (v - v_m1) / (v_p1 - v)
+                    reconstructed_primitive(i) = v &
+                                               + 0.25d0 * (1.d0 - kappa_) * minmod(1.d0 / s) * (v    - v_m1) &
+                                               + 0.25d0 * (1.d0 - kappa_) * minmod(       s) * (v_p1 - v   )
+                end if
             end associate
         end do
     end function reconstruct_leftside_minmod_muscl
 
     pure function reconstruct_rightside_minmod_muscl( &
         primitive_values_set             , &
-        reference_cell_indexs_set        , &
+        face_to_cell_index        , &
         cell_positions                   , &
         face_positions                   , &
         face_index                          ) result(reconstructed_primitive)
 
         real   (real_kind), intent(in) :: primitive_values_set      (:, :)
-        integer(int_kind ), intent(in) :: reference_cell_indexs_set (:, :)
+        integer(int_kind ), intent(in) :: face_to_cell_index        (:, :)
         real   (real_kind), intent(in) :: cell_positions            (:, :)
         real   (real_kind), intent(in) :: face_positions            (:, :)
         integer(int_kind ), intent(in) :: face_index
@@ -79,14 +83,18 @@ module minmod_muscl_module
 
         do i = 1, n_primitives, 1
             associate(                                                                                            &
-                v_m1       => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_+0), i), &
-                v          => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_+1), i), &
-                v_p1       => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_+2), i)  &
+                v_m1       => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_+0), i), &
+                v          => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_+1), i), &
+                v_p1       => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_+2), i)  &
             )
-                s = (v - v_m1) / (v_p1 - v)
-                reconstructed_primitive(i) = v &
-                                           - 0.25d0 * (1.d0 - kappa_) * minmod(1.d0 / s) * (v    - v_m1) &
-                                           - 0.25d0 * (1.d0 - kappa_) * minmod(       s) * (v_p1 - v   )
+                if((v - v_m1) == 0.d0 .or. (v_p1 - v) == 0.d0)then
+                    reconstructed_primitive(i) = v
+                else
+                    s = (v - v_m1) / (v_p1 - v)
+                    reconstructed_primitive(i) = v &
+                                               - 0.25d0 * (1.d0 - kappa_) * minmod(1.d0 / s) * (v    - v_m1) &
+                                               - 0.25d0 * (1.d0 - kappa_) * minmod(       s) * (v_p1 - v   )
+                end if
             end associate
         end do
     end function reconstruct_rightside_minmod_muscl
@@ -95,7 +103,7 @@ module minmod_muscl_module
         primitive_values_set              , &
         cell_centor_positions             , &
         cell_volumes                      , &
-        reference_cell_indexs_set         , &
+        face_to_cell_index         , &
         face_centor_positions             , &
         face_normal_vectors               , &
         face_tangential1_vectors          , &
@@ -108,12 +116,12 @@ module minmod_muscl_module
         eos_pressure_function             , &
         eos_soundspeed_function           , &
         primitive_to_conservative_function, &
-        integrated_element_function             ) result(element_lef_and_right_side)
+        integrated_element_function             ) result(element)
 
         real   (real_kind), intent(in ) :: primitive_values_set     (:, :)
         real   (real_kind), intent(in ) :: cell_centor_positions    (:, :)
         real   (real_kind), intent(in ) :: cell_volumes             (:)
-        integer(int_kind ), intent(in ) :: reference_cell_indexs_set(:,:)
+        integer(int_kind ), intent(in ) :: face_to_cell_index       (:,:)
         real   (real_kind), intent(in ) :: face_normal_vectors      (:,:)
         real   (real_kind), intent(in ) :: face_tangential1_vectors (:,:)
         real   (real_kind), intent(in ) :: face_tangential2_vectors (:,:)
@@ -123,7 +131,7 @@ module minmod_muscl_module
         integer(int_kind ), intent(in ) :: n_conservative_values
         integer(int_kind ), intent(in ) :: n_derivative_values
 
-        real   (real_kind)              :: element_lef_and_right_side(2, n_conservative_values+n_derivative_values)
+        real   (real_kind)              :: element(2, n_conservative_values+n_derivative_values)
 
         interface
             pure function flux_function(       &
@@ -188,7 +196,7 @@ module minmod_muscl_module
                 flux_function                     , &
                 eos_pressure_function             , &
                 eos_soundspeed_function           , &
-                primitive_to_conservative_function   ) result(element_lef_and_right_side)
+                primitive_to_conservative_function   ) result(element)
 
                 use typedef_module
 
@@ -202,7 +210,7 @@ module minmod_muscl_module
                 real   (real_kind), intent(in ) :: face_area
                 integer(int_kind ), intent(in ) :: n_conservative_values
                 integer(int_kind ), intent(in ) :: n_derivative_values
-                real   (real_kind)              :: element_lef_and_right_side        (2, n_conservative_values+n_derivative_values)
+                real   (real_kind)              :: element        (2, n_conservative_values+n_derivative_values)
 
                 interface
                     pure function flux_function(       &
@@ -262,25 +270,25 @@ module minmod_muscl_module
         integer(int_kind )              :: n_primitives, i
         real   (real_kind)              :: delta
 
-        lhc_index = reference_cell_indexs_set(face_index, num_ghost_cells_+0)
-        rhc_index = reference_cell_indexs_set(face_index, num_ghost_cells_+1)
+        lhc_index = face_to_cell_index(face_index, num_ghost_cells_+0)
+        rhc_index = face_to_cell_index(face_index, num_ghost_cells_+1)
 
         lhc_primitive = reconstruct_leftside_minmod_muscl(      &
             primitive_values_set                       , &
-            reference_cell_indexs_set                  , &
+            face_to_cell_index                         , &
             cell_centor_positions                      , &
             face_centor_positions                      , &
             face_index                                   &
         )
         rhc_primitive = reconstruct_rightside_minmod_muscl(     &
             primitive_values_set                       , &
-            reference_cell_indexs_set                  , &
+            face_to_cell_index                         , &
             cell_centor_positions                      , &
             face_centor_positions                      , &
             face_index                                   &
         )
 
-        element_lef_and_right_side = integrated_element_function(  &
+        element = integrated_element_function(  &
             lhc_primitive                            , &
             rhc_primitive                            , &
             cell_volumes(lhc_index)                  , &

@@ -9,23 +9,25 @@ module faces_module
     integer(int_kind) :: num_faces_
     integer(int_kind) :: num_local_cells_
 
-    ! Reference for cells index
+    ! Data structure and rule:
     ! (local cell index)   -2        -1         0         1         2         3
     !                       |         |         |         |         |         |
     !
     !                  *---------*---------*---------*---------*---------*---------*
-    !                  |         |         |         |         |         |         |
-    !                  |    o    |    o    |    o    x    o    |    o    |    o    |
+    !                  |         |         |         | n       |         |         | "n" is a normal vector.
+    !                  |    o    |    o    |    o    x--> o    |    o    |    o    | Normal vector must be oriented to the right-hand cell.
     ! (cell index) ->  |    1    |    2    |    3    |    4    |    5    |    6    |
     !                  *---------*---------*---------*---------*---------*---------*
     !
-    !   (inner cells) ______|_________|_________|    |    |_________|_________|________ (ghost cells)
+    !   (inner cells) ______|_________|_________|    |    |_________|_________|________ (inner or ghost cells)
     !                                                |             *If fase is boundary, ghost cells are stored right-side.
-    !                                         (boundary face)
-    !
+    !                                      (boundary/inner face)
+
+
+    ! Reference for cell index
     ! Elm. 2) -Number of ghost cells + 1: Number of ghost cells , Local cell index
     ! Elm. 3) 1 : Number of faces                               , Face number
-    integer(int_kind), public, allocatable :: faces_reference_cell_index(:,:)
+    integer(int_kind), public, allocatable :: faces_to_cell_index(:,:)
 
     ! Normal vectors that is directed right-hand cell (local index is one)
     ! Elm. 1) 1 : 3              , vector compornents
@@ -82,10 +84,10 @@ module faces_module
         end if
         num_local_cells_ = num_local_cells
 
-        if(allocated(faces_reference_cell_index))then
-            call call_error("Array faces_reference_cell_index is already allocated. But you call the initialiser for faces module.")
+        if(allocated(faces_to_cell_index))then
+            call call_error("Array faces_to_cell_index is already allocated. But you call the initialiser for faces module.")
         end if
-        allocate(faces_reference_cell_index(num_faces, -num_local_cells + 1:num_local_cells))
+        allocate(faces_to_cell_index(num_faces, -num_local_cells + 1:num_local_cells))
 
         if(allocated(faces_normal_vector))then
             call call_error("Array faces_normal_vector is already allocated. But you call the initialiser for faces module.")
@@ -114,10 +116,10 @@ module faces_module
     end subroutine initialise_faces
 
     subroutine finalize_faces()
-        if(.not. allocated(faces_reference_cell_index))then
-            call call_error("Array faces_reference_cell_index are not allocated. But you call the finalizer for faces module.")
+        if(.not. allocated(faces_to_cell_index))then
+            call call_error("Array faces_to_cell_index are not allocated. But you call the finalizer for faces module.")
         end if
-        deallocate(faces_reference_cell_index)
+        deallocate(faces_to_cell_index)
 
         if(allocated(faces_normal_vector))then
             call call_error("Array faces_normal_vector is not allocated. But you call the finalizer for faces module.")

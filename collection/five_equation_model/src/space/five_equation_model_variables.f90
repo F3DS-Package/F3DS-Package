@@ -25,7 +25,7 @@ module five_equation_model_variables_module
     real(real_kind), public, allocatable :: primitive_variables_set(:,:)
 
     ! Elm. 1) following variables are saved
-    ! derivative_variables_set(:, 1  )   : grad(density)
+    ! derivative_variables_set(:, 1  )   : div(u)
     ! derivative_variables_set(:, 2  )   : div(u)
     ! Elm. 2) 1 : {@code num_cells}, cell index
     real(real_kind), public, allocatable :: derivative_variables_set(:,:)
@@ -60,14 +60,8 @@ module five_equation_model_variables_module
             conservative_variables(3) = u  * rho
             conservative_variables(4) = v  * rho
             conservative_variables(5) = w  * rho
-            conservative_variables(6) = ie * rho + 0.5d0 * (u**2.d0 + v**2.d0 + w**2.d0) / rho
-            if(z1 > 1.d0)then
-                conservative_variables(7) = 1.d0
-            else if(z1 < 0.d0)then
-                conservative_variables(7) = 0.d0
-            else
-                conservative_variables(7) = z1
-            end if
+            conservative_variables(6) = ie * rho + 0.5d0 * (u**2.d0 + v**2.d0 + w**2.d0) * rho
+            conservative_variables(7) = z1
         end associate
     end function primitive_to_conservative
 
@@ -89,23 +83,17 @@ module five_equation_model_variables_module
                 z1      => conservative_variables(7)  &
             )
             rho = rho1_z1 + rho2_z2
-            primitive_variables(1) = rho1_z1
-            primitive_variables(2) = rho2_z2
-            if (rho == 0.d0)then
-                primitive_variables(3:6) = 0.d0
+            if(rho < 1.d-8)then
+                primitive_variables(:) = 0.d0
             else
+                primitive_variables(1) = rho1_z1
+                primitive_variables(2) = rho2_z2
                 primitive_variables(3) = rho_u / rho
                 primitive_variables(4) = rho_v / rho
                 primitive_variables(5) = rho_w / rho
-                primitive_variables(6) = (e - 0.5d0 * (rho_u**2.d0 + rho_v**2.d0 + rho_w**2.d0) / rho) / rho
-            end if
-            if(z1 > 1.d0)then
-                primitive_variables(7) = 1.d0
-            else if(z1 < 0.d0)then
-                primitive_variables(7) = 0.d0
-            else
+                primitive_variables(6) = e / rho - 0.5d0 * (rho_u**2.d0 + rho_v**2.d0 + rho_w**2.d0) / rho**2.d0
                 primitive_variables(7) = z1
-            end if
+            endif
         end associate
     end function conservative_to_primitive
 

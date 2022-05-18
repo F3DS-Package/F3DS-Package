@@ -31,7 +31,7 @@ module third_order_tvd_rk_module
         derivative_variables_set                 , &
         cell_centor_positions                    , &
         cell_volumes                             , &
-        reference_cell_indexs_set                , &
+        face_to_cell_index                , &
         face_normal_vectors                      , &
         face_tangential1_vectors                 , &
         face_tangential2_vectors                 , &
@@ -62,7 +62,7 @@ module third_order_tvd_rk_module
     real   (real_kind), intent(inout) :: derivative_variables_set   (:,:)
     real   (real_kind), intent(in   ) :: cell_centor_positions      (:,:)
     real   (real_kind), intent(in   ) :: cell_volumes               (:)
-    integer(int_kind ), intent(in   ) :: reference_cell_indexs_set  (:,:)
+    integer(int_kind ), intent(in   ) :: face_to_cell_index         (:,:)
     real   (real_kind), intent(in   ) :: face_normal_vectors        (:,:)
     real   (real_kind), intent(in   ) :: face_tangential1_vectors   (:,:)
     real   (real_kind), intent(in   ) :: face_tangential2_vectors   (:,:)
@@ -84,7 +84,7 @@ module third_order_tvd_rk_module
             primitive_values_set              , &
             cell_centor_positions             , &
             cell_volumes                      , &
-            reference_cell_indexs_set         , &
+            face_to_cell_index         , &
             face_centor_positions             , &
             face_normal_vectors               , &
             face_tangential1_vectors          , &
@@ -97,14 +97,14 @@ module third_order_tvd_rk_module
             eos_pressure_function             , &
             eos_soundspeed_function           , &
             primitive_to_conservative_function, &
-            integrated_element_function             ) result(element_lef_and_right_side)
+            integrated_element_function             ) result(element)
 
             use typedef_module
 
             real   (real_kind), intent(in ) :: primitive_values_set     (:, :)
             real   (real_kind), intent(in ) :: cell_centor_positions    (:, :)
             real   (real_kind), intent(in ) :: cell_volumes             (:)
-            integer(int_kind ), intent(in ) :: reference_cell_indexs_set(:,:)
+            integer(int_kind ), intent(in ) :: face_to_cell_index       (:,:)
             real   (real_kind), intent(in ) :: face_normal_vectors      (:,:)
             real   (real_kind), intent(in ) :: face_tangential1_vectors (:,:)
             real   (real_kind), intent(in ) :: face_tangential2_vectors (:,:)
@@ -114,7 +114,7 @@ module third_order_tvd_rk_module
             integer(int_kind ), intent(in ) :: n_conservative_values
             integer(int_kind ), intent(in ) :: n_derivative_values
 
-            real   (real_kind) :: element_lef_and_right_side(2, n_conservative_values+n_derivative_values)
+            real   (real_kind) :: element(2, n_conservative_values+n_derivative_values)
 
             interface
                 pure function flux_function(       &
@@ -179,7 +179,7 @@ module third_order_tvd_rk_module
                     flux_function                     , &
                     eos_pressure_function             , &
                     eos_soundspeed_function           , &
-                    primitive_to_conservative_function   ) result(element_lef_and_right_side)
+                    primitive_to_conservative_function   ) result(element)
 
                     use typedef_module
                     real   (real_kind), intent(in ) :: reconstructed_leftside_primitive  (:)
@@ -192,7 +192,7 @@ module third_order_tvd_rk_module
                     real   (real_kind), intent(in ) :: face_area
                     integer(int_kind ), intent(in ) :: n_conservative_values
                     integer(int_kind ), intent(in ) :: n_derivative_values
-                    real   (real_kind)              :: element_lef_and_right_side        (2, n_conservative_values+n_derivative_values)
+                    real   (real_kind)              :: element        (2, n_conservative_values+n_derivative_values)
 
                     interface
                         pure function flux_function(       &
@@ -261,7 +261,7 @@ module third_order_tvd_rk_module
             flux_function                     , &
             eos_pressure_function             , &
             eos_soundspeed_function           , &
-            primitive_to_conservative_function   ) result(element_lef_and_right_side)
+            primitive_to_conservative_function   ) result(element)
 
             use typedef_module
             real   (real_kind), intent(in ) :: reconstructed_leftside_primitive  (:)
@@ -274,7 +274,7 @@ module third_order_tvd_rk_module
             real   (real_kind), intent(in ) :: face_area
             integer(int_kind ), intent(in ) :: n_conservative_values
             integer(int_kind ), intent(in ) :: n_derivative_values
-            real   (real_kind)              :: element_lef_and_right_side        (2, n_conservative_values+n_derivative_values)
+            real   (real_kind)              :: element        (2, n_conservative_values+n_derivative_values)
 
             interface
                 pure function flux_function(       &
@@ -383,7 +383,7 @@ module third_order_tvd_rk_module
 
         function set_boundary_condition_function( &
                 primitive_variables_set   , &
-                reference_cell_indexs_set , &
+                face_to_cell_index , &
                 face_normal_vectors       , &
                 face_tangential1_vectors  , &
                 face_tangential2_vectors  , &
@@ -397,7 +397,7 @@ module third_order_tvd_rk_module
             ) result(error)
             use typedef_module
             real   (real_kind), intent(inout) :: primitive_variables_set    (:,:)
-            integer(int_kind ), intent(in   ) :: reference_cell_indexs_set  (:,:)
+            integer(int_kind ), intent(in   ) :: face_to_cell_index         (:,:)
             real   (real_kind), intent(in   ) :: face_normal_vectors        (:,:)
             real   (real_kind), intent(in   ) :: face_tangential1_vectors   (:,:)
             real   (real_kind), intent(in   ) :: face_tangential2_vectors   (:,:)
@@ -417,17 +417,17 @@ module third_order_tvd_rk_module
         integer(int_kind ) :: lhc_index, rhc_index
         integer(int_kind ) :: n_conservative_values
         integer(int_kind ) :: n_derivative_values
-        real   (real_kind) :: element_lef_and_right_side(2, size(conservative_variables_set(1,:)) + size(derivative_variables_set(1,:)))
+        real   (real_kind) :: element(2, size(conservative_variables_set(1,:)) + size(derivative_variables_set(1,:)))
         logical :: err
 
         n_conservative_values = size(conservative_variables_set(1,:))
         n_derivative_values   = size(derivative_variables_set  (1,:))
 
-        derivative_variables_set(:, :) = 0.d0
+        !derivative_variables_set(:, :) = 0.d0
 
         err = set_boundary_condition_function( &
             primitive_variables_set   , &
-            reference_cell_indexs_set , &
+            face_to_cell_index , &
             face_normal_vectors       , &
             face_tangential1_vectors  , &
             face_tangential2_vectors  , &
@@ -440,15 +440,15 @@ module third_order_tvd_rk_module
             n_ghost_cells               &
         )
 
-!$omp parallel do private(j, lhc_index, rhc_index, element_lef_and_right_side)
+!$omp parallel do private(j, lhc_index, rhc_index, element)
         do j = 1, n_faces, 1
-            lhc_index = reference_cell_indexs_set(j, n_ghost_cells+0)
-            rhc_index = reference_cell_indexs_set(j, n_ghost_cells+1)
-            element_lef_and_right_side = reconstruction_function( &
+            lhc_index = face_to_cell_index(j, n_ghost_cells+0)
+            rhc_index = face_to_cell_index(j, n_ghost_cells+1)
+            element = reconstruction_function( &
                 primitive_variables_set            , &
                 cell_centor_positions              , &
                 cell_volumes                       , &
-                reference_cell_indexs_set          , &
+                face_to_cell_index          , &
                 face_centor_positions              , &
                 face_normal_vectors                , &
                 face_tangential1_vectors           , &
@@ -463,15 +463,14 @@ module third_order_tvd_rk_module
                 primitive_to_conservative_function , &
                 integrated_element_function          &
             )
-            residual_set(lhc_index, :) = residual_set(lhc_index, :) + element_lef_and_right_side(1, 1:n_conservative_values)
-            residual_set(rhc_index, :) = residual_set(rhc_index, :) + element_lef_and_right_side(2, 1:n_conservative_values)
-            derivative_variables_set(lhc_index, :) = derivative_variables_set(lhc_index, :) + element_lef_and_right_side(1, n_conservative_values+1:n_conservative_values+n_derivative_values)
-            derivative_variables_set(rhc_index, :) = derivative_variables_set(rhc_index, :) + element_lef_and_right_side(2, n_conservative_values+1:n_conservative_values+n_derivative_values)
+            residual_set(lhc_index, :) = residual_set(lhc_index, :) + element(1, 1:n_conservative_values)
+            residual_set(rhc_index, :) = residual_set(rhc_index, :) + element(2, 1:n_conservative_values)
+            derivative_variables_set(lhc_index, :) = derivative_variables_set(lhc_index, :) + element(1, n_conservative_values+1:n_conservative_values+n_derivative_values)
+            derivative_variables_set(rhc_index, :) = derivative_variables_set(rhc_index, :) + element(2, n_conservative_values+1:n_conservative_values+n_derivative_values)
         end do
 
 !$omp parallel do private(i)
         do i = 1, n_cells, 1
-            residual_set(i, 7) = residual_set(i, 7) - primitive_variables_set(i, 7) * derivative_variables_set(i, 1)
             stage1_conservative_variables_set(i, :) = conservative_variables_set(i, :) &
                 + time_increment * residual_set(i, :)
             primitive_variables_set(i, :) = conservative_to_primitive_function(stage1_conservative_variables_set(i, :))
@@ -481,7 +480,7 @@ module third_order_tvd_rk_module
 
         err = set_boundary_condition_function( &
             primitive_variables_set   , &
-            reference_cell_indexs_set , &
+            face_to_cell_index , &
             face_normal_vectors       , &
             face_tangential1_vectors  , &
             face_tangential2_vectors  , &
@@ -494,15 +493,15 @@ module third_order_tvd_rk_module
             n_ghost_cells               &
         )
 
-!$omp parallel do private(j, lhc_index, rhc_index, element_lef_and_right_side)
+!$omp parallel do private(j, lhc_index, rhc_index, element)
         do j = 1, n_faces, 1
-            lhc_index = reference_cell_indexs_set(j, n_ghost_cells+0)
-            rhc_index = reference_cell_indexs_set(j, n_ghost_cells+1)
-            element_lef_and_right_side = reconstruction_function( &
+            lhc_index = face_to_cell_index(j, n_ghost_cells+0)
+            rhc_index = face_to_cell_index(j, n_ghost_cells+1)
+            element = reconstruction_function( &
                 primitive_variables_set            , &
                 cell_centor_positions              , &
                 cell_volumes                       , &
-                reference_cell_indexs_set          , &
+                face_to_cell_index          , &
                 face_centor_positions              , &
                 face_normal_vectors                , &
                 face_tangential1_vectors           , &
@@ -517,15 +516,14 @@ module third_order_tvd_rk_module
                 primitive_to_conservative_function , &
                 integrated_element_function          &
             )
-            residual_set(lhc_index, :) = residual_set(lhc_index, :) + element_lef_and_right_side(1, 1:n_conservative_values)
-            residual_set(rhc_index, :) = residual_set(rhc_index, :) + element_lef_and_right_side(2, 1:n_conservative_values)
-            derivative_variables_set(lhc_index, :) = derivative_variables_set(lhc_index, :) + element_lef_and_right_side(1, n_conservative_values+1:n_conservative_values+n_derivative_values)
-            derivative_variables_set(rhc_index, :) = derivative_variables_set(rhc_index, :) + element_lef_and_right_side(2, n_conservative_values+1:n_conservative_values+n_derivative_values)
+            residual_set(lhc_index, :) = residual_set(lhc_index, :) + element(1, 1:n_conservative_values)
+            residual_set(rhc_index, :) = residual_set(rhc_index, :) + element(2, 1:n_conservative_values)
+            derivative_variables_set(lhc_index, :) = derivative_variables_set(lhc_index, :) + element(1, n_conservative_values+1:n_conservative_values+n_derivative_values)
+            derivative_variables_set(rhc_index, :) = derivative_variables_set(rhc_index, :) + element(2, n_conservative_values+1:n_conservative_values+n_derivative_values)
         end do
 
 !$omp parallel do private(i)
         do i = 1, n_cells, 1
-            residual_set(i, 7) = residual_set(i, 7) - primitive_variables_set(i, 7) * derivative_variables_set(i, 1)
             stage2_conservative_variables_set(i, :) = 0.75d0 * conservative_variables_set(i, :) + 0.25d0 * (stage1_conservative_variables_set(i, :) + time_increment * residual_set(i, :))
             primitive_variables_set(i, :) = conservative_to_primitive_function(stage2_conservative_variables_set(i, :))
             residual_set(i, :) = 0.d0
@@ -534,7 +532,7 @@ module third_order_tvd_rk_module
 
         err = set_boundary_condition_function( &
             primitive_variables_set   , &
-            reference_cell_indexs_set , &
+            face_to_cell_index , &
             face_normal_vectors       , &
             face_tangential1_vectors  , &
             face_tangential2_vectors  , &
@@ -547,15 +545,15 @@ module third_order_tvd_rk_module
             n_ghost_cells               &
         )
 
-!$omp parallel do private(j, lhc_index, rhc_index, element_lef_and_right_side)
+!$omp parallel do private(j, lhc_index, rhc_index, element)
         do j = 1, n_faces, 1
-            lhc_index = reference_cell_indexs_set(j, n_ghost_cells+0)
-            rhc_index = reference_cell_indexs_set(j, n_ghost_cells+1)
-            element_lef_and_right_side = reconstruction_function( &
+            lhc_index = face_to_cell_index(j, n_ghost_cells+0)
+            rhc_index = face_to_cell_index(j, n_ghost_cells+1)
+            element = reconstruction_function( &
                 primitive_variables_set            , &
                 cell_centor_positions              , &
                 cell_volumes                       , &
-                reference_cell_indexs_set          , &
+                face_to_cell_index          , &
                 face_centor_positions              , &
                 face_normal_vectors                , &
                 face_tangential1_vectors           , &
@@ -570,15 +568,14 @@ module third_order_tvd_rk_module
                 primitive_to_conservative_function , &
                 integrated_element_function          &
             )
-            residual_set(lhc_index, :) = residual_set(lhc_index, :) + element_lef_and_right_side(1, 1:n_conservative_values)
-            residual_set(rhc_index, :) = residual_set(rhc_index, :) + element_lef_and_right_side(2, 1:n_conservative_values)
-            derivative_variables_set(lhc_index, :) = derivative_variables_set(lhc_index, :) + element_lef_and_right_side(1, n_conservative_values+1:n_conservative_values+n_derivative_values)
-            derivative_variables_set(rhc_index, :) = derivative_variables_set(rhc_index, :) + element_lef_and_right_side(2, n_conservative_values+1:n_conservative_values+n_derivative_values)
+            residual_set(lhc_index, :) = residual_set(lhc_index, :) + element(1, 1:n_conservative_values)
+            residual_set(rhc_index, :) = residual_set(rhc_index, :) + element(2, 1:n_conservative_values)
+            derivative_variables_set(lhc_index, :) = derivative_variables_set(lhc_index, :) + element(1, n_conservative_values+1:n_conservative_values+n_derivative_values)
+            derivative_variables_set(rhc_index, :) = derivative_variables_set(rhc_index, :) + element(2, n_conservative_values+1:n_conservative_values+n_derivative_values)
         end do
 
 !$omp parallel do private(i)
         do i = 1, n_cells, 1
-            residual_set(i, 7) = residual_set(i, 7) - primitive_variables_set(i, 7) * derivative_variables_set(i, 1)
             conservative_variables_set(i, :) = (1.d0/3.d0) * conservative_variables_set(i, :) + (2.d0/3.d0) * (stage2_conservative_variables_set(i, :) + time_increment * residual_set(i, :))
             primitive_variables_set(i, :) = conservative_to_primitive_function(conservative_variables_set(i, :))
             residual_set(i, :) = 0.d0

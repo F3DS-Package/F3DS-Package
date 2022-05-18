@@ -60,13 +60,13 @@ module weno5_module
 
     pure function reconstruct_leftside_weno5( &
         primitive_values_set             , &
-        reference_cell_indexs_set        , &
+        face_to_cell_index        , &
         cell_positions                   , &
         face_positions                   , &
         face_index                          ) result(reconstructed_primitive)
 
         real   (real_kind), intent(in) :: primitive_values_set      (:, :)
-        integer(int_kind ), intent(in) :: reference_cell_indexs_set (:, :)
+        integer(int_kind ), intent(in) :: face_to_cell_index (:, :)
         real   (real_kind), intent(in) :: cell_positions            (:, :)
         real   (real_kind), intent(in) :: face_positions            (:, :)
         integer(int_kind ), intent(in) :: face_index
@@ -79,18 +79,18 @@ module weno5_module
         n_primitives = size(primitive_values_set(:,0))
 
         do i = 1, n_primitives, 1
-            cell_pos_l(1:3) = cell_positions(reference_cell_indexs_set(face_index, num_ghost_cells_+0), 1:3)
-            cell_pos_r(1:3) = cell_positions(reference_cell_indexs_set(face_index, num_ghost_cells_+1), 1:3)
+            cell_pos_l(1:3) = cell_positions(face_to_cell_index(face_index, num_ghost_cells_+0), 1:3)
+            cell_pos_r(1:3) = cell_positions(face_to_cell_index(face_index, num_ghost_cells_+1), 1:3)
             face_pos  (1:3) = face_positions(face_index, 1:3)
             cell_cell_distance = vector_distance(cell_pos_l, cell_pos_r)
             cell_face_distanse = vector_distance(cell_pos_l, face_pos  )
             s = cell_face_distanse / cell_cell_distance
             associate(                                                                                              &
-                v_m2 => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_-2), i), &
-                v_m1 => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_-1), i), &
-                v    => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_+0), i), &
-                v_p1 => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_+1), i), &
-                v_p2 => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_+2), i)  &
+                v_m2 => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_-2), i), &
+                v_m1 => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_-1), i), &
+                v    => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_+0), i), &
+                v_p1 => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_+1), i), &
+                v_p2 => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_+2), i)  &
             )
                 w(1:3) = compute_weights    (s, v_m2, v_m1, v, v_p1, v_p2)
                 p(1:3) = compute_polynomials(s, v_m2, v_m1, v, v_p1, v_p2)
@@ -101,13 +101,13 @@ module weno5_module
 
     pure function reconstruct_rightside_weno5( &
         primitive_values_set             , &
-        reference_cell_indexs_set        , &
+        face_to_cell_index        , &
         cell_positions                   , &
         face_positions                   , &
         face_index                          ) result(reconstructed_primitive)
 
         real   (real_kind), intent(in) :: primitive_values_set      (:, :)
-        integer(int_kind ), intent(in) :: reference_cell_indexs_set (:, :)
+        integer(int_kind ), intent(in) :: face_to_cell_index (:, :)
         real   (real_kind), intent(in) :: cell_positions            (:, :)
         real   (real_kind), intent(in) :: face_positions            (:, :)
         integer(int_kind ), intent(in) :: face_index
@@ -120,18 +120,18 @@ module weno5_module
         n_primitives = size(primitive_values_set(:,0))
 
         do i = 1, n_primitives, 1
-            cell_pos_l(1:3) = cell_positions(reference_cell_indexs_set(face_index, num_ghost_cells_+0), 1:3)
-            cell_pos_r(1:3) = cell_positions(reference_cell_indexs_set(face_index, num_ghost_cells_+1), 1:3)
+            cell_pos_l(1:3) = cell_positions(face_to_cell_index(face_index, num_ghost_cells_+0), 1:3)
+            cell_pos_r(1:3) = cell_positions(face_to_cell_index(face_index, num_ghost_cells_+1), 1:3)
             face_pos  (1:3) = face_positions(face_index, 1:3)
             cell_cell_distance = vector_distance(cell_pos_l, cell_pos_r)
             cell_face_distanse = vector_distance(cell_pos_l, face_pos  )
             s = - 1.d0 * cell_face_distanse / cell_cell_distance
             associate(                                                                                              &
-                v_m2       => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_-1), i), &
-                v_m1       => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_+0), i), &
-                v          => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_+1), i), &
-                v_p1       => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_+2), i), &
-                v_p2       => primitive_values_set(reference_cell_indexs_set(face_index, num_ghost_cells_+3), i)  &
+                v_m2       => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_-1), i), &
+                v_m1       => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_+0), i), &
+                v          => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_+1), i), &
+                v_p1       => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_+2), i), &
+                v_p2       => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_+3), i)  &
             )
                 w(1:3) = compute_weights    (s, v_m2, v_m1, v, v_p1, v_p2)
                 p(1:3) = compute_polynomials(s, v_m2, v_m1, v, v_p1, v_p2)
@@ -144,7 +144,7 @@ module weno5_module
         primitive_values_set              , &
         cell_centor_positions             , &
         cell_volumes                      , &
-        reference_cell_indexs_set         , &
+        face_to_cell_index         , &
         face_centor_positions             , &
         face_normal_vectors               , &
         face_tangential1_vectors          , &
@@ -157,12 +157,12 @@ module weno5_module
         eos_pressure_function             , &
         eos_soundspeed_function           , &
         primitive_to_conservative_function, &
-        integrated_element_function             ) result(element_lef_and_right_side)
+        integrated_element_function             ) result(element)
 
         real   (real_kind), intent(in ) :: primitive_values_set     (:, :)
         real   (real_kind), intent(in ) :: cell_centor_positions    (:, :)
         real   (real_kind), intent(in ) :: cell_volumes             (:)
-        integer(int_kind ), intent(in ) :: reference_cell_indexs_set(:,:)
+        integer(int_kind ), intent(in ) :: face_to_cell_index(:,:)
         real   (real_kind), intent(in ) :: face_normal_vectors      (:,:)
         real   (real_kind), intent(in ) :: face_tangential1_vectors (:,:)
         real   (real_kind), intent(in ) :: face_tangential2_vectors (:,:)
@@ -172,7 +172,7 @@ module weno5_module
         integer(int_kind ), intent(in ) :: n_conservative_values
         integer(int_kind ), intent(in ) :: n_derivative_values
 
-        real   (real_kind)              :: element_lef_and_right_side(2, n_conservative_values+n_derivative_values)
+        real   (real_kind)              :: element(2, n_conservative_values+n_derivative_values)
 
         interface
             pure function flux_function(       &
@@ -237,7 +237,7 @@ module weno5_module
                 flux_function                     , &
                 eos_pressure_function             , &
                 eos_soundspeed_function           , &
-                primitive_to_conservative_function   ) result(element_lef_and_right_side)
+                primitive_to_conservative_function   ) result(element)
 
                 use typedef_module
 
@@ -251,7 +251,7 @@ module weno5_module
                 real   (real_kind), intent(in ) :: face_area
                 integer(int_kind ), intent(in ) :: n_conservative_values
                 integer(int_kind ), intent(in ) :: n_derivative_values
-                real   (real_kind)              :: element_lef_and_right_side        (2, n_conservative_values+n_derivative_values)
+                real   (real_kind)              :: element        (2, n_conservative_values+n_derivative_values)
 
                 interface
                     pure function flux_function(       &
@@ -309,25 +309,25 @@ module weno5_module
         real   (real_kind), allocatable :: lhc_primitive   (:)
         real   (real_kind), allocatable :: rhc_primitive   (:)
 
-        lhc_index = reference_cell_indexs_set(face_index, num_ghost_cells_+0)
-        rhc_index = reference_cell_indexs_set(face_index, num_ghost_cells_+1)
+        lhc_index = face_to_cell_index(face_index, num_ghost_cells_+0)
+        rhc_index = face_to_cell_index(face_index, num_ghost_cells_+1)
 
         lhc_primitive = reconstruct_leftside_weno5(      &
             primitive_values_set                       , &
-            reference_cell_indexs_set                  , &
+            face_to_cell_index                         , &
             cell_centor_positions                      , &
             face_centor_positions                      , &
             face_index                                   &
         )
         rhc_primitive = reconstruct_rightside_weno5(     &
             primitive_values_set                       , &
-            reference_cell_indexs_set                  , &
+            face_to_cell_index                         , &
             cell_centor_positions                      , &
             face_centor_positions                      , &
             face_index                                   &
         )
 
-        element_lef_and_right_side = integrated_element_function(  &
+        element = integrated_element_function(  &
             lhc_primitive                            , &
             rhc_primitive                            , &
             cell_volumes(lhc_index)                  , &

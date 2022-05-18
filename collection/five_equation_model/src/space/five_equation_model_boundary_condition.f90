@@ -12,7 +12,7 @@ module five_equation_model_boundary_condition_module
 
     function five_equation_model_set_boundary_condition( &
             primitive_variables_set   , &
-            reference_cell_indexs_set , &
+            face_to_cell_index , &
             face_normal_vectors       , &
             face_tangential1_vectors  , &
             face_tangential2_vectors  , &
@@ -25,7 +25,7 @@ module five_equation_model_boundary_condition_module
             n_ghost_cells               &
         ) result(error)
         real   (real_kind), intent(inout) :: primitive_variables_set    (:,:)
-        integer(int_kind ), intent(in   ) :: reference_cell_indexs_set  (:,:)
+        integer(int_kind ), intent(in   ) :: face_to_cell_index  (:,:)
         real   (real_kind), intent(in   ) :: face_normal_vectors        (:,:)
         real   (real_kind), intent(in   ) :: face_tangential1_vectors   (:,:)
         real   (real_kind), intent(in   ) :: face_tangential2_vectors   (:,:)
@@ -44,12 +44,12 @@ module five_equation_model_boundary_condition_module
         do bc_face_index = 1, num_outflow_faces, 1
             associate( &
                 face_idx   => outflow_face_indexs(bc_face_index)                                            , &
-                ghost_idx1 => reference_cell_indexs_set(outflow_face_indexs(bc_face_index), n_ghost_cells+1), &
-                ghost_idx2 => reference_cell_indexs_set(outflow_face_indexs(bc_face_index), n_ghost_cells+2), &
-                ghost_idx3 => reference_cell_indexs_set(outflow_face_indexs(bc_face_index), n_ghost_cells+3), &
-                inner_idx1 => reference_cell_indexs_set(outflow_face_indexs(bc_face_index), n_ghost_cells+0), &
-                inner_idx2 => reference_cell_indexs_set(outflow_face_indexs(bc_face_index), n_ghost_cells-1), &
-                inner_idx3 => reference_cell_indexs_set(outflow_face_indexs(bc_face_index), n_ghost_cells-2)  &
+                ghost_idx1 => face_to_cell_index(outflow_face_indexs(bc_face_index), n_ghost_cells+1), &
+                ghost_idx2 => face_to_cell_index(outflow_face_indexs(bc_face_index), n_ghost_cells+2), &
+                ghost_idx3 => face_to_cell_index(outflow_face_indexs(bc_face_index), n_ghost_cells+3), &
+                inner_idx1 => face_to_cell_index(outflow_face_indexs(bc_face_index), n_ghost_cells+0), &
+                inner_idx2 => face_to_cell_index(outflow_face_indexs(bc_face_index), n_ghost_cells-1), &
+                inner_idx3 => face_to_cell_index(outflow_face_indexs(bc_face_index), n_ghost_cells-2)  &
             )
                 primitive_variables_set(ghost_idx1, :) = make_ghost_primitive_variables_outflow( &
                     primitive_variables_set , &
@@ -82,12 +82,12 @@ module five_equation_model_boundary_condition_module
         do bc_face_index = 1, num_slipwall_faces, 1
             associate( &
                 face_idx   => slipwall_face_indexs(bc_face_index)                                            , &
-                ghost_idx1 => reference_cell_indexs_set(slipwall_face_indexs(bc_face_index), n_ghost_cells+1), &
-                ghost_idx2 => reference_cell_indexs_set(slipwall_face_indexs(bc_face_index), n_ghost_cells+2), &
-                ghost_idx3 => reference_cell_indexs_set(slipwall_face_indexs(bc_face_index), n_ghost_cells+3), &
-                inner_idx1 => reference_cell_indexs_set(slipwall_face_indexs(bc_face_index), n_ghost_cells+0), &
-                inner_idx2 => reference_cell_indexs_set(slipwall_face_indexs(bc_face_index), n_ghost_cells-1), &
-                inner_idx3 => reference_cell_indexs_set(slipwall_face_indexs(bc_face_index), n_ghost_cells-2)  &
+                ghost_idx1 => face_to_cell_index(slipwall_face_indexs(bc_face_index), n_ghost_cells+1), &
+                ghost_idx2 => face_to_cell_index(slipwall_face_indexs(bc_face_index), n_ghost_cells+2), &
+                ghost_idx3 => face_to_cell_index(slipwall_face_indexs(bc_face_index), n_ghost_cells+3), &
+                inner_idx1 => face_to_cell_index(slipwall_face_indexs(bc_face_index), n_ghost_cells+0), &
+                inner_idx2 => face_to_cell_index(slipwall_face_indexs(bc_face_index), n_ghost_cells-1), &
+                inner_idx3 => face_to_cell_index(slipwall_face_indexs(bc_face_index), n_ghost_cells-2)  &
             )
                 primitive_variables_set(ghost_idx1, :) = make_ghost_primitive_variables_slipwall( &
                     primitive_variables_set , &
@@ -120,12 +120,12 @@ module five_equation_model_boundary_condition_module
         do bc_face_index = 1, num_symmetric_faces, 1
             associate( &
                 face_idx   => symmetric_face_indexs(bc_face_index)                                            , &
-                ghost_idx1 => reference_cell_indexs_set(symmetric_face_indexs(bc_face_index), n_ghost_cells+1), &
-                ghost_idx2 => reference_cell_indexs_set(symmetric_face_indexs(bc_face_index), n_ghost_cells+2), &
-                ghost_idx3 => reference_cell_indexs_set(symmetric_face_indexs(bc_face_index), n_ghost_cells+3), &
-                inner_idx1 => reference_cell_indexs_set(symmetric_face_indexs(bc_face_index), n_ghost_cells+0), &
-                inner_idx2 => reference_cell_indexs_set(symmetric_face_indexs(bc_face_index), n_ghost_cells-1), &
-                inner_idx3 => reference_cell_indexs_set(symmetric_face_indexs(bc_face_index), n_ghost_cells-2)  &
+                ghost_idx1 => face_to_cell_index(symmetric_face_indexs(bc_face_index), n_ghost_cells+1), &
+                ghost_idx2 => face_to_cell_index(symmetric_face_indexs(bc_face_index), n_ghost_cells+2), &
+                ghost_idx3 => face_to_cell_index(symmetric_face_indexs(bc_face_index), n_ghost_cells+3), &
+                inner_idx1 => face_to_cell_index(symmetric_face_indexs(bc_face_index), n_ghost_cells+0), &
+                inner_idx2 => face_to_cell_index(symmetric_face_indexs(bc_face_index), n_ghost_cells-1), &
+                inner_idx3 => face_to_cell_index(symmetric_face_indexs(bc_face_index), n_ghost_cells-2)  &
             )
                 primitive_variables_set(ghost_idx1, :) = make_ghost_primitive_variables_symmetric( &
                     primitive_variables_set , &
