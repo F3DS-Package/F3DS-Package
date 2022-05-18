@@ -63,7 +63,7 @@ module jiang_weno5_module
         endif
     end function compute_polynomials
 
-    pure function reconstruct_leftside_jiang_weno5( &
+    pure function reconstruct_lhc_jiang_weno5( &
         primitive_values_set             , &
         face_to_cell_index        , &
         cell_positions                   , &
@@ -102,9 +102,9 @@ module jiang_weno5_module
                 reconstructed_primitive(i) = w(1) * p(1) + w(2) * p(2) + w(3) * p(3)
             end associate
         end do
-    end function reconstruct_leftside_jiang_weno5
+    end function reconstruct_lhc_jiang_weno5
 
-    pure function reconstruct_rightside_jiang_weno5( &
+    pure function reconstruct_rhc_jiang_weno5( &
         primitive_values_set             , &
         face_to_cell_index        , &
         cell_positions                   , &
@@ -143,7 +143,7 @@ module jiang_weno5_module
                 reconstructed_primitive(i) = w(1) * p(1) + w(2) * p(2) + w(3) * p(3)
             end associate
         end do
-    end function reconstruct_rightside_jiang_weno5
+    end function reconstruct_rhc_jiang_weno5
 
     pure function reconstruct_jiang_weno5(  &
         primitive_values_set              , &
@@ -215,10 +215,10 @@ module jiang_weno5_module
             end function primitive_to_conservative_function
 
             pure function integrated_element_function( &
-                reconstructed_leftside_primitive  , &
-                reconstructed_rightside_primitive , &
-                leftside_cell_volume              , &
-                rightside_cell_volume             , &
+                reconstructed_lhc_primitive  , &
+                reconstructed_rhc_primitive , &
+                lhc_cell_volume              , &
+                rhc_cell_volume             , &
                 face_normal_vector                , &
                 face_tangential1_vector           , &
                 face_tangential2_vector           , &
@@ -232,10 +232,10 @@ module jiang_weno5_module
                 use typedef_module
                 use abstract_mixture_eos
 
-                real   (real_kind  ), intent(in) :: reconstructed_leftside_primitive  (:)
-                real   (real_kind  ), intent(in) :: reconstructed_rightside_primitive (:)
-                real   (real_kind  ), intent(in) :: leftside_cell_volume
-                real   (real_kind  ), intent(in) :: rightside_cell_volume
+                real   (real_kind  ), intent(in) :: reconstructed_lhc_primitive  (:)
+                real   (real_kind  ), intent(in) :: reconstructed_rhc_primitive (:)
+                real   (real_kind  ), intent(in) :: lhc_cell_volume
+                real   (real_kind  ), intent(in) :: rhc_cell_volume
                 real   (real_kind  ), intent(in) :: face_normal_vector                (3)
                 real   (real_kind  ), intent(in) :: face_tangential1_vector           (3)
                 real   (real_kind  ), intent(in) :: face_tangential2_vector           (3)
@@ -292,14 +292,14 @@ module jiang_weno5_module
         lhc_index = face_to_cell_index(face_index, num_ghost_cells_+0)
         rhc_index = face_to_cell_index(face_index, num_ghost_cells_+1)
 
-        lhc_primitive = reconstruct_leftside_jiang_weno5(      &
+        lhc_primitive = reconstruct_lhc_jiang_weno5(      &
             primitive_values_set                       , &
             face_to_cell_index                         , &
             cell_centor_positions                      , &
             face_centor_positions                      , &
             face_index                                   &
         )
-        rhc_primitive = reconstruct_rightside_jiang_weno5(     &
+        rhc_primitive = reconstruct_rhc_jiang_weno5(     &
             primitive_values_set                       , &
             face_to_cell_index                         , &
             cell_centor_positions                      , &

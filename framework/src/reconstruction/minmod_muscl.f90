@@ -24,7 +24,7 @@ module minmod_muscl_module
         r = max(0.d0, min(1.d0, s))
     end function
 
-    pure function reconstruct_leftside_minmod_muscl( &
+    pure function reconstruct_lhc_minmod_muscl( &
         primitive_values_set             , &
         face_to_cell_index        , &
         cell_positions                   , &
@@ -60,9 +60,9 @@ module minmod_muscl_module
                 end if
             end associate
         end do
-    end function reconstruct_leftside_minmod_muscl
+    end function reconstruct_lhc_minmod_muscl
 
-    pure function reconstruct_rightside_minmod_muscl( &
+    pure function reconstruct_rhc_minmod_muscl( &
         primitive_values_set             , &
         face_to_cell_index        , &
         cell_positions                   , &
@@ -98,7 +98,7 @@ module minmod_muscl_module
                 end if
             end associate
         end do
-    end function reconstruct_rightside_minmod_muscl
+    end function reconstruct_rhc_minmod_muscl
 
     pure function reconstruct_minmod_muscl(        &
         primitive_values_set              , &
@@ -170,10 +170,10 @@ module minmod_muscl_module
             end function primitive_to_conservative_function
 
             pure function integrated_element_function( &
-                reconstructed_leftside_primitive  , &
-                reconstructed_rightside_primitive , &
-                leftside_cell_volume              , &
-                rightside_cell_volume             , &
+                reconstructed_lhc_primitive  , &
+                reconstructed_rhc_primitive , &
+                lhc_cell_volume              , &
+                rhc_cell_volume             , &
                 face_normal_vector                , &
                 face_tangential1_vector           , &
                 face_tangential2_vector           , &
@@ -187,10 +187,10 @@ module minmod_muscl_module
                 use typedef_module
                 use abstract_mixture_eos
 
-                real   (real_kind  ), intent(in) :: reconstructed_leftside_primitive  (:)
-                real   (real_kind  ), intent(in) :: reconstructed_rightside_primitive (:)
-                real   (real_kind  ), intent(in) :: leftside_cell_volume
-                real   (real_kind  ), intent(in) :: rightside_cell_volume
+                real   (real_kind  ), intent(in) :: reconstructed_lhc_primitive  (:)
+                real   (real_kind  ), intent(in) :: reconstructed_rhc_primitive (:)
+                real   (real_kind  ), intent(in) :: lhc_cell_volume
+                real   (real_kind  ), intent(in) :: rhc_cell_volume
                 real   (real_kind  ), intent(in) :: face_normal_vector                (3)
                 real   (real_kind  ), intent(in) :: face_tangential1_vector           (3)
                 real   (real_kind  ), intent(in) :: face_tangential2_vector           (3)
@@ -247,14 +247,14 @@ module minmod_muscl_module
         lhc_index = face_to_cell_index(face_index, num_ghost_cells_+0)
         rhc_index = face_to_cell_index(face_index, num_ghost_cells_+1)
 
-        lhc_primitive = reconstruct_leftside_minmod_muscl(      &
+        lhc_primitive = reconstruct_lhc_minmod_muscl(      &
             primitive_values_set                       , &
             face_to_cell_index                         , &
             cell_centor_positions                      , &
             face_centor_positions                      , &
             face_index                                   &
         )
-        rhc_primitive = reconstruct_rightside_minmod_muscl(     &
+        rhc_primitive = reconstruct_rhc_minmod_muscl(     &
             primitive_values_set                       , &
             face_to_cell_index                         , &
             cell_centor_positions                      , &
