@@ -152,10 +152,12 @@ module second_order_tvd_rk_module
                     end function
 
                     pure function integrated_element_function( &
-                        reconstructed_lhc_primitive  , &
-                        reconstructed_rhc_primitive , &
-                        lhc_cell_volume              , &
-                        rhc_cell_volume             , &
+                        reconstructed_lhc_primitive       , &
+                        reconstructed_rhc_primitive       , &
+                        lhc_primitive                     , &
+                        rhc_primitive                     , &
+                        lhc_cell_volume                   , &
+                        rhc_cell_volume                   , &
                         face_normal_vector                , &
                         face_tangential1_vector           , &
                         face_tangential2_vector           , &
@@ -169,8 +171,10 @@ module second_order_tvd_rk_module
                         use typedef_module
                         use abstract_mixture_eos
 
-                        real   (real_kind  ), intent(in ) :: reconstructed_lhc_primitive  (:)
+                        real   (real_kind  ), intent(in ) :: reconstructed_lhc_primitive (:)
                         real   (real_kind  ), intent(in ) :: reconstructed_rhc_primitive (:)
+                        real   (real_kind  ), intent(in ) :: lhc_primitive               (:)
+                        real   (real_kind  ), intent(in ) :: rhc_primitive               (:)
                         real   (real_kind  ), intent(in ) :: lhc_cell_volume
                         real   (real_kind  ), intent(in ) :: rhc_cell_volume
                         real   (real_kind  ), intent(in ) :: face_normal_vector                (3)
@@ -222,10 +226,12 @@ module second_order_tvd_rk_module
             end function reconstruction_function
 
             pure function integrated_element_function( &
-                reconstructed_lhc_primitive  , &
-                reconstructed_rhc_primitive  , &
-                lhc_cell_volume              , &
-                rhc_cell_volume              , &
+                reconstructed_lhc_primitive       , &
+                reconstructed_rhc_primitive       , &
+                lhc_primitive                     , &
+                rhc_primitive                     , &
+                lhc_cell_volume                   , &
+                rhc_cell_volume                   , &
                 face_normal_vector                , &
                 face_tangential1_vector           , &
                 face_tangential2_vector           , &
@@ -239,8 +245,10 @@ module second_order_tvd_rk_module
                 use typedef_module
                 use abstract_mixture_eos
 
-                real   (real_kind  ), intent(in ) :: reconstructed_lhc_primitive  (:)
+                real   (real_kind  ), intent(in ) :: reconstructed_lhc_primitive (:)
                 real   (real_kind  ), intent(in ) :: reconstructed_rhc_primitive (:)
+                real   (real_kind  ), intent(in ) :: lhc_primitive               (:)
+                real   (real_kind  ), intent(in ) :: rhc_primitive               (:)
                 real   (real_kind  ), intent(in ) :: lhc_cell_volume
                 real   (real_kind  ), intent(in ) :: rhc_cell_volume
                 real   (real_kind  ), intent(in ) :: face_normal_vector                (3)
@@ -333,7 +341,7 @@ module second_order_tvd_rk_module
 
             function set_boundary_condition_function( &
                     primitive_variables_set   , &
-                    face_to_cell_index , &
+                    face_to_cell_index        , &
                     face_normal_vectors       , &
                     face_tangential1_vectors  , &
                     face_tangential2_vectors  , &

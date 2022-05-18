@@ -215,10 +215,12 @@ module jiang_weno5_module
             end function primitive_to_conservative_function
 
             pure function integrated_element_function( &
-                reconstructed_lhc_primitive  , &
-                reconstructed_rhc_primitive , &
-                lhc_cell_volume              , &
-                rhc_cell_volume             , &
+                reconstructed_lhc_primitive       , &
+                reconstructed_rhc_primitive       , &
+                lhc_primitive                     , &
+                rhc_primitive                     , &
+                lhc_cell_volume                   , &
+                rhc_cell_volume                   , &
                 face_normal_vector                , &
                 face_tangential1_vector           , &
                 face_tangential2_vector           , &
@@ -232,8 +234,10 @@ module jiang_weno5_module
                 use typedef_module
                 use abstract_mixture_eos
 
-                real   (real_kind  ), intent(in) :: reconstructed_lhc_primitive  (:)
+                real   (real_kind  ), intent(in) :: reconstructed_lhc_primitive (:)
                 real   (real_kind  ), intent(in) :: reconstructed_rhc_primitive (:)
+                real   (real_kind  ), intent(in) :: lhc_primitive               (:)
+                real   (real_kind  ), intent(in) :: rhc_primitive               (:)
                 real   (real_kind  ), intent(in) :: lhc_cell_volume
                 real   (real_kind  ), intent(in) :: rhc_cell_volume
                 real   (real_kind  ), intent(in) :: face_normal_vector                (3)
@@ -310,6 +314,8 @@ module jiang_weno5_module
         element = integrated_element_function(  &
             lhc_primitive                            , &
             rhc_primitive                            , &
+            primitive_values_set(lhc_index, :)       , &
+            primitive_values_set(rhc_index, :)       , &
             cell_volumes(lhc_index)                  , &
             cell_volumes(rhc_index)                  , &
             face_normal_vectors     (face_index, 1:3), &

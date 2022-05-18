@@ -11,9 +11,11 @@ module five_equation_space_model_module
     contains
 
     pure function compute_space_element_five_equation_model(&
-        reconstructed_lhc_primitive                  , &
+        reconstructed_lhc_primitive                 , &
         reconstructed_rhc_primitive                 , &
-        lhc_cell_volume                              , &
+        lhc_primitive                               , &
+        rhc_primitive                               , &
+        lhc_cell_volume                             , &
         rhc_cell_volume                             , &
         face_normal_vector                                , &
         face_tangential1_vector                           , &
@@ -27,8 +29,10 @@ module five_equation_space_model_module
 
         use typedef_module
 
-        real   (real_kind  ), intent(in) :: reconstructed_lhc_primitive  (:)
+        real   (real_kind  ), intent(in) :: reconstructed_lhc_primitive (:)
         real   (real_kind  ), intent(in) :: reconstructed_rhc_primitive (:)
+        real   (real_kind  ), intent(in) :: lhc_primitive               (:)
+        real   (real_kind  ), intent(in) :: rhc_primitive               (:)
         real   (real_kind  ), intent(in) :: lhc_cell_volume
         real   (real_kind  ), intent(in) :: rhc_cell_volume
         real   (real_kind  ), intent(in) :: face_normal_vector                (3)
@@ -167,13 +171,13 @@ module five_equation_space_model_module
         )
 
         ! # summation nonviscosity-flux
-        element(1, 1:7) = (-1.d0 / lhc_cell_volume ) * nonviscosity_flux(:) * face_area
+        element(1, 1:7) = (-1.d0 / lhc_cell_volume) * nonviscosity_flux(:) * face_area
         element(2, 1:7) = (+1.d0 / rhc_cell_volume) * nonviscosity_flux(:) * face_area
 
         ! # z1 * div(u)
         element(1, 7) = element(1, 7) &
-                      - reconstructed_lhc_primitive(7)  * (1.d0 / lhc_cell_volume ) * multiply_vector(reconstructed_lhc_primitive (3:5), +1.d0 * face_normal_vector(1:3) * face_area)
+                      - lhc_primitive(7) * (1.d0 / lhc_cell_volume) * multiply_vector(reconstructed_lhc_primitive(3:5), +1.d0 * face_normal_vector(1:3) * face_area)
         element(2, 7) = element(2, 7) &
-                      - reconstructed_rhc_primitive(7) * (1.d0 / rhc_cell_volume) * multiply_vector(reconstructed_rhc_primitive(3:5), -1.d0 * face_normal_vector(1:3) * face_area)
+                      - rhc_primitive(7) * (1.d0 / rhc_cell_volume) * multiply_vector(reconstructed_rhc_primitive(3:5), -1.d0 * face_normal_vector(1:3) * face_area)
     end function compute_space_element_five_equation_model
 end module five_equation_space_model_module
