@@ -1,6 +1,7 @@
 module five_equation_model_variables_module
     use typedef_module
     use stdio_module
+    use abstract_mixture_eos
 
     implicit none
 
@@ -37,9 +38,10 @@ module five_equation_model_variables_module
 
     contains
 
-    pure function primitive_to_conservative(primitive_variables) result(conservative_variables)
-        real(real_kind), intent(in)  :: primitive_variables   (:)
-        real(real_kind), allocatable :: conservative_variables(:)
+    pure function primitive_to_conservative(primitive_variables, eos) result(conservative_variables)
+        real(real_kind   ), intent(in)  :: primitive_variables   (:)
+        class(mixture_eos), intent(in)  :: eos
+        real(real_kind   ), allocatable :: conservative_variables(:)
 
         real(8) :: rho
 
@@ -65,9 +67,10 @@ module five_equation_model_variables_module
         end associate
     end function primitive_to_conservative
 
-    pure function conservative_to_primitive(conservative_variables) result(primitive_variables)
-        real(real_kind), intent(in)  :: conservative_variables(:)
-        real(real_kind), allocatable :: primitive_variables   (:)
+    pure function conservative_to_primitive(conservative_variables, eos) result(primitive_variables)
+        real (real_kind  ), intent(in)  :: conservative_variables(:)
+        class(mixture_eos), intent(in)  :: eos
+        real (real_kind  ), allocatable :: primitive_variables   (:)
 
         real(real_kind) :: rho, u, v, w
 

@@ -1,5 +1,6 @@
 module five_equation_space_model_module
     use vector_module
+    use abstract_mixture_eos
 
     implicit none
 
@@ -20,24 +21,24 @@ module five_equation_space_model_module
         face_area                                         , &
         n_conservative_values                             , &
         n_derivative_values                               , &
+        eos                                               , &
         flux_function                                     , &
-        eos_pressure_function                             , &
-        eos_soundspeed_function                           , &
         primitive_to_conservative_function                 ) result(element)
 
         use typedef_module
 
-        real   (real_kind), intent(in ) :: reconstructed_leftside_primitive  (:)
-        real   (real_kind), intent(in ) :: reconstructed_rightside_primitive (:)
-        real   (real_kind), intent(in ) :: leftside_cell_volume
-        real   (real_kind), intent(in ) :: rightside_cell_volume
-        real   (real_kind), intent(in ) :: face_normal_vector                (3)
-        real   (real_kind), intent(in ) :: face_tangential1_vector           (3)
-        real   (real_kind), intent(in ) :: face_tangential2_vector           (3)
-        real   (real_kind), intent(in ) :: face_area
-        integer(int_kind ), intent(in ) :: n_conservative_values
-        integer(int_kind ), intent(in ) :: n_derivative_values
-        real   (real_kind)              :: element        (2, n_conservative_values+n_derivative_values) ! 1 -> left, 2-> right
+        real   (real_kind  ), intent(in) :: reconstructed_leftside_primitive  (:)
+        real   (real_kind  ), intent(in) :: reconstructed_rightside_primitive (:)
+        real   (real_kind  ), intent(in) :: leftside_cell_volume
+        real   (real_kind  ), intent(in) :: rightside_cell_volume
+        real   (real_kind  ), intent(in) :: face_normal_vector                (3)
+        real   (real_kind  ), intent(in) :: face_tangential1_vector           (3)
+        real   (real_kind  ), intent(in) :: face_tangential2_vector           (3)
+        real   (real_kind  ), intent(in) :: face_area
+        integer(int_kind   ), intent(in) :: n_conservative_values
+        integer(int_kind   ), intent(in) :: n_derivative_values
+        class  (mixture_eos), intent(in) :: eos
+        real   (real_kind)               :: element        (2, n_conservative_values+n_derivative_values) ! 1 -> left, 2-> right
 
         interface
             pure function flux_function(       &
@@ -66,26 +67,12 @@ module five_equation_space_model_module
                 real(real_kind)             :: flux(size(left_conservative))
             end function flux_function
 
-            pure function eos_pressure_function(specific_internal_energy, density, volume_fruction) result(pressure)
+            pure function primitive_to_conservative_function(primitive, eos) result(conservative)
                 use typedef_module
-                real(real_kind), intent(in) :: specific_internal_energy
-                real(real_kind), intent(in) :: density
-                real(real_kind), intent(in) :: volume_fruction
-                real(real_kind)             :: pressure
-            end function eos_pressure_function
-
-            pure function eos_soundspeed_function(specific_internal_energy, density, volume_fruction) result(soundspeed)
-                use typedef_module
-                real(real_kind), intent(in) :: specific_internal_energy
-                real(real_kind), intent(in) :: density
-                real(real_kind), intent(in) :: volume_fruction
-                real(real_kind)             :: soundspeed
-            end function eos_soundspeed_function
-
-            pure function primitive_to_conservative_function(primitive) result(conservative)
-                use typedef_module
-                real(real_kind), intent(in)  :: primitive   (:)
-                real(real_kind), allocatable :: conservative(:)
+                use abstract_mixture_eos
+                real (real_kind  ), intent(in)  :: primitive   (:)
+                class(mixture_eos), intent(in)  :: eos
+                real (real_kind  ), allocatable :: conservative(:)
             end function
         end interface
 
@@ -119,10 +106,12 @@ module five_equation_space_model_module
 
         ! # compute conservative-variables
         lhc_conservative = primitive_to_conservative_function( &
-            local_coordinate_lhc_primitive                     &
+            local_coordinate_lhc_primitive,                    &
+            eos                                                &
         )
         rhc_conservative = primitive_to_conservative_function( &
-            local_coordinate_rhc_primitive                     &
+            local_coordinate_rhc_primitive,                    &
+            eos                                                &
         )
 
         ! # compute EoS, main velosity, and fluxs
@@ -136,8 +125,8 @@ module five_equation_space_model_module
                 z1      => local_coordinate_lhc_primitive(7)  &
             )
             lhc_density    = rho1_z1 + rho2_z2
-            lhc_pressure   = eos_pressure_function  (ie, lhc_density, z1)
-            lhc_soundspeed = eos_soundspeed_function(ie, lhc_density, z1)
+            lhc_pressure   = eos%compute_pressure  (ie, lhc_density, z1)
+            lhc_soundspeed = eos%compute_soundspeed(ie, lhc_density, z1)
             lhc_main_velocity = u
         end associate
         associate(                        &
@@ -150,8 +139,8 @@ module five_equation_space_model_module
                 z1      => local_coordinate_rhc_primitive(7)  &
             )
             rhc_density    = rho1_z1 + rho2_z2
-            rhc_pressure   = eos_pressure_function  (ie, rhc_density, z1)
-            rhc_soundspeed = eos_soundspeed_function(ie, rhc_density, z1)
+            rhc_pressure   = eos%compute_pressure  (ie, rhc_density, z1)
+            rhc_soundspeed = eos%compute_soundspeed(ie, rhc_density, z1)
             rhc_main_velocity = u
         end associate
 

@@ -15,7 +15,7 @@ program five_eq_model_solver
     use five_equation_space_model_module
     use five_equation_model_hllc_module
     ! Model
-    use mixture_stiffened_eos_module
+    use class_stiffened_gas_mixture_eos
     ! Grid & initial condition reader
     use class_nlinit_parser
     use class_nlgrid_parser
@@ -42,6 +42,8 @@ program five_eq_model_solver
     real     (R4P), allocatable :: vtk_pressure(:), vtk_density(:), vtk_cell_id(:), vtk_soundspeed(:)
     integer  (I1P), allocatable :: vtk_cell_type(:)
     integer  (I4P), allocatable :: vtk_offset(:), vtk_connect(:)
+
+    type(stiffened_gas_mixture_eos) :: eos
 
     time_increment = 1.d-4
     max_timestep   = 100
@@ -72,7 +74,7 @@ program five_eq_model_solver
     call a_init_parser%get_conservative_variables_set(conservative_variables_set)
     call a_init_parser%close()
     do index = 1, get_number_of_cells(), 1
-        primitive_variables_set(index, :) = conservative_to_primitive(conservative_variables_set(index, :))
+        primitive_variables_set(index, :) = conservative_to_primitive(conservative_variables_set(index, :), eos)
     end do
 
     ! VTK
@@ -105,7 +107,7 @@ program five_eq_model_solver
     n_output_points = get_number_of_points()
 
     call initialize_second_order_tvd_rk(conservative_variables_set)
-    call initialize_mixture_stiffened_eos(1.4d0, 6.12d0, 0.d0, 2.450d3)
+    call eos%initialize(1.4d0, 6.12d0, 0.d0, 2.450d3)
 
     ! solver timestepping loop
     do timestep = 0, max_timestep, 1
@@ -126,8 +128,8 @@ program five_eq_model_solver
                         ie     => primitive_variables_set(index, 6), &
                         z1     => primitive_variables_set(index, 7))
                         vtk_density   (vtk_index) = rho1z1 + rho2z2
-                        vtk_pressure  (vtk_index) = compute_pressure_mixture_stiffened_eos  (ie, rho1z1 + rho2z2, z1)
-                        vtk_soundspeed(vtk_index) = compute_soundspeed_mixture_stiffened_eos(ie, rho1z1 + rho2z2, z1)
+                        vtk_pressure  (vtk_index) = eos%compute_pressure  (ie, rho1z1 + rho2z2, z1)
+                        vtk_soundspeed(vtk_index) = eos%compute_soundspeed(ie, rho1z1 + rho2z2, z1)
                         vtk_cell_id   (vtk_index) = index
                     end associate
                     vtk_index = vtk_index + 1
@@ -171,11 +173,10 @@ program five_eq_model_solver
             get_number_of_slipwall_faces()           , &
             get_number_of_symmetric_faces()          , &
             time_increment                           , &
+            eos                                      , &
             reconstruct_minmod_muscl                 , &
             compute_space_element_five_equation_model, &
             compute_flux_five_equation_model_hllc    , &
-            compute_pressure_mixture_stiffened_eos   , &
-            compute_soundspeed_mixture_stiffened_eos , &
             primitive_to_conservative                , &
             conservative_to_primitive                , &
             five_equation_model_set_boundary_condition &

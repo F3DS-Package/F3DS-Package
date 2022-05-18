@@ -5,6 +5,7 @@ module weno5_module
 
     use typedef_module
     use vector_module
+    use abstract_mixture_eos
 
     implicit none
 
@@ -144,7 +145,7 @@ module weno5_module
         primitive_values_set              , &
         cell_centor_positions             , &
         cell_volumes                      , &
-        face_to_cell_index         , &
+        face_to_cell_index                , &
         face_centor_positions             , &
         face_normal_vectors               , &
         face_tangential1_vectors          , &
@@ -152,25 +153,25 @@ module weno5_module
         face_areas                        , &
         face_index                        , &
         n_conservative_values             , &
-        n_derivative_values              , &
+        n_derivative_values               , &
+        eos                               , &
         flux_function                     , &
-        eos_pressure_function             , &
-        eos_soundspeed_function           , &
         primitive_to_conservative_function, &
         integrated_element_function             ) result(element)
 
-        real   (real_kind), intent(in ) :: primitive_values_set     (:, :)
-        real   (real_kind), intent(in ) :: cell_centor_positions    (:, :)
-        real   (real_kind), intent(in ) :: cell_volumes             (:)
-        integer(int_kind ), intent(in ) :: face_to_cell_index(:,:)
-        real   (real_kind), intent(in ) :: face_normal_vectors      (:,:)
-        real   (real_kind), intent(in ) :: face_tangential1_vectors (:,:)
-        real   (real_kind), intent(in ) :: face_tangential2_vectors (:,:)
-        real   (real_kind), intent(in ) :: face_centor_positions    (:,:)
-        real   (real_kind), intent(in ) :: face_areas               (:)
-        integer(int_kind ), intent(in ) :: face_index
-        integer(int_kind ), intent(in ) :: n_conservative_values
-        integer(int_kind ), intent(in ) :: n_derivative_values
+        real   (real_kind  ), intent(in) :: primitive_values_set     (:, :)
+        real   (real_kind  ), intent(in) :: cell_centor_positions    (:, :)
+        real   (real_kind  ), intent(in) :: cell_volumes             (:)
+        integer(int_kind   ), intent(in) :: face_to_cell_index       (:,:)
+        real   (real_kind  ), intent(in) :: face_normal_vectors      (:,:)
+        real   (real_kind  ), intent(in) :: face_tangential1_vectors (:,:)
+        real   (real_kind  ), intent(in) :: face_tangential2_vectors (:,:)
+        real   (real_kind  ), intent(in) :: face_centor_positions    (:,:)
+        real   (real_kind  ), intent(in) :: face_areas               (:)
+        integer(int_kind   ), intent(in) :: face_index
+        integer(int_kind   ), intent(in) :: n_conservative_values
+        integer(int_kind   ), intent(in) :: n_derivative_values
+        class  (mixture_eos), intent(in) :: eos
 
         real   (real_kind)              :: element(2, n_conservative_values+n_derivative_values)
 
@@ -201,26 +202,12 @@ module weno5_module
                 real(real_kind)             :: flux(size(left_conservative))
             end function flux_function
 
-            pure function eos_pressure_function(specific_internal_energy, density, volume_fruction) result(pressure)
+            pure function primitive_to_conservative_function(primitive, eos) result(conservative)
                 use typedef_module
-                real(real_kind), intent(in) :: specific_internal_energy
-                real(real_kind), intent(in) :: density
-                real(real_kind), intent(in) :: volume_fruction
-                real(real_kind)             :: pressure
-            end function eos_pressure_function
-
-            pure function eos_soundspeed_function(specific_internal_energy, density, volume_fruction) result(soundspeed)
-                use typedef_module
-                real(real_kind), intent(in) :: specific_internal_energy
-                real(real_kind), intent(in) :: density
-                real(real_kind), intent(in) :: volume_fruction
-                real(real_kind)             :: soundspeed
-            end function eos_soundspeed_function
-
-            pure function primitive_to_conservative_function(primitive) result(conservative)
-                use typedef_module
-                real(real_kind), intent(in)  :: primitive   (:)
-                real(real_kind), allocatable :: conservative(:)
+                use abstract_mixture_eos
+                real (real_kind  ), intent(in)  :: primitive   (:)
+                class(mixture_eos), intent(in)  :: eos
+                real (real_kind  ), allocatable :: conservative(:)
             end function primitive_to_conservative_function
 
             pure function integrated_element_function( &
@@ -233,25 +220,26 @@ module weno5_module
                 face_tangential2_vector           , &
                 face_area                         , &
                 n_conservative_values             , &
-                n_derivative_values              , &
+                n_derivative_values               , &
+                eos                               , &
                 flux_function                     , &
-                eos_pressure_function             , &
-                eos_soundspeed_function           , &
                 primitive_to_conservative_function   ) result(element)
 
                 use typedef_module
+                use abstract_mixture_eos
 
-                real   (real_kind), intent(in ) :: reconstructed_leftside_primitive  (:)
-                real   (real_kind), intent(in ) :: reconstructed_rightside_primitive (:)
-                real   (real_kind), intent(in ) :: leftside_cell_volume
-                real   (real_kind), intent(in ) :: rightside_cell_volume
-                real   (real_kind), intent(in ) :: face_normal_vector                (3)
-                real   (real_kind), intent(in ) :: face_tangential1_vector           (3)
-                real   (real_kind), intent(in ) :: face_tangential2_vector           (3)
-                real   (real_kind), intent(in ) :: face_area
-                integer(int_kind ), intent(in ) :: n_conservative_values
-                integer(int_kind ), intent(in ) :: n_derivative_values
-                real   (real_kind)              :: element        (2, n_conservative_values+n_derivative_values)
+                real   (real_kind  ), intent(in) :: reconstructed_leftside_primitive  (:)
+                real   (real_kind  ), intent(in) :: reconstructed_rightside_primitive (:)
+                real   (real_kind  ), intent(in) :: leftside_cell_volume
+                real   (real_kind  ), intent(in) :: rightside_cell_volume
+                real   (real_kind  ), intent(in) :: face_normal_vector                (3)
+                real   (real_kind  ), intent(in) :: face_tangential1_vector           (3)
+                real   (real_kind  ), intent(in) :: face_tangential2_vector           (3)
+                real   (real_kind  ), intent(in) :: face_area
+                integer(int_kind   ), intent(in) :: n_conservative_values
+                integer(int_kind   ), intent(in) :: n_derivative_values
+                class  (mixture_eos), intent(in) :: eos
+                real   (real_kind)               :: element        (2, n_conservative_values+n_derivative_values)
 
                 interface
                     pure function flux_function(       &
@@ -280,26 +268,12 @@ module weno5_module
                         real(real_kind)             :: flux(size(left_conservative))
                     end function flux_function
 
-                    pure function eos_pressure_function(specific_internal_energy, density, volume_fruction) result(pressure)
+                    pure function primitive_to_conservative_function(primitive, eos) result(conservative)
                         use typedef_module
-                        real(real_kind), intent(in) :: specific_internal_energy
-                        real(real_kind), intent(in) :: density
-                        real(real_kind), intent(in) :: volume_fruction
-                        real(real_kind)             :: pressure
-                    end function eos_pressure_function
-
-                    pure function eos_soundspeed_function(specific_internal_energy, density, volume_fruction) result(soundspeed)
-                        use typedef_module
-                        real(real_kind), intent(in) :: specific_internal_energy
-                        real(real_kind), intent(in) :: density
-                        real(real_kind), intent(in) :: volume_fruction
-                        real(real_kind)             :: soundspeed
-                    end function eos_soundspeed_function
-
-                    pure function primitive_to_conservative_function(primitive) result(conservative)
-                        use typedef_module
-                        real(real_kind), intent(in)  :: primitive   (:)
-                        real(real_kind), allocatable :: conservative(:)
+                        use abstract_mixture_eos
+                        real (real_kind  ), intent(in)  :: primitive   (:)
+                        class(mixture_eos), intent(in)  :: eos
+                        real (real_kind  ), allocatable :: conservative(:)
                     end function primitive_to_conservative_function
                 end interface
             end function integrated_element_function
@@ -338,9 +312,8 @@ module weno5_module
             face_areas              (face_index)     , &
             n_conservative_values                    , &
             n_derivative_values                      , &
+            eos                                      , &
             flux_function                            , &
-            eos_pressure_function                    , &
-            eos_soundspeed_function                  , &
             primitive_to_conservative_function         &
         )
     end function reconstruct_weno5
