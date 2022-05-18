@@ -88,6 +88,16 @@ module five_equation_space_model_module
         real(real_kind) :: lhc_soundspeed, lhc_pressure, lhc_density, lhc_main_velocity
         real(real_kind) :: rhc_soundspeed, rhc_pressure, rhc_density, rhc_main_velocity
 
+        ! ## HLLC wave speeds
+        real(real_kind) :: ave_vel, ave_c
+        real(real_kind) :: s_mid
+        real(real_kind) :: s_muinus
+        real(real_kind) :: s_puls
+        real(real_kind) :: s_left
+        real(real_kind) :: s_right
+        real(real_kind) :: numerical_velocity
+
+
         ! # compute primitive-variables of face local coordinate
         ! ## left-side
         local_coordinate_lhc_primitive(1:2) = reconstructed_lhc_primitive(1:2)
@@ -174,10 +184,39 @@ module five_equation_space_model_module
         element(1, 1:7) = (-1.d0 / lhc_cell_volume) * nonviscosity_flux(:) * face_area
         element(2, 1:7) = (+1.d0 / rhc_cell_volume) * nonviscosity_flux(:) * face_area
 
+        ! # Compute (- alpha1 - K) * div(u) according to [Schmidmayer 2020, JCP] using HLLC.
+        ! # If you choice other Riemann solver, term (- alpha1 - K) * div(u) is computed by HLLC forcely. Sorry.
+        associate(                                               &
+            lhc_u       => local_coordinate_lhc_primitive(3)   , &
+            lhc_z1      => local_coordinate_lhc_primitive(7)   , &
+            lhc_rho     => lhc_density                         , &
+            lhc_p       => lhc_pressure                        , &
+            lhc_c       => lhc_soundspeed                      , &
+            rhc_u       => local_coordinate_rhc_primitive(3)   , &
+            rhc_z1      => local_coordinate_rhc_primitive(7)   , &
+            rhc_rho     => rhc_density                         , &
+            rhc_p       => rhc_pressure                        , &
+            rhc_c       => rhc_soundspeed                        &
+        )
+        ! ## Compute HLLC valiables and numerical velocity
+            ave_vel  = 0.5d0 * (lhc_u + rhc_u)
+            ave_c    = 0.5d0 * (lhc_c + rhc_c)
+            s_left   = min(ave_vel - ave_c, lhc_u - lhc_c)
+            s_right  = max(ave_vel + ave_c, rhc_u + rhc_c)
+            s_muinus = min(0.d0, s_left )
+            s_puls   = max(0.d0, s_right)
+            s_mid    = (rhc_p - lhc_p + lhc_rho * lhc_u * (s_left  - lhc_u)  &
+                                      - rhc_rho * rhc_u * (s_right - rhc_u)) &
+                     / (lhc_rho * (s_left  - lhc_u) - rhc_rho * (s_right - rhc_u))
+            numerical_velocity &
+                = 0.5d0 * (1.d0 + sign(1.d0, s_mid)) * (lhc_u + s_muinus * ((s_left  - lhc_u) / (s_left  - s_mid) - 1.d0)) &
+                + 0.5d0 * (1.d0 - sign(1.d0, s_mid)) * (rhc_u + s_puls   * ((s_right - rhc_u) / (s_right - s_mid) - 1.d0))
+        end associate
+
         ! # z1 * div(u)
         element(1, 7) = element(1, 7) &
-                      - lhc_primitive(7) * (1.d0 / lhc_cell_volume) * multiply_vector(reconstructed_lhc_primitive(3:5), +1.d0 * face_normal_vector(1:3) * face_area)
+                      - lhc_primitive(7) * (-1.d0 / lhc_cell_volume) * numerical_velocity * face_area
         element(2, 7) = element(2, 7) &
-                      - rhc_primitive(7) * (1.d0 / rhc_cell_volume) * multiply_vector(reconstructed_rhc_primitive(3:5), -1.d0 * face_normal_vector(1:3) * face_area)
+                      - rhc_primitive(7) * (+1.d0 / rhc_cell_volume) * numerical_velocity * face_area
     end function compute_space_element_five_equation_model
 end module five_equation_space_model_module
