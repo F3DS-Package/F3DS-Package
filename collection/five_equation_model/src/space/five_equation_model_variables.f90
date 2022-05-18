@@ -20,7 +20,7 @@ module five_equation_model_variables_module
     ! primitive_variables_set(:, 1  )   : volume fraction * density of fluid1
     ! primitive_variables_set(:, 2  )   : volume fraction * density of fluid2
     ! primitive_variables_set(:, 3:5)   : velocity vector (u,v,w)
-    ! primitive_variables_set(:, 6  )   : specific internal energy (not energy density)
+    ! primitive_variables_set(:, 6  )   : pressre
     ! primitive_variables_set(:, 7  )   : volume fraction of fluid1
     ! Elm. 2) 1 : {@code num_cells}, cell index
     real(real_kind), public, allocatable :: primitive_variables_set(:,:)
@@ -53,7 +53,7 @@ module five_equation_model_variables_module
                 u       => primitive_variables(3), &
                 v       => primitive_variables(4), &
                 w       => primitive_variables(5), &
-                ie      => primitive_variables(6), &
+                p       => primitive_variables(6), &
                 z1      => primitive_variables(7)  &
             )
             rho = rho1_z1 + rho2_z2
@@ -62,7 +62,7 @@ module five_equation_model_variables_module
             conservative_variables(3) = u  * rho
             conservative_variables(4) = v  * rho
             conservative_variables(5) = w  * rho
-            conservative_variables(6) = ie * rho + 0.5d0 * (u**2.d0 + v**2.d0 + w**2.d0) * rho
+            conservative_variables(6) = eos%compute_internal_energy_density(p, rho, z1) + 0.5d0 * (u**2.d0 + v**2.d0 + w**2.d0) * rho
             conservative_variables(7) = z1
         end associate
     end function primitive_to_conservative
@@ -72,7 +72,7 @@ module five_equation_model_variables_module
         class(mixture_eos), intent(in)  :: eos
         real (real_kind  ), allocatable :: primitive_variables   (:)
 
-        real(real_kind) :: rho, u, v, w
+        real(real_kind) :: rho, ie
 
         allocate(primitive_variables(7))
 
@@ -89,12 +89,13 @@ module five_equation_model_variables_module
             if(rho < 1.d-8)then
                 primitive_variables(:) = 0.d0
             else
+                ie  = e / rho - 0.5d0 * (rho_u**2.d0 + rho_v**2.d0 + rho_w**2.d0) / rho**2.d0
                 primitive_variables(1) = rho1_z1
                 primitive_variables(2) = rho2_z2
                 primitive_variables(3) = rho_u / rho
                 primitive_variables(4) = rho_v / rho
                 primitive_variables(5) = rho_w / rho
-                primitive_variables(6) = e / rho - 0.5d0 * (rho_u**2.d0 + rho_v**2.d0 + rho_w**2.d0) / rho**2.d0
+                primitive_variables(6) = eos%compute_pressure(ie, rho, z1)
                 primitive_variables(7) = z1
             endif
         end associate

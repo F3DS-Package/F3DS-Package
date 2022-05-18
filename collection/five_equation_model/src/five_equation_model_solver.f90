@@ -39,15 +39,17 @@ program five_eq_model_solver
     integer  (int_kind )        :: file_output_counter, vtk_index, cell_point_index
     character(16)               :: vtk_filename
     integer  (I4P)              :: n_output_cells, n_output_points, n_cell_points, offset_incriment, n_output_file
-    real     (R4P), allocatable :: vtk_pressure(:), vtk_density(:), vtk_cell_id(:), vtk_soundspeed(:)
+    real     (R4P), allocatable :: vtk_density(:), vtk_cell_id(:), vtk_soundspeed(:)
     integer  (I1P), allocatable :: vtk_cell_type(:)
     integer  (I4P), allocatable :: vtk_offset(:), vtk_connect(:)
 
     type(stiffened_gas_mixture_eos) :: eos
 
     time_increment = 1.d-4
-    max_timestep   = 100
+    max_timestep   = 1*10**4
     n_output_file  = 100
+
+    call eos%initialize(1.4d0, 6.12d0, 0.d0, 2.450d3)
 
 #ifdef _OPENMP
     call omp_set_num_threads(16)
@@ -84,7 +86,6 @@ program five_eq_model_solver
     do index = 1, get_number_of_cells(), 1
         if(cells_is_real_cell(index)) n_output_cells = n_output_cells + 1
     end do
-    allocate(vtk_pressure  (n_output_cells    ))
     allocate(vtk_density   (n_output_cells    ))
     allocate(vtk_soundspeed(n_output_cells    ))
     allocate(vtk_cell_id   (n_output_cells    ))
@@ -107,7 +108,6 @@ program five_eq_model_solver
     n_output_points = get_number_of_points()
 
     call initialize_second_order_tvd_rk(conservative_variables_set)
-    call eos%initialize(1.4d0, 6.12d0, 0.d0, 2.450d3)
 
     ! solver timestepping loop
     do timestep = 0, max_timestep, 1
@@ -125,20 +125,18 @@ program five_eq_model_solver
                     associate(                                     &
                         rho1z1 => primitive_variables_set(index, 1), &
                         rho2z2 => primitive_variables_set(index, 2), &
-                        ie     => primitive_variables_set(index, 6), &
+                        p      => primitive_variables_set(index, 6), &
                         z1     => primitive_variables_set(index, 7))
                         vtk_density   (vtk_index) = rho1z1 + rho2z2
-                        vtk_pressure  (vtk_index) = eos%compute_pressure  (ie, rho1z1 + rho2z2, z1)
-                        vtk_soundspeed(vtk_index) = eos%compute_soundspeed(ie, rho1z1 + rho2z2, z1)
+                        vtk_soundspeed(vtk_index) = eos%compute_soundspeed(p, rho1z1 + rho2z2, z1)
                         vtk_cell_id   (vtk_index) = index
                     end associate
                     vtk_index = vtk_index + 1
                 end if
             end do
-            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='pressure', x=vtk_pressure)
             vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='density', x=vtk_density)
             vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='velocity', x=pack(primitive_variables_set(:, 3), mask=cells_is_real_cell), y=pack(primitive_variables_set(:, 4), mask=cells_is_real_cell), z=pack(primitive_variables_set(:, 5), mask=cells_is_real_cell))
-            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='internal enargy', x=pack(primitive_variables_set(:, 6), mask=cells_is_real_cell))
+            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='pressure', x=pack(primitive_variables_set(:, 6), mask=cells_is_real_cell))
             vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='volume fruction', x=pack(primitive_variables_set(:, 7), mask=cells_is_real_cell))
             vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='sound speed', x=vtk_soundspeed)
             vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='cell id', x=vtk_cell_id)
@@ -155,9 +153,9 @@ program five_eq_model_solver
             conservative_variables_set               , &
             primitive_variables_set                  , &
             derivative_variables_set                 , &
-            cells_centor_position                    , & ! <- TODO: We remove arguments in a future. We make the solver module and compute_next_state() routine.
+            cells_centor_position                    , & ! <-
             cells_volume                             , & ! <-
-            faces_to_cell_index               , & ! <-
+            faces_to_cell_index                      , & ! <-
             faces_normal_vector                      , & ! <-
             faces_tangential1_vector                 , & ! <-
             faces_tangential2_vector                 , & ! <-
@@ -174,7 +172,7 @@ program five_eq_model_solver
             get_number_of_symmetric_faces()          , &
             time_increment                           , &
             eos                                      , &
-            reconstruct_minmod_muscl                 , &
+            reconstruct_jiang_weno5                  , &
             compute_space_element_five_equation_model, &
             compute_flux_five_equation_model_hllc    , &
             primitive_to_conservative                , &

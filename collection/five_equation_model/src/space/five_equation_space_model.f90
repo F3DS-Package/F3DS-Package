@@ -121,12 +121,12 @@ module five_equation_space_model_module
                 u       => local_coordinate_lhc_primitive(3), &
                 v       => local_coordinate_lhc_primitive(4), &
                 w       => local_coordinate_lhc_primitive(5), &
-                ie      => local_coordinate_lhc_primitive(6), &
+                p       => local_coordinate_lhc_primitive(6), &
                 z1      => local_coordinate_lhc_primitive(7)  &
             )
             lhc_density    = rho1_z1 + rho2_z2
-            lhc_pressure   = eos%compute_pressure  (ie, lhc_density, z1)
-            lhc_soundspeed = eos%compute_soundspeed(ie, lhc_density, z1)
+            lhc_pressure   = p
+            lhc_soundspeed = eos%compute_soundspeed(p, lhc_density, z1)
             lhc_main_velocity = u
         end associate
         associate(                        &
@@ -135,12 +135,12 @@ module five_equation_space_model_module
                 u       => local_coordinate_rhc_primitive(3), &
                 v       => local_coordinate_rhc_primitive(4), &
                 w       => local_coordinate_rhc_primitive(5), &
-                ie      => local_coordinate_rhc_primitive(6), &
+                p       => local_coordinate_rhc_primitive(6), &
                 z1      => local_coordinate_rhc_primitive(7)  &
             )
             rhc_density    = rho1_z1 + rho2_z2
-            rhc_pressure   = eos%compute_pressure  (ie, rhc_density, z1)
-            rhc_soundspeed = eos%compute_soundspeed(ie, rhc_density, z1)
+            rhc_pressure   = p
+            rhc_soundspeed = eos%compute_soundspeed(p, rhc_density, z1)
             rhc_main_velocity = u
         end associate
 
