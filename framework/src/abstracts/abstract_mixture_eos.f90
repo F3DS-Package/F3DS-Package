@@ -9,6 +9,7 @@ module abstract_mixture_eos
         procedure(compute_pressure_interface                ), pass(self), deferred :: compute_pressure
         procedure(compute_soundspeed_interface              ), pass(self), deferred :: compute_soundspeed
         procedure(compute_internal_energy_density_interface ), pass(self), deferred :: compute_internal_energy_density
+        procedure(compute_inversed_wood_soundspeed_interface), pass(self), deferred :: compute_inversed_wood_soundspeed
     end type mixture_eos
 
     abstract interface
@@ -51,5 +52,15 @@ module abstract_mixture_eos
             real (real_kind  ), intent(in) :: volume_fruction
             real (real_kind  )             :: specific_internal_energy
         end function compute_internal_energy_density_interface
+
+        pure function compute_inversed_wood_soundspeed_interface(self, pressure, density, volume_fruction) result(soundspeed)
+            use typedef_module
+            import mixture_eos
+            class(mixture_eos), intent(in) :: self
+            real (real_kind  ), intent(in) :: pressure
+            real (real_kind  ), intent(in) :: density
+            real (real_kind  ), intent(in) :: volume_fruction
+            real (real_kind  )             :: soundspeed
+        end function compute_inversed_wood_soundspeed_interface
     end interface
 end module abstract_mixture_eos

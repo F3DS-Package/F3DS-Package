@@ -97,6 +97,10 @@ module five_equation_space_model_module
         real(real_kind) :: s_right
         real(real_kind) :: numerical_velocity
 
+        ! ## kapila K
+        real(real_kind) :: rhc_k, lhc_k
+        real(real_kind) :: rhc_inv_wood1, rhc_inv_wood2
+        real(real_kind) :: lhc_inv_wood1, lhc_inv_wood2
 
         ! # compute primitive-variables of face local coordinate
         ! ## left-side
@@ -213,10 +217,27 @@ module five_equation_space_model_module
                 + 0.5d0 * (1.d0 - sign(1.d0, s_mid)) * (rhc_u + s_puls   * ((s_right - rhc_u) / (s_right - s_mid) - 1.d0))
         end associate
 
-        ! # z1 * div(u)
-        element(1, 7) = element(1, 7) &
-                      - lhc_primitive(7) * (-1.d0 / lhc_cell_volume) * numerical_velocity * face_area
-        element(2, 7) = element(2, 7) &
-                      - rhc_primitive(7) * (+1.d0 / rhc_cell_volume) * numerical_velocity * face_area
+        ! # (-z1 - K) * div(u)
+        associate(                           &
+            lhc_rho1_z1 => lhc_primitive(1), &
+            lhc_rho2_z2 => lhc_primitive(2), &
+            lhc_p       => lhc_primitive(6), &
+            lhc_z1      => lhc_primitive(7), &
+            rhc_rho1_z1 => rhc_primitive(1), &
+            rhc_rho2_z2 => rhc_primitive(2), &
+            rhc_p       => rhc_primitive(6), &
+            rhc_z1      => rhc_primitive(7)  &
+        )
+            lhc_inv_wood1 = eos%compute_inversed_wood_soundspeed(lhc_p, lhc_density, 1.d0)
+            lhc_inv_wood2 = eos%compute_inversed_wood_soundspeed(lhc_p, lhc_density, 0.d0)
+            rhc_inv_wood1 = eos%compute_inversed_wood_soundspeed(rhc_p, rhc_density, 1.d0)
+            rhc_inv_wood2 = eos%compute_inversed_wood_soundspeed(rhc_p, rhc_density, 0.d0)
+            lhc_k         = lhc_z1 * (1.d0 - lhc_z1) * (lhc_inv_wood2 - lhc_inv_wood1) / (lhc_z1 * lhc_inv_wood2 + (1.d0 - lhc_z1) * lhc_inv_wood1)
+            rhc_k         = rhc_z1 * (1.d0 - rhc_z1) * (rhc_inv_wood2 - rhc_inv_wood1) / (rhc_z1 * rhc_inv_wood2 + (1.d0 - rhc_z1) * rhc_inv_wood1)
+            element(1, 7) = element(1, 7) &
+                          + (-lhc_z1 - lhc_k) * (-1.d0 / lhc_cell_volume) * numerical_velocity * face_area
+            element(2, 7) = element(2, 7) &
+                          + (-rhc_z1 - rhc_k) * (+1.d0 / rhc_cell_volume) * numerical_velocity * face_area
+        end associate
     end function compute_space_element_five_equation_model
 end module five_equation_space_model_module

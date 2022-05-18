@@ -20,6 +20,7 @@ module class_stiffened_gas_mixture_eos
         procedure, public, pass(self) :: compute_pressure
         procedure, public, pass(self) :: compute_soundspeed
         procedure, public, pass(self) :: compute_internal_energy_density
+        procedure, public, pass(self) :: compute_inversed_wood_soundspeed
 
         procedure, pass(self) :: compute_mixture_specific_heat_ratio
         procedure, pass(self) :: compute_mixture_reference_pressure
@@ -80,6 +81,19 @@ module class_stiffened_gas_mixture_eos
         pref = self%compute_mixture_reference_pressure (volume_fruction, g)
         specific_internal_energy = (pressure + g * pref) / (g - 1.d0)
     end function compute_internal_energy_density
+
+    pure function compute_inversed_wood_soundspeed(self, pressure, density, volume_fruction) result(soundspeed)
+        class(stiffened_gas_mixture_eos), intent(in) :: self
+        real(real_kind), intent(in) :: pressure
+        real(real_kind), intent(in) :: density
+        real(real_kind), intent(in) :: volume_fruction
+        real(real_kind)             :: soundspeed
+        real(real_kind)             :: g, pref
+
+        g    = self%compute_mixture_specific_heat_ratio(volume_fruction)
+        pref = self%compute_mixture_reference_pressure (volume_fruction, g)
+        soundspeed = g * (pressure + pref)
+    end function compute_inversed_wood_soundspeed
 
     pure function compute_mixture_specific_heat_ratio(self, volume_fruction) result(g)
         class(stiffened_gas_mixture_eos), intent(in) :: self
