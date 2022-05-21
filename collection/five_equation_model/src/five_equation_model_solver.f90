@@ -46,7 +46,7 @@ program five_eq_model_solver
     type(stiffened_gas_mixture_eos) :: eos
 
     time_increment = 1.d-4
-    max_timestep   = 1*10**4
+    max_timestep   = 5*10**5
     n_output_file  = 100
 
     call eos%initialize(1.4d0, 6.12d0, 0.d0, 2.450d3)
