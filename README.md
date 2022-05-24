@@ -1,7 +1,13 @@
 # Fortran Fine-volume Fluid Dynamics Solver (F3DS) Flamework & Collection
 
 F3DS is the Modern Fortran (such as Fortran 2003, 2008, ...) library for development fluid dynamics solvers by Fine-volume method (FVM).  
-This library support for Object Oriented Desing (OOD) and Structure of Arrays (SoA) layout. We provide a fast, maintainable FVM library and solvers.
+This library support for Object Oriented Desing (OOD) and Structure of Arrays (SoA) layout. 
+We provide a fast, maintainable FVM library and solvers.  
+
+Status: **DEVELOPMENT**  
+
+Many methods are specialized. We need to recompile by changing parameters and methods. 
+We are currently working on improving the parameters and methods so that they can be freely modified from parameter files.
 
 ## Feature
 
@@ -9,7 +15,7 @@ This library support for Object Oriented Desing (OOD) and Structure of Arrays (S
 
 - [x] 5 equation model (in collection/five_equation_model. Binary name is "f3ds5eq")
     - Additional terms
-        - [x] with K term [Kapila 2001]
+        - [x] with -K * div(u) term [Kapila 2001]
         - [ ] with surface tension term [Garrick 2017]
         - [ ] with viscosity term [Coralic 2014]
     - Nonviscosity flux approximation
@@ -34,6 +40,7 @@ This library support for Object Oriented Desing (OOD) and Structure of Arrays (S
     - [x] with JS-type smoothing indicator (WENO5-JS)
 - [ ] MUSCL3+THINC (3rd order, Support for Cartesian coordinate system only)
 - [ ] Unstructure MUSCL (3rd order)
+- [ ] Unstructure MUSCL + Unstructure THINC (3rd order)
 - [ ] k-expect WENO5 (5th order)
 
 ### Time Stepping
@@ -63,7 +70,7 @@ This library support for Object Oriented Desing (OOD) and Structure of Arrays (S
 ### Result I/O
 
 - [ ] F3DS original
-- [x] VTK
+- [x] VTK ([VTKFortran](https://github.com/szaghi/VTKFortran) backend)
 
 ### Initial Condition
 
@@ -92,6 +99,8 @@ This library support for Object Oriented Desing (OOD) and Structure of Arrays (S
 - [ ] Nearest Neighbor Search
     - [ ] [FLANN](https://github.com/flann-lib/flann)
     - [ ] [Annoy](https://github.com/spotify/annoy)
+- [x] Data Description Language I/O
+    - [x] JSON ([JSON-Fortran](https://github.com/jacobwilliams/json-fortran) backend)
 
 ## How to compile
 
@@ -101,7 +110,7 @@ F3DS only support for Linux system now. We can compile F3DS by Makefile like thi
 make
 ```
 
-Defalt compiler is set "gfortran". And default option is "-O3 -march=native -ffree-line-length-none -fopenmp -cpp".  
+Default compiler is set "gfortran". And default option is "-O3 -march=native -ffree-line-length-none -fopenmp -cpp".  
 If you want to use "ifort" and "-fast -openmp" options, you shoud type following command in your terminal.
 
 ```:shell
