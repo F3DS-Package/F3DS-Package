@@ -6,7 +6,7 @@ We provide a fast, maintainable FVM library and solvers.
 
 Status: **DEVELOPMENT**  
 
-Many methods are specialized. We need to recompile by changing parameters and methods. 
+Solver are specialized. We need to recompile by changing parameters and methods. 
 We are currently working on improving to modify methods/parameters from external files.
 
 ## Feature

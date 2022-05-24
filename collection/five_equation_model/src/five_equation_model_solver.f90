@@ -179,7 +179,7 @@ program five_eq_model_solver
             get_number_of_symmetric_faces()          , &
             time_increment                           , &
             eos                                      , &
-            reconstruct_minmod_muscl                 , &
+            reconstruct_jiang_weno5                  , &
             compute_space_element_five_equation_model, &
             compute_flux_five_equation_model_hllc    , &
             primitive_to_conservative                , &
