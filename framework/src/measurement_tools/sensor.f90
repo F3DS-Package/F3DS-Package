@@ -48,8 +48,7 @@ module sensor_class
             open(newunit = unit_number, file=self%output_filename_, status = 'old', position='append')
             write(unit_number, *) time, primitive_values_set(self%cell_id_, :)
             close(unit_number)
+            self%next_output_time_ = self%next_output_time_ + self%output_timespan_
         end if
-
-        self%next_output_time_ = self%next_output_time_ + self%output_timespan_
     end subroutine write
 end module sensor_class

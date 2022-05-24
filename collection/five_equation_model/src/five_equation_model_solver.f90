@@ -54,7 +54,7 @@ program five_eq_model_solver
     time           = 0.d0
 
     call eos%initialize(1.4d0, 6.12d0, 0.d0, 2.450d3)
-    call pressure_sensor%initialize("sensor.dat", 1.d6, 13633)
+    call pressure_sensor%initialize("sensor.dat", 5.d3, 13633)
 
 #ifdef _OPENMP
     call omp_set_num_threads(16)
