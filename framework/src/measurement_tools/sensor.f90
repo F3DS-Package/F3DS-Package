@@ -16,6 +16,7 @@ module sensor_class
         contains
 
         procedure, public, pass(self) :: initialize => initialize_by_id
+        procedure, public, pass(self) :: write
     end type
 
     contains
@@ -44,7 +45,7 @@ module sensor_class
         integer(int_kind )                :: unit_number
 
         if(time >= self%next_output_time_)then
-            open(newunit = unit_number, file=self%output_filename_, status = 'old')
+            open(newunit = unit_number, file=self%output_filename_, status = 'old', position='append')
             write(unit_number, *) time, primitive_values_set(self%cell_id_, :)
             close(unit_number)
         end if

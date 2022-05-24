@@ -68,6 +68,7 @@ FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/reconstruction/*.f90)
 FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/time_stepping/*.f90)
 FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/grid_parser/*.f90)
 FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/initial_condition_parser/*.f90)
+FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/measurement_tools/*.f90)
 # Tier 1 layer (Application)
 
 # F3DS Collection

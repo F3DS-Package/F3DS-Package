@@ -7,11 +7,11 @@ We provide a fast, maintainable FVM library and solvers.
 Status: **DEVELOPMENT**  
 
 Many methods are specialized. We need to recompile by changing parameters and methods. 
-We are currently working on improving the parameters and methods so that they can be freely modified from parameter files.
+We are currently working on improving to modify methods/parameters from external files.
 
 ## Feature
 
-### Equations
+### Equation Collection
 
 - [x] 5 equation model (in collection/five_equation_model. Binary name is "f3ds5eq")
     - Additional terms
@@ -22,7 +22,9 @@ We are currently working on improving the parameters and methods so that they ca
         - [x] HLLC [Toro 1997]
 - [ ] Euler equation
 
-### EoS
+### Flamework
+
+#### EoS
 
 - EoS
     - [ ] Ideal gas EoS
@@ -30,7 +32,7 @@ We are currently working on improving the parameters and methods so that they ca
     - [x] Stiffened-gas EoS
     - [ ] Noble-Abel Stiffened-gas EoS
 
-### Reconstruction Methods
+#### Reconstruction Methods
 
 - [x] MUSCL3 (3rd order, Support for Cartesian coordinate system only)
     - [x] with minimod flux limmiter
@@ -43,7 +45,7 @@ We are currently working on improving the parameters and methods so that they ca
 - [ ] Unstructure MUSCL + Unstructure THINC (3rd order)
 - [ ] k-expect WENO5 (5th order)
 
-### Time Stepping
+#### Time Stepping
 
 - Explicit Runge-Kutta
     - [x] 2nd order TVD Runge-Kutta
@@ -51,13 +53,13 @@ We are currently working on improving the parameters and methods so that they ca
     - [ ] 4th order TVD Runge-Kutta
     - [ ] Jameson-Baker 4 stage Runge-Kutta [Jameson 1929]
 
-### Grid System
+#### Grid System
 
 - [x] Structure grid
 - [x] Unstructure grid
 - [ ] Addaptive Mesh Refinement (AMR)
 
-### Grid I/O
+#### Grid I/O
 
 - Structure grid format
     - [x] Nishida Lab. legacy format
@@ -67,34 +69,35 @@ We are currently working on improving the parameters and methods so that they ca
     - [ ] CGNS
     - [ ] OpenFOAM
 
-### Result I/O
+#### Result I/O
 
 - [ ] F3DS original
 - [x] VTK ([VTKFortran](https://github.com/szaghi/VTKFortran) backend)
 
-### Initial Condition
+#### Initial Condition
 
 - [x] Input from Nishida Lab. legacy format
 
-### Parallelization Backend
+#### Parallelization Backend
 
 - [x] OpenMP
 - [ ] OpenMPI (single-node/multi-node)
 - [ ] CUDA Fortran
 - [ ] OpenACC
 
-### Grid Decomposition for Parallelization
+#### Grid Decomposition for Parallelization
 
 - [x] Structure (Simple decomposition by OpemMP)
 - [ ] Metis
 - [ ] Scotch
 
-### Measurement Tools
+#### Measurement Tools
 
-- [ ] Sensor (Probe)
-- [ ] Virtual surface
+- [x] Sensor (Probe)
+- [ ] Measurement surface
+- [ ] Virtual measurement surface
 
-### Other tools
+#### Other tools
 
 - [ ] Nearest Neighbor Search
     - [ ] [FLANN](https://github.com/flann-lib/flann)

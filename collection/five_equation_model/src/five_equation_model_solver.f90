@@ -24,10 +24,12 @@ program five_eq_model_solver
     use vtk_fortran, only : vtk_file
     ! BC
     use five_equation_model_boundary_condition_module
+    ! Measurement
+    use sensor_class
 
     implicit none
 
-    real   (real_kind)  :: time_increment
+    real   (real_kind)  :: time_increment, time
     integer(int_kind )  :: max_timestep, timestep
     integer(int_kind )  :: index
     ! Grid & initial condition I/O
@@ -44,12 +46,15 @@ program five_eq_model_solver
     integer  (I4P), allocatable :: vtk_offset(:), vtk_connect(:)
 
     type(stiffened_gas_mixture_eos) :: eos
+    type(sensor) :: pressure_sensor
 
     time_increment = 1.d-4
     max_timestep   = 5*10**5
     n_output_file  = 100
+    time           = 0.d0
 
     call eos%initialize(1.4d0, 6.12d0, 0.d0, 2.450d3)
+    call pressure_sensor%initialize("sensor.dat", 1.d6, 13633)
 
 #ifdef _OPENMP
     call omp_set_num_threads(16)
@@ -111,6 +116,8 @@ program five_eq_model_solver
 
     ! solver timestepping loop
     do timestep = 0, max_timestep, 1
+        print *, "step ", timestep
+
         if (mod(timestep, max_timestep / n_output_file) == 0) then
             write(vtk_filename, "(a, i5.5, a)") "result/", file_output_counter, ".vtu"
             print *, "write vtk "//vtk_filename//"..."
@@ -147,7 +154,7 @@ program five_eq_model_solver
             file_output_counter = file_output_counter + 1
         end if
 
-        print *, "step ", timestep
+        call pressure_sensor%write(time, primitive_variables_set)
 
         call compute_next_state_second_order_tvd_rk(   &
             conservative_variables_set               , &
@@ -172,13 +179,15 @@ program five_eq_model_solver
             get_number_of_symmetric_faces()          , &
             time_increment                           , &
             eos                                      , &
-            reconstruct_jiang_weno5                  , &
+            reconstruct_minmod_muscl                 , &
             compute_space_element_five_equation_model, &
             compute_flux_five_equation_model_hllc    , &
             primitive_to_conservative                , &
             conservative_to_primitive                , &
             five_equation_model_set_boundary_condition &
         )
+
+        time = time + time_increment
     end do
 
     call finalize_boundary_reference()
