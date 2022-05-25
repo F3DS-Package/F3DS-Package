@@ -5,6 +5,7 @@ module vector_module
 
     private
 
+    public :: vector_angle
     public :: vector_magnitude
     public :: vector_distance
     public :: multiply_vector
@@ -12,6 +13,16 @@ module vector_module
     public :: reverse_vector
 
     contains
+
+    pure function vector_angle(vector1, vector2) result(angle)
+        real(real_kind), intent(in) :: vector1 (3)
+        real(real_kind), intent(in) :: vector2 (3)
+        real(real_kind)             :: angle
+        angle = acos( &
+            (vector1(1) * vector2(1) + vector1(2) * vector2(2) + vector1(3) * vector2(3)) &
+            / (sqrt(vector1(1)**2.d0 + vector1(2)**2.d0 + vector1(3)**2.d0) + sqrt(vector2(1)**2.d0 + vector2(2)**2.d0 + vector2(3)**2.d0)) &
+        )
+    end function vector_angle
 
     pure function vector_magnitude(vector) result(magnitude)
         real(real_kind), intent(in) :: vector(3)
