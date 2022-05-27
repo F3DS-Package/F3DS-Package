@@ -33,7 +33,7 @@ module sensor_class
         self%cell_id_          = cell_id
         self%next_output_time_ = 0.d0
 
-        open(newunit = unit_number, file = self%output_filename_, status = 'replace')
+        open(newunit = unit_number, file = "result/"//self%output_filename_, status = 'replace')
         write(unit_number, *) "# F3DS sensor data (cell id = ", self%cell_id_, ")"
         close(unit_number)
     end subroutine initialize_by_id
@@ -45,7 +45,7 @@ module sensor_class
         integer(int_kind )                :: unit_number
 
         if(time >= self%next_output_time_)then
-            open(newunit = unit_number, file=self%output_filename_, status = 'old', position='append')
+            open(newunit = unit_number, file="result/"//self%output_filename_, status = 'old', position='append')
             write(unit_number, *) time, primitive_values_set(self%cell_id_, :)
             close(unit_number)
             self%next_output_time_ = self%next_output_time_ + self%output_timespan_

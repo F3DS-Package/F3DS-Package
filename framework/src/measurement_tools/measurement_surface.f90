@@ -101,7 +101,7 @@ module measurement_surface_class
                     output_values(values_index) = output_values(values_index) + values_set(cell_index, values_index) * face_areas(self%face_ids_(id_index))
                 end do
             end do
-            open(newunit = unit_number, file=self%output_filename_, status = 'old', position = 'append')
+            open(newunit = unit_number, file="result/"//self%output_filename_, status = 'old', position = 'append')
             write(unit_number, *) time, output_values(:)
             close(unit_number)
             self%next_output_time_ = self%next_output_time_ + self%output_timespan_
@@ -113,7 +113,7 @@ module measurement_surface_class
         character(len=*              ), intent(in) :: filename
         integer  (int_kind           )             :: unit_number
 
-        open(newunit = unit_number, file = self%output_filename_, status = 'replace')
+        open(newunit = unit_number, file = "result/"//self%output_filename_, status = 'replace')
         write(unit_number, *) "# F3DS measurement surface data"
         close(unit_number)
     end subroutine make_new_file
