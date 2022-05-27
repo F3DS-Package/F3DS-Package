@@ -44,7 +44,7 @@ module measurement_surface_class
         integer  (int_kind           )                :: n_faces, n_measurement_surface, face_index, rhc_index, lhc_index
         real     (real_kind          )                :: angle
 
-        n_ghost_cells = size(face_to_cell_index   (1, :))
+        n_ghost_cells = size(face_to_cell_index   (1, :)) / 2
         n_faces       = size(face_centor_positions(:, 1))
         allocate(tmp_face_ids  (n_faces))
         allocate(tmp_lhc_or_rhc(n_faces))
@@ -53,18 +53,18 @@ module measurement_surface_class
             if(self%is_point_in_region(face_centor_positions(face_index, :), x_max, x_min, y_max, y_min, z_max, z_min))then
                 angle = vector_angle(normal, face_normal_vectors(face_index, :))
                 if(0.d0 - machine_epsilon <= angle .and. angle <= 0.d0 + machine_epsilon)then
-                    rhc_index = face_to_cell_index(face_index, n_ghost_cells+1)
-                    if(is_real_cell(rhc_index))then
-                        n_measurement_surface = n_measurement_surface + 1
-                        tmp_face_ids  (n_measurement_surface) = face_index
-                        tmp_lhc_or_rhc(n_measurement_surface) = 1
-                    end if
-                else if(pi - machine_epsilon <= angle .and. angle <= pi + machine_epsilon)then
                     lhc_index = face_to_cell_index(face_index, n_ghost_cells+0)
                     if(is_real_cell(lhc_index))then
                         n_measurement_surface = n_measurement_surface + 1
                         tmp_face_ids  (n_measurement_surface) = face_index
                         tmp_lhc_or_rhc(n_measurement_surface) = 0
+                    end if
+                else if(pi - machine_epsilon <= angle .and. angle <= pi + machine_epsilon)then
+                    rhc_index = face_to_cell_index(face_index, n_ghost_cells+1)
+                    if(is_real_cell(rhc_index))then
+                        n_measurement_surface = n_measurement_surface + 1
+                        tmp_face_ids  (n_measurement_surface) = face_index
+                        tmp_lhc_or_rhc(n_measurement_surface) = 1
                     end if
                 end if
             end if
@@ -80,7 +80,7 @@ module measurement_surface_class
         call self%make_new_file(filename)
     end subroutine initialize_by_face_positions
 
-    subroutine write(self, time, values_set, face_to_cell_index, face_areas, n_ghost_cells)
+    subroutine write(self, time, values_set, face_to_cell_index, face_areas)
         class  (measurement_surface), intent(inout) :: self
         real   (real_kind          ), intent(in   ) :: time
         real   (real_kind          ), intent(in   ) :: values_set        (:,:)
@@ -91,7 +91,7 @@ module measurement_surface_class
         integer(int_kind           )                :: unit_number, id_index, cell_index, values_index, n_output_values
         real   (real_kind          )                :: output_values(size(values_set(1,:)))
 
-        n_ghost_cells = size(face_to_cell_index(1, :))
+        n_ghost_cells = size(face_to_cell_index(1, :)) / 2
 
         if(time >= self%next_output_time_)then
             n_output_values = size(values_set(1,:))

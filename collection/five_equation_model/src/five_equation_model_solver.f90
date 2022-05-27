@@ -26,6 +26,7 @@ program five_eq_model_solver
     use five_equation_model_boundary_condition_module
     ! Measurement
     use sensor_class
+    use measurement_surface_class
 
     implicit none
 
@@ -46,7 +47,9 @@ program five_eq_model_solver
     integer  (I4P), allocatable :: vtk_offset(:), vtk_connect(:)
 
     type(stiffened_gas_mixture_eos) :: eos
-    type(sensor) :: pressure_sensor
+    type(sensor)              :: pressure_sensor
+    type(measurement_surface) :: surface
+    real(real_kind)           :: normal(3)
 
     time_increment = 1.d-4
     max_timestep   = 5*10**5
@@ -113,6 +116,10 @@ program five_eq_model_solver
     n_output_points = get_number_of_points()
 
     call initialize_second_order_tvd_rk(conservative_variables_set)
+    normal(1) = 0.d0
+    normal(2) = 1.d0
+    normal(3) = 0.d0
+    call surface%initialize("surface.dat", 5.d3, 10.d0+0.04d0, 10.d0-0.04d0, 1.d0, 0.d0, 7.d0, 0.d0, normal, faces_to_cell_index, faces_position, faces_normal_vector, cells_is_real_cell)
 
     ! solver timestepping loop
     do timestep = 0, max_timestep, 1
@@ -155,6 +162,7 @@ program five_eq_model_solver
         end if
 
         call pressure_sensor%write(time, primitive_variables_set)
+        call surface%write(time, primitive_variables_set, faces_to_cell_index, faces_area)
 
         call compute_next_state_second_order_tvd_rk(   &
             conservative_variables_set               , &

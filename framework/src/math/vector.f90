@@ -20,7 +20,7 @@ module vector_module
         real(real_kind)             :: angle
         angle = acos( &
             (vector1(1) * vector2(1) + vector1(2) * vector2(2) + vector1(3) * vector2(3)) &
-            / (sqrt(vector1(1)**2.d0 + vector1(2)**2.d0 + vector1(3)**2.d0) + sqrt(vector2(1)**2.d0 + vector2(2)**2.d0 + vector2(3)**2.d0)) &
+            / (vector_magnitude(vector1) * vector_magnitude(vector2)) &
         )
     end function vector_angle
 

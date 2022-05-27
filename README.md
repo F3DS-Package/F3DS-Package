@@ -6,7 +6,7 @@ We provide a fast, maintainable FVM library and solvers.
 
 Status: **DEVELOPMENT**  
 
-Solver are specialized. We need to recompile by changing parameters and methods. 
+Solvers are specialized. We need to recompile by changing parameters and methods. 
 We are currently working on improving to modify methods/parameters from external files.
 
 ## Feature
@@ -40,7 +40,7 @@ We are currently working on improving to modify methods/parameters from external
 - [x] WENO5 (5th order, Support for Cartesian coordinate system only)
     - [x] with original smoothing indicator (WENO5)
     - [x] with JS-type smoothing indicator (WENO5-JS)
-- [ ] MUSCL3+THINC (3rd order, Support for Cartesian coordinate system only)
+- [ ] MUSCL3 + THINC (3rd order, Support for Cartesian coordinate system only)
 - [ ] Unstructure MUSCL (3rd order)
 - [ ] Unstructure MUSCL + Unstructure THINC (3rd order)
 - [ ] k-expect WENO5 (5th order)
@@ -94,7 +94,7 @@ We are currently working on improving to modify methods/parameters from external
 #### Measurement Tools
 
 - [x] Sensor (Probe)
-- [ ] Measurement surface
+- [x] Measurement surface
 - [ ] Virtual measurement surface
 
 #### Other tools
@@ -104,6 +104,7 @@ We are currently working on improving to modify methods/parameters from external
     - [ ] [Annoy](https://github.com/spotify/annoy)
 - [x] Data Description Language I/O
     - [x] JSON ([JSON-Fortran](https://github.com/jacobwilliams/json-fortran) backend)
+    - [x] XML ([FoXy](https://github.com/Fortran-FOSS-Programmers/FoXy) backend)
 
 ## How to compile
 
