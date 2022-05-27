@@ -22,11 +22,13 @@ program five_eq_model_solver
     ! Result file output
     use penf
     use vtk_fortran, only : vtk_file
+    use sytem_call_module
     ! BC
     use five_equation_model_boundary_condition_module
     ! Measurement
     use sensor_class
     use measurement_surface_class
+    use line_plot_class
 
     implicit none
 
@@ -40,24 +42,24 @@ program five_eq_model_solver
     type(vtk_file)              :: a_vtk_file
     integer  (I4P)              :: vtk_error
     integer  (int_kind )        :: file_output_counter, vtk_index, cell_point_index
-    character(16)               :: vtk_filename
+    character(22)               :: vtk_filename
     integer  (I4P)              :: n_output_cells, n_output_points, n_cell_points, offset_incriment, n_output_file
     real     (R4P), allocatable :: vtk_density(:), vtk_cell_id(:), vtk_soundspeed(:)
     integer  (I1P), allocatable :: vtk_cell_type(:)
     integer  (I4P), allocatable :: vtk_offset(:), vtk_connect(:)
 
     type(stiffened_gas_mixture_eos) :: eos
-    type(sensor)              :: pressure_sensor
+    type(sensor             ) :: pressure_sensor
     type(measurement_surface) :: surface
+    type(line_plot          ) :: line
     real(real_kind)           :: normal(3)
+    integer(int_kind ), allocatable :: line_ids(:)
+    integer(int_kind )              :: n_line_ids
 
     time_increment = 1.d-4
     max_timestep   = 5*10**5
     n_output_file  = 100
     time           = 0.d0
-
-    call eos%initialize(1.4d0, 6.12d0, 0.d0, 2.450d3)
-    call pressure_sensor%initialize("sensor.dat", 5.d3, 13633)
 
 #ifdef _OPENMP
     call omp_set_num_threads(16)
@@ -83,9 +85,29 @@ program five_eq_model_solver
     call a_init_parser%parse("init.nlinit")
     call a_init_parser%get_conservative_variables_set(conservative_variables_set)
     call a_init_parser%close()
+
+    ! sensor
+    call pressure_sensor%initialize("sensor.dat", 5.d3, 13633)
+
+    ! measurement surface
+    normal(1) = 0.d0
+    normal(2) = 1.d0
+    normal(3) = 0.d0
+    call surface%initialize("surface.dat", 5.d3, 10.d0+0.04d0, 10.d0-0.04d0, 1.d0, 0.d0, 7.d0, 0.d0, normal, faces_to_cell_index, faces_position, faces_normal_vector, cells_is_real_cell)
+
+    ! line plot
+    allocate(line_ids(get_number_of_cells()))
+    n_line_ids = 0
     do index = 1, get_number_of_cells(), 1
-        primitive_variables_set(index, :) = conservative_to_primitive(conservative_variables_set(index, :), eos)
+        if  ( 0.5d0 < cells_centor_position(index, 1)                                                &
+        .and. 0.d0  < cells_centor_position(index, 2) .and. cells_centor_position(index, 2) < 0.04d0 &
+        .and. 0.d0  < cells_centor_position(index, 3) .and. cells_centor_position(index, 3) < 0.04d0 ) then
+            n_line_ids = n_line_ids + 1
+            line_ids(n_line_ids) = index
+        end if
     end do
+    call line%initialize("line", 0.1d3, line_ids(1:n_line_ids))
+    deallocate(line_ids)
 
     ! VTK
     file_output_counter = 0
@@ -114,19 +136,23 @@ program five_eq_model_solver
         end if
     end do
     n_output_points = get_number_of_points()
+    call make_dir("result/field")
 
+    ! EoS and primitive-valiables
+    call eos%initialize(1.4d0, 6.12d0, 0.d0, 2.450d3)
+    do index = 1, get_number_of_cells(), 1
+        primitive_variables_set(index, :) = conservative_to_primitive(conservative_variables_set(index, :), eos)
+    end do
+
+    ! time-stepping
     call initialize_second_order_tvd_rk(conservative_variables_set)
-    normal(1) = 0.d0
-    normal(2) = 1.d0
-    normal(3) = 0.d0
-    call surface%initialize("surface.dat", 5.d3, 10.d0+0.04d0, 10.d0-0.04d0, 1.d0, 0.d0, 7.d0, 0.d0, normal, faces_to_cell_index, faces_position, faces_normal_vector, cells_is_real_cell)
 
     ! solver timestepping loop
     do timestep = 0, max_timestep, 1
         print *, "step ", timestep
 
         if (mod(timestep, max_timestep / n_output_file) == 0) then
-            write(vtk_filename, "(a, i5.5, a)") "result/", file_output_counter, ".vtu"
+            write(vtk_filename, "(a, i5.5, a)") "result/field/", file_output_counter, ".vtu"
             print *, "write vtk "//vtk_filename//"..."
             vtk_error = a_vtk_file%initialize                   (format="binary", filename=vtk_filename, mesh_topology="UnstructuredGrid")
             vtk_error = a_vtk_file%xml_writer%write_piece       (np=n_output_points, nc=n_output_cells)
@@ -163,6 +189,7 @@ program five_eq_model_solver
 
         call pressure_sensor%write(time, primitive_variables_set)
         call surface%write(time, primitive_variables_set, faces_to_cell_index, faces_area)
+        call line%write(time, primitive_variables_set, cells_centor_position)
 
         call compute_next_state_second_order_tvd_rk(   &
             conservative_variables_set               , &
