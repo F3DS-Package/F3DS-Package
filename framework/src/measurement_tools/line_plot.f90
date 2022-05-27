@@ -1,5 +1,6 @@
 module line_plot_class
     use typedef_module
+    use sytem_call_module
 
     implicit none
 
@@ -8,7 +9,7 @@ module line_plot_class
     type, public :: line_plot
         private
 
-        character(:        ), allocatable :: output_filename_head_
+        character(:        ), allocatable :: output_dir_
         integer  (int_kind ), allocatable :: cell_ids_  (:)
         real     (real_kind)              :: output_timespan_
         real     (real_kind)              :: next_output_time_
@@ -23,20 +24,22 @@ module line_plot_class
 
     contains
 
-    subroutine initialize_by_ids(self, filename_head, frequency, cell_ids)
+    subroutine initialize_by_ids(self, output_dir, frequency, cell_ids)
         class    (line_plot), intent(inout) :: self
-        character(len=*    ), intent(in   ) :: filename_head
+        character(len=*    ), intent(in   ) :: output_dir
         real     (real_kind), intent(in   ) :: frequency
         integer  (int_kind ), intent(in   ) :: cell_ids(:)
 
         integer  (int_kind )                :: unit_number
 
-        self%output_filename_head_ = filename_head
+        self%output_dir_           = output_dir
         self%output_timespan_      = 1.d0 / frequency
         self%next_output_time_     = 0.d0
-        self%cell_ids_             = size(self%cell_ids_)
+        self%n_cells_              = size(cell_ids)
         self%n_output_             = 0
         allocate(self%cell_ids_, source=cell_ids)
+
+        call make_dir("result/"//self%output_dir_)
     end subroutine
 
     subroutine write(self, time, values_set, cell_positions)
@@ -46,11 +49,11 @@ module line_plot_class
         real   (real_kind), intent(in   ) :: cell_positions      (:,:)
 
         integer  (int_kind )              :: unit_number, i
-        character(:        ), allocatable :: output_filename
+        character(7)                      :: cher_n_output
 
         if(time >= self%next_output_time_)then
-            write(output_filename, "(a, a, i7.7, a)") "result/", self%output_filename_head_, self%n_output_, ".dat"
-            open(newunit = unit_number, file=output_filename, status = 'replace')
+            write(cher_n_output, "(i7.7)") self%n_output_
+            open(newunit = unit_number, file="result/"//self%output_dir_//"/"//cher_n_output//".dat", status = 'replace')
             write(unit_number, *) "# time = ", time
             do i = 1, self%n_cells_, 1
                 write(unit_number, *) cell_positions(self%cell_ids_(i), :), values_set(self%cell_ids_(i), :)
