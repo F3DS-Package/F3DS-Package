@@ -1,6 +1,6 @@
 # Fortran Fine-volume Fluid Dynamics Solver (F3DS) Flamework & Collection
 
-F3DS is the Modern Fortran (such as Fortran 2003, 2008, ...) library for development fluid dynamics solvers by Fine-volume method (FVM).  
+F3DS is the modern Fortran (such as Fortran 2003, 2008, ...) library for development fluid dynamics solvers by Fine-volume method (FVM).  
 This library support for Object Oriented Desing (OOD) and Structure of Arrays (SoA) layout. 
 We provide a fast, maintainable FVM library and solvers.  
 
@@ -13,12 +13,12 @@ We are currently working on improving to modify methods/parameters from external
 
 ### Equation Collection
 
-- [x] 5 equation model (in collection/five_equation_model. Binary name is "f3ds5eq")
+- [x] 5 equation model (in collection/five_equation_model. Binary name is "f5eq")
     - Additional terms
         - [x] with -K * div(u) term [Kapila 2001]
         - [ ] with surface tension term [Garrick 2017]
         - [ ] with viscosity term [Coralic 2014]
-    - Nonviscosity flux approximation
+    - Approximate Riemann solvers
         - [x] HLLC [Toro 1997]
 - [ ] Euler equation
 
@@ -34,23 +34,25 @@ We are currently working on improving to modify methods/parameters from external
 
 #### Reconstruction Methods
 
-- [x] MUSCL3 (3rd order, Support for Cartesian coordinate system only)
-    - [x] with minimod flux limmiter
-    - [ ] with monotonized central flux limmiter
-- [x] WENO5 (5th order, Support for Cartesian coordinate system only)
-    - [x] with original smoothing indicator (WENO5)
-    - [x] with JS-type smoothing indicator (WENO5-JS)
-- [ ] MUSCL3 + THINC (3rd order, Support for Cartesian coordinate system only)
-- [ ] Unstructure MUSCL (3rd order)
-- [ ] Unstructure MUSCL + Unstructure THINC (3rd order)
-- [ ] k-expect WENO5 (5th order)
+- For structure grid (supported orthogonal grid)
+    - [x] MUSCL3 (3rd order)
+        - [x] with minimod flux limmiter
+        - [ ] with monotonized central flux limmiter
+    - [ ] MUSCL3 + THINC
+    - [x] WENO5 (5th order)
+        - [x] with original smoothing indicator (WENO5) [Liu 1994]
+        - [x] with smoothing indicator proposed by Jiang & Shu (WENO5-JS) [Jiang 1996]
+- For unstructure grid
+    - [ ] Unstructured-MUSCL (3rd order)
+    - [ ] Unstructured-MUSCL + Unstructure-THINC (3rd order)
+    - [ ] k-expect WENO5 (5th order)
 
 #### Time Stepping
 
 - Explicit Runge-Kutta
-    - [x] 2nd order TVD Runge-Kutta
-    - [x] 3rd order TVD Runge-Kutta
-    - [ ] 4th order TVD Runge-Kutta
+    - [x] 2nd order TVD(SPP) Runge-Kutta
+    - [x] 3rd order TVD(SPP) Runge-Kutta
+    - [ ] 4th order TVD(SPP) Runge-Kutta
     - [ ] Jameson-Baker 4 stage Runge-Kutta [Jameson 1929]
 
 #### Grid System
@@ -88,14 +90,16 @@ We are currently working on improving to modify methods/parameters from external
 #### Grid Decomposition for Parallelization
 
 - [x] Structure (Simple decomposition by OpemMP)
-- [ ] Metis
-- [ ] Scotch
+- [ ] [Metis](https://github.com/KarypisLab/METIS)
+- [ ] [Scotch](https://gitlab.inria.fr/scotch/scotch)
+- [ ] [Zoltan](https://github.com/sandialabs/Zoltan)
 
 #### Measurement Tools
 
 - [x] Sensor (Probe)
 - [x] Measurement surface
 - [ ] Virtual measurement surface
+- [x] Line plotting tool
 
 #### Other tools
 
@@ -123,5 +127,5 @@ make FC=ifort FFLAGS=-fast -openmp
 
 ## How to use
 
-All binaries provided by F3DS is stored in "bins" directory. If you want use "f3ds5eq", you type "./bins/f3ds5eq".  
+All binaries provided by F3DS is stored in "bins" directory. If you want use "f5eq", you type "./bins/f5eq".  
 If you want more infomations, please read README.md in each collection directories.
