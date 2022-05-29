@@ -99,14 +99,14 @@ program five_eq_model_solver
     allocate(line_ids(get_number_of_cells()))
     n_line_ids = 0
     do index = 1, get_number_of_cells(), 1
-        if  ( 0.5d0 < cells_centor_position(index, 1)                                                &
+        if  ( 0.0d0 < cells_centor_position(index, 1) .and. cells_centor_position(index, 1) < 10.d0  &
         .and. 0.d0  < cells_centor_position(index, 2) .and. cells_centor_position(index, 2) < 0.04d0 &
         .and. 0.d0  < cells_centor_position(index, 3) .and. cells_centor_position(index, 3) < 0.04d0 ) then
             n_line_ids = n_line_ids + 1
             line_ids(n_line_ids) = index
         end if
     end do
-    call line%initialize("line", 0.1d3, line_ids(1:n_line_ids))
+    call line%initialize("line", 0.05d3, line_ids(1:n_line_ids))
     deallocate(line_ids)
 
     ! VTK
@@ -139,7 +139,7 @@ program five_eq_model_solver
     call make_dir("result/field")
 
     ! EoS and primitive-valiables
-    call eos%initialize(1.4d0, 6.12d0, 0.d0, 2.450d3)
+    call eos%initialize(1.4d0, 2.35d0, 0.d0, 7.142d3)
     do index = 1, get_number_of_cells(), 1
         primitive_variables_set(index, :) = conservative_to_primitive(conservative_variables_set(index, :), eos)
     end do

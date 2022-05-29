@@ -46,10 +46,9 @@ module class_nlinit_parser
         ALLOCATE (self%conservative_variables_set_(self%imin-2:self%imax+2, self%jmin-2:self%jmax+2, self%kmin-2:self%kmax+2, 1:self%n_conservative_variables) )
         ALLOCATE (self%primitive_variables_set_   (self%imin-2:self%imax+2, self%jmin-2:self%jmax+2, self%kmin-2:self%kmax+2, 1:self%n_primitive_variables   ) )
 
-        open(newunit=unit_number, file=filepath, access = 'stream', form = 'unformatted', status = 'old')
-
         read(unit_number) ((((self%primitive_variables_set_   (i,j,k,n), i = self%imin-2, self%imax+2), j = self%jmin-2, self%jmax+2), k = self%kmin-2, self%kmax+2), n = 1, self%n_primitive_variables   )
         read(unit_number) ((((self%conservative_variables_set_(i,j,k,n), i = self%imin-2, self%imax+2), j = self%jmin-2, self%jmax+2), k = self%kmin-2, self%kmax+2), n = 1, self%n_conservative_variables)
+
 
         close(unit_number)
 
