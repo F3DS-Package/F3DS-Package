@@ -139,7 +139,11 @@ program five_eq_model_solver
     call make_dir("result/field")
 
     ! EoS and primitive-valiables
-    call eos%initialize(1.4d0, 2.35d0, 0.d0, 7.142d3)
+    !call eos%initialize(1.4d0, 2.35d0, 0.d0, 7.142d3) ![Pelanti 2019]
+    !call eos%initialize(1.4d0, 4.4d0, 0.d0, 4.286d3) ![Garick 2019]
+    !call eos%initialize(1.4d0, 4.4d0, 0.d0, 4.3d-2) ![Garick 2019]
+    !call eos%initialize(1.4d0, 7.0d0, 0.d0, 2.142d3) ![Lou 2004]
+    call eos%initialize(1.4d0, 6.12d0, 0.d0, 2.450d3) ! [Nishida]
     do index = 1, get_number_of_cells(), 1
         primitive_variables_set(index, :) = conservative_to_primitive(conservative_variables_set(index, :), eos)
     end do
