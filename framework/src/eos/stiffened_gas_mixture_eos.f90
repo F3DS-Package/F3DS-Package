@@ -1,6 +1,7 @@
 module class_stiffened_gas_mixture_eos
     use typedef_module
     use abstract_mixture_eos
+    use math_constant_module
 
     implicit none
 
@@ -20,7 +21,8 @@ module class_stiffened_gas_mixture_eos
         procedure, public, pass(self) :: compute_pressure
         procedure, public, pass(self) :: compute_soundspeed
         procedure, public, pass(self) :: compute_internal_energy_density
-        procedure, public, pass(self) :: compute_inversed_wood_soundspeed
+        procedure, public, pass(self) :: compute_wood_soundspeed
+        procedure, public, pass(self) :: compute_k
 
         procedure, pass(self) :: compute_mixture_specific_heat_ratio
         procedure, pass(self) :: compute_mixture_reference_pressure
@@ -82,18 +84,50 @@ module class_stiffened_gas_mixture_eos
         specific_internal_energy = (pressure + g * pref) / (g - 1.d0)
     end function compute_internal_energy_density
 
-    pure function compute_inversed_wood_soundspeed(self, pressure, density, volume_fruction) result(soundspeed)
+    pure function compute_wood_soundspeed(self, pressure, density1, density2, volume_fruction) result(soundspeed)
         class(stiffened_gas_mixture_eos), intent(in) :: self
         real(real_kind), intent(in) :: pressure
-        real(real_kind), intent(in) :: density
+        real(real_kind), intent(in) :: density1
+        real(real_kind), intent(in) :: density2
         real(real_kind), intent(in) :: volume_fruction
         real(real_kind)             :: soundspeed
-        real(real_kind)             :: g, pref
+        real(real_kind)             :: g1, pref1, g2, pref2
+        real(real_kind)             :: squared_c1, squared_c2
 
-        g    = self%compute_mixture_specific_heat_ratio(volume_fruction)
-        pref = self%compute_mixture_reference_pressure (volume_fruction, g)
-        soundspeed = g * (pressure + pref)
-    end function compute_inversed_wood_soundspeed
+        if (volume_fruction < machine_epsilon) then
+            squared_c2 = self%specific_heat_ratio_fluid2_ * (pressure + self%reference_pressure_fluid2_) / density2
+            soundspeed = 1.d0 / density2 * squared_c2
+        else if (1.d0 - machine_epsilon < volume_fruction) then
+            squared_c1 = self%specific_heat_ratio_fluid1_ * (pressure + self%reference_pressure_fluid1_) / density1
+            soundspeed = 1.d0 / density1 * squared_c1
+        else
+            squared_c1 = self%specific_heat_ratio_fluid1_ * (pressure + self%reference_pressure_fluid1_) / density1
+            squared_c2 = self%specific_heat_ratio_fluid2_ * (pressure + self%reference_pressure_fluid2_) / density2
+            soundspeed = volume_fruction / density1 * squared_c1 + (1.d0 - volume_fruction) / density2 * squared_c2
+        end if
+    end function compute_wood_soundspeed
+
+    pure function compute_k(self, pressure, density1, density2, volume_fruction) result(k)
+        class(stiffened_gas_mixture_eos), intent(in) :: self
+        real(real_kind), intent(in) :: pressure
+        real(real_kind), intent(in) :: density1
+        real(real_kind), intent(in) :: density2
+        real(real_kind), intent(in) :: volume_fruction
+        real(real_kind)             :: k
+        real(real_kind)             :: g1, pref1, g2, pref2
+        real(real_kind)             :: squared_c1, squared_c2
+
+        if (volume_fruction < machine_epsilon) then
+            k = 0.d0
+        else if (1.d0 - machine_epsilon < volume_fruction) then
+            k = 0.d0
+        else
+            squared_c1 = self%specific_heat_ratio_fluid1_ * (pressure + self%reference_pressure_fluid1_) / density1
+            squared_c2 = self%specific_heat_ratio_fluid2_ * (pressure + self%reference_pressure_fluid2_) / density2
+            k = volume_fruction * (1.d0 - volume_fruction) * (density1 * squared_c1 - density2 * squared_c2) &
+              / (volume_fruction * density2 * squared_c2 + (1.d0 - volume_fruction) * density1 * squared_c1)
+        end if
+    end function compute_k
 
     pure function compute_mixture_specific_heat_ratio(self, volume_fruction) result(g)
         class(stiffened_gas_mixture_eos), intent(in) :: self

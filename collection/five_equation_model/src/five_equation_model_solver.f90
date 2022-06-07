@@ -44,7 +44,7 @@ program five_eq_model_solver
     integer  (int_kind )        :: file_output_counter, vtk_index, cell_point_index
     character(22)               :: vtk_filename
     integer  (I4P)              :: n_output_cells, n_output_points, n_cell_points, offset_incriment, n_output_file
-    real     (R4P), allocatable :: vtk_density(:), vtk_cell_id(:), vtk_soundspeed(:)
+    real     (R4P), allocatable :: vtk_density(:), vtk_cell_id(:), vtk_soundspeed(:), vtk_wood_soundspeed(:)
     integer  (I1P), allocatable :: vtk_cell_type(:)
     integer  (I4P), allocatable :: vtk_offset(:), vtk_connect(:)
 
@@ -116,12 +116,13 @@ program five_eq_model_solver
     do index = 1, get_number_of_cells(), 1
         if(cells_is_real_cell(index)) n_output_cells = n_output_cells + 1
     end do
-    allocate(vtk_density   (n_output_cells    ))
-    allocate(vtk_soundspeed(n_output_cells    ))
-    allocate(vtk_cell_id   (n_output_cells    ))
-    allocate(vtk_cell_type (n_output_cells    ))
-    allocate(vtk_offset    (n_output_cells    ))
-    allocate(vtk_connect   (n_output_cells * 8))
+    allocate(vtk_density        (n_output_cells    ))
+    allocate(vtk_soundspeed     (n_output_cells    ))
+    allocate(vtk_wood_soundspeed(n_output_cells    ))
+    allocate(vtk_cell_id        (n_output_cells    ))
+    allocate(vtk_cell_type      (n_output_cells    ))
+    allocate(vtk_offset         (n_output_cells    ))
+    allocate(vtk_connect        (n_output_cells * 8))
     vtk_index = 1
     do index = 1, get_number_of_cells(), 1
         if(cells_is_real_cell(index))then
@@ -167,22 +168,26 @@ program five_eq_model_solver
             do index = 1, get_number_of_cells(), 1
                 if(cells_is_real_cell(index))then
                     associate(                                     &
-                        rho1z1 => primitive_variables_set(index, 1), &
-                        rho2z2 => primitive_variables_set(index, 2), &
+                        rho1   => primitive_variables_set(index, 1), &
+                        rho2   => primitive_variables_set(index, 2), &
                         p      => primitive_variables_set(index, 6), &
                         z1     => primitive_variables_set(index, 7))
-                        vtk_density   (vtk_index) = rho1z1 + rho2z2
-                        vtk_soundspeed(vtk_index) = eos%compute_soundspeed(p, rho1z1 + rho2z2, z1)
+                        vtk_density   (vtk_index) = rho1 * z1 + rho2 * (1.d0 - z1)
+                        vtk_soundspeed(vtk_index) = eos%compute_soundspeed(p, rho1 * z1 + rho2 * (1.d0 - z1), z1)
+                        vtk_wood_soundspeed(vtk_index) = eos%compute_wood_soundspeed(p, rho1, rho2, z1)
                         vtk_cell_id   (vtk_index) = index
                     end associate
                     vtk_index = vtk_index + 1
                 end if
             end do
             vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='density', x=vtk_density)
+            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='density1', x=pack(primitive_variables_set(:, 1), mask=cells_is_real_cell))
+            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='density2', x=pack(primitive_variables_set(:, 2), mask=cells_is_real_cell))
             vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='velocity', x=pack(primitive_variables_set(:, 3), mask=cells_is_real_cell), y=pack(primitive_variables_set(:, 4), mask=cells_is_real_cell), z=pack(primitive_variables_set(:, 5), mask=cells_is_real_cell))
             vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='pressure', x=pack(primitive_variables_set(:, 6), mask=cells_is_real_cell))
             vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='volume fruction', x=pack(primitive_variables_set(:, 7), mask=cells_is_real_cell))
             vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='sound speed', x=vtk_soundspeed)
+            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='wood sound speed', x=vtk_wood_soundspeed)
             vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='cell id', x=vtk_cell_id)
             vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='cell position', x=pack(cells_centor_position(:, 1), mask=cells_is_real_cell), y=pack(cells_centor_position(:, 2), mask=cells_is_real_cell), z=pack(cells_centor_position(:, 3), mask=cells_is_real_cell))
             vtk_error = a_vtk_file%xml_writer%write_dataarray(location='cell', action='close')

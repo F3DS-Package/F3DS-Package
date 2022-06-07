@@ -134,29 +134,29 @@ module five_equation_space_model_module
 
         ! # compute EoS, main velosity, and fluxs
         associate(                                         &
-                rho1_z1 => local_coordinate_lhc_primitive(1), &
-                rho2_z2 => local_coordinate_lhc_primitive(2), &
+                rho1    => local_coordinate_lhc_primitive(1), &
+                rho2    => local_coordinate_lhc_primitive(2), &
                 u       => local_coordinate_lhc_primitive(3), &
                 v       => local_coordinate_lhc_primitive(4), &
                 w       => local_coordinate_lhc_primitive(5), &
                 p       => local_coordinate_lhc_primitive(6), &
                 z1      => local_coordinate_lhc_primitive(7)  &
             )
-            lhc_density    = rho1_z1 + rho2_z2
+            lhc_density    = rho1 * z1 + rho2 * (1.d0 - z1)
             lhc_pressure   = p
             lhc_soundspeed = eos%compute_soundspeed(p, lhc_density, z1)
             lhc_main_velocity = u
         end associate
         associate(                        &
-                rho1_z1 => local_coordinate_rhc_primitive(1), &
-                rho2_z2 => local_coordinate_rhc_primitive(2), &
+                rho1    => local_coordinate_rhc_primitive(1), &
+                rho2    => local_coordinate_rhc_primitive(2), &
                 u       => local_coordinate_rhc_primitive(3), &
                 v       => local_coordinate_rhc_primitive(4), &
                 w       => local_coordinate_rhc_primitive(5), &
                 p       => local_coordinate_rhc_primitive(6), &
                 z1      => local_coordinate_rhc_primitive(7)  &
             )
-            rhc_density    = rho1_z1 + rho2_z2
+            rhc_density    = rho1 * z1 + rho2 * (1.d0 - z1)
             rhc_pressure   = p
             rhc_soundspeed = eos%compute_soundspeed(p, rhc_density, z1)
             rhc_main_velocity = u
@@ -219,21 +219,17 @@ module five_equation_space_model_module
 
         ! # (-z1 - K) * div(u)
         associate(                           &
-            lhc_rho1_z1 => lhc_primitive(1), &
-            lhc_rho2_z2 => lhc_primitive(2), &
+            lhc_rho1    => lhc_primitive(1), &
+            lhc_rho2    => lhc_primitive(2), &
             lhc_p       => lhc_primitive(6), &
             lhc_z1      => lhc_primitive(7), &
-            rhc_rho1_z1 => rhc_primitive(1), &
-            rhc_rho2_z2 => rhc_primitive(2), &
+            rhc_rho1    => rhc_primitive(1), &
+            rhc_rho2    => rhc_primitive(2), &
             rhc_p       => rhc_primitive(6), &
             rhc_z1      => rhc_primitive(7)  &
         )
-            lhc_inv_wood1 = eos%compute_inversed_wood_soundspeed(lhc_p, lhc_density, 1.d0)
-            lhc_inv_wood2 = eos%compute_inversed_wood_soundspeed(lhc_p, lhc_density, 0.d0)
-            rhc_inv_wood1 = eos%compute_inversed_wood_soundspeed(rhc_p, rhc_density, 1.d0)
-            rhc_inv_wood2 = eos%compute_inversed_wood_soundspeed(rhc_p, rhc_density, 0.d0)
-            lhc_k         = lhc_z1 * (1.d0 - lhc_z1) * (lhc_inv_wood2 - lhc_inv_wood1) / (lhc_z1 * lhc_inv_wood2 + (1.d0 - lhc_z1) * lhc_inv_wood1)
-            rhc_k         = rhc_z1 * (1.d0 - rhc_z1) * (rhc_inv_wood2 - rhc_inv_wood1) / (rhc_z1 * rhc_inv_wood2 + (1.d0 - rhc_z1) * rhc_inv_wood1)
+            lhc_k = eos%compute_k(lhc_p, lhc_rho1, lhc_rho2, lhc_z1)
+            rhc_k = eos%compute_k(rhc_p, rhc_rho1, rhc_rho2, rhc_z1)
             element(1, 7) = element(1, 7) &
                           + (-lhc_z1 - lhc_k) * (-1.d0 / lhc_cell_volume) * numerical_velocity * face_area
             element(2, 7) = element(2, 7) &
