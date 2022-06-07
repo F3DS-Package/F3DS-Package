@@ -5,7 +5,6 @@ module minmod_muscl_module
 
     use typedef_module
     use vector_module
-    use abstract_mixture_eos
 
     implicit none
 
