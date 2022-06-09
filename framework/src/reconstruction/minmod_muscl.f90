@@ -5,6 +5,7 @@ module minmod_muscl_module
 
     use typedef_module
     use vector_module
+    use abstract_mixture_eos
 
     implicit none
 
@@ -14,6 +15,8 @@ module minmod_muscl_module
     real   (real_kind), parameter :: kappa_ = 1.d0 / 3.d0
 
     public :: reconstruct_minmod_muscl
+    public :: reconstruct_lhc_minmod_muscl
+    public :: reconstruct_rhc_minmod_muscl
 
     contains
 
@@ -25,7 +28,7 @@ module minmod_muscl_module
 
     pure function reconstruct_lhc_minmod_muscl( &
         primitive_values_set             , &
-        face_to_cell_index        , &
+        face_to_cell_index               , &
         cell_positions                   , &
         face_positions                   , &
         face_index                          ) result(reconstructed_primitive)

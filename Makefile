@@ -75,6 +75,7 @@ FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/measurement_tools/*.f90)
 # Five-equation model
 FIVE_EQ_MODEL_SRCDIR=collection/five_equation_model/src
 FIVE_EQ_MODEL_SRCS=$(wildcard $(FIVE_EQ_MODEL_SRCDIR)/nonviscosity_flux/*.f90)
+FIVE_EQ_MODEL_SRCS+=$(wildcard $(FIVE_EQ_MODEL_SRCDIR)/reconstruction/*.f90)
 FIVE_EQ_MODEL_SRCS+=$(wildcard $(FIVE_EQ_MODEL_SRCDIR)/space/*.f90)
 FIVE_EQ_MODEL_SRCS+=$(wildcard $(FIVE_EQ_MODEL_SRCDIR)/*.f90)
 

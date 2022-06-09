@@ -15,6 +15,8 @@ module jiang_weno5_module
     integer(int_kind) :: num_ghost_cells_ = 3
 
     public :: reconstruct_jiang_weno5
+    public :: reconstruct_lhc_jiang_weno5
+    public :: reconstruct_rhc_jiang_weno5
 
     contains
 

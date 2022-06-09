@@ -11,7 +11,7 @@ program five_eq_model_solver
     use second_order_tvd_rk_module
     use third_order_tvd_rk_module
     use jiang_weno5_module
-    use minmod_muscl_module
+    use five_equation_model_rho_thinc_module
     use five_equation_space_model_module
     use five_equation_model_hllc_module
     ! Model
@@ -57,7 +57,7 @@ program five_eq_model_solver
     integer(int_kind )              :: n_line_ids
 
     time_increment = 1.d-4
-    max_timestep   = 5*10**5
+    max_timestep   = 3*10**4!5*10**5
     n_output_file  = 100
     time           = 0.d0
 
@@ -141,10 +141,10 @@ program five_eq_model_solver
 
     ! EoS and primitive-valiables
     !call eos%initialize(1.4d0, 2.35d0, 0.d0, 7.142d3) ![Pelanti 2019]
-    !call eos%initialize(1.4d0, 4.4d0, 0.d0, 4.286d3) ![Garick 2019]
+    call eos%initialize(1.4d0, 4.4d0, 0.d0, 4.286d3) ![Garick 2019]
     !call eos%initialize(1.4d0, 4.4d0, 0.d0, 4.3d-2) ![Garick 2019]
     !call eos%initialize(1.4d0, 7.0d0, 0.d0, 2.142d3) ![Lou 2004]
-    call eos%initialize(1.4d0, 6.12d0, 0.d0, 2.450d3) ! [Nishida]
+    !call eos%initialize(1.4d0, 6.12d0, 0.d0, 2.450d3) ! [Nishida]
     do index = 1, get_number_of_cells(), 1
         primitive_variables_set(index, :) = conservative_to_primitive(conservative_variables_set(index, :), eos)
     end do
@@ -223,7 +223,7 @@ program five_eq_model_solver
             get_number_of_symmetric_faces()          , &
             time_increment                           , &
             eos                                      , &
-            reconstruct_jiang_weno5                  , &
+            reconstruct_rho_thinc                    , &
             compute_space_element_five_equation_model, &
             compute_flux_five_equation_model_hllc    , &
             primitive_to_conservative                , &
