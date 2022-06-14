@@ -9,7 +9,7 @@ module five_equation_model_rho_thinc_module
 
     private
 
-    real(real_kind)  , parameter :: specified_slope_parameter_ = 1.d0
+    real(real_kind)  , parameter :: specified_slope_parameter_ = 2.5d0
     integer(int_kind), parameter :: num_ghost_cells_ = 3
 
     public :: reconstruct_rho_thinc

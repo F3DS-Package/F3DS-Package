@@ -57,7 +57,7 @@ program five_eq_model_solver
     integer(int_kind )              :: n_line_ids
 
     time_increment = 1.d-4
-    max_timestep   = 3*10**4!5*10**5
+    max_timestep   = 5*10**5
     n_output_file  = 100
     time           = 0.d0
 

@@ -45,9 +45,9 @@ module class_nlgrid_parser
         real(real_kind), private, allocatable :: y_poss_cell_edge(:,:,:)
         real(real_kind), private, allocatable :: z_poss_cell_edge(:,:,:)
 
-        integer(kind(boundary_type)), private :: x_puls_direction, x_muinus_direction
-        integer(kind(boundary_type)), private :: y_puls_direction, y_muinus_direction
-        integer(kind(boundary_type)), private :: z_puls_direction, z_muinus_direction
+        integer(kind(boundary_type)), private :: x_plus_direction, x_minus_direction
+        integer(kind(boundary_type)), private :: y_plus_direction, y_minus_direction
+        integer(kind(boundary_type)), private :: z_plus_direction, z_minus_direction
 
         logical, private :: parsed = .false.
 
@@ -176,35 +176,35 @@ module class_nlgrid_parser
             call call_error("Can not read boundary_condition.json that is writen boundary condition infomation.")
         end if
 
-        call json%get("Xi puls direction", string_value, found)
-        if(.not. found) call call_error("Keyword 'Xi puls direction' is not found.")
-        self%x_puls_direction = string_to_boundary_type(string_value)
-        if(self%x_puls_direction == unknown_boundary_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
+        call json%get("Xi plus direction", string_value, found)
+        if(.not. found) call call_error("Keyword 'Xi plus direction' is not found.")
+        self%x_plus_direction = string_to_boundary_type(string_value)
+        if(self%x_plus_direction == unknown_boundary_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
 
-        call json%get("Xi muinus direction", string_value, found)
-        if(.not. found) call call_error("Keyword 'Xi muinus direction' is not found.")
-        self%x_muinus_direction = string_to_boundary_type(string_value)
-        if(self%x_muinus_direction == unknown_boundary_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
+        call json%get("Xi minus direction", string_value, found)
+        if(.not. found) call call_error("Keyword 'Xi minus direction' is not found.")
+        self%x_minus_direction = string_to_boundary_type(string_value)
+        if(self%x_minus_direction == unknown_boundary_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
 
-        call json%get("Eta puls direction", string_value, found)
-        if(.not. found) call call_error("Keyword 'Eta puls direction' is not found.")
-        self%y_puls_direction = string_to_boundary_type(string_value)
-        if(self%y_puls_direction == unknown_boundary_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
+        call json%get("Eta plus direction", string_value, found)
+        if(.not. found) call call_error("Keyword 'Eta plus direction' is not found.")
+        self%y_plus_direction = string_to_boundary_type(string_value)
+        if(self%y_plus_direction == unknown_boundary_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
 
-        call json%get("Eta muinus direction", string_value, found)
-        if(.not. found) call call_error("Keyword 'Eta muinus direction' is not found.")
-        self%y_muinus_direction = string_to_boundary_type(string_value)
-        if(self%y_muinus_direction == unknown_boundary_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
+        call json%get("Eta minus direction", string_value, found)
+        if(.not. found) call call_error("Keyword 'Eta minus direction' is not found.")
+        self%y_minus_direction = string_to_boundary_type(string_value)
+        if(self%y_minus_direction == unknown_boundary_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
 
-        call json%get("Zeta puls direction", string_value, found)
-        if(.not. found) call call_error("Keyword 'Zeta puls direction' is not found.")
-        self%z_puls_direction = string_to_boundary_type(string_value)
-        if(self%z_puls_direction == unknown_boundary_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
+        call json%get("Zeta plus direction", string_value, found)
+        if(.not. found) call call_error("Keyword 'Zeta plus direction' is not found.")
+        self%z_plus_direction = string_to_boundary_type(string_value)
+        if(self%z_plus_direction == unknown_boundary_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
 
-        call json%get("Zeta muinus direction", string_value, found)
-        if(.not. found) call call_error("Keyword 'Zeta muinus direction' is not found.")
-        self%z_muinus_direction = string_to_boundary_type(string_value)
-        if(self%z_muinus_direction == unknown_boundary_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
+        call json%get("Zeta minus direction", string_value, found)
+        if(.not. found) call call_error("Keyword 'Zeta minus direction' is not found.")
+        self%z_minus_direction = string_to_boundary_type(string_value)
+        if(self%z_minus_direction == unknown_boundary_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
 
         call json%destroy()
 
@@ -289,12 +289,12 @@ module class_nlgrid_parser
 
         n = 0
 
-        if(self%x_puls_direction   == outflow_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
-        if(self%y_puls_direction   == outflow_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
-        if(self%z_puls_direction   == outflow_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
-        if(self%x_muinus_direction == outflow_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
-        if(self%y_muinus_direction == outflow_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
-        if(self%z_muinus_direction == outflow_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
+        if(self%x_plus_direction   == outflow_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
+        if(self%y_plus_direction   == outflow_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
+        if(self%z_plus_direction   == outflow_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
+        if(self%x_minus_direction == outflow_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
+        if(self%y_minus_direction == outflow_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
+        if(self%z_minus_direction == outflow_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
     end function get_number_of_outflow_faces
 
     function get_number_of_slipwall_faces(self) result(n)
@@ -307,12 +307,12 @@ module class_nlgrid_parser
 
         n = 0
 
-        if(self%x_puls_direction   == slipwall_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
-        if(self%y_puls_direction   == slipwall_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
-        if(self%z_puls_direction   == slipwall_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
-        if(self%x_muinus_direction == slipwall_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
-        if(self%y_muinus_direction == slipwall_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
-        if(self%z_muinus_direction == slipwall_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
+        if(self%x_plus_direction   == slipwall_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
+        if(self%y_plus_direction   == slipwall_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
+        if(self%z_plus_direction   == slipwall_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
+        if(self%x_minus_direction == slipwall_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
+        if(self%y_minus_direction == slipwall_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
+        if(self%z_minus_direction == slipwall_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
     end function get_number_of_slipwall_faces
 
     function get_number_of_symmetric_faces(self) result(n)
@@ -325,12 +325,12 @@ module class_nlgrid_parser
 
         n = 0
 
-        if(self%x_puls_direction   == symmetric_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
-        if(self%y_puls_direction   == symmetric_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
-        if(self%z_puls_direction   == symmetric_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
-        if(self%x_muinus_direction == symmetric_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
-        if(self%y_muinus_direction == symmetric_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
-        if(self%z_muinus_direction == symmetric_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
+        if(self%x_plus_direction   == symmetric_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
+        if(self%y_plus_direction   == symmetric_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
+        if(self%z_plus_direction   == symmetric_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
+        if(self%x_minus_direction == symmetric_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
+        if(self%y_minus_direction == symmetric_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
+        if(self%z_minus_direction == symmetric_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
     end function get_number_of_symmetric_faces
 
     function get_number_of_points(self) result(n)
@@ -937,122 +937,122 @@ module class_nlgrid_parser
             do j = self%jmin, self%jmax - 1, 1
                 do i = self%imin, self%imax, 1
                     if(i == self%imin)then
-                        if(self%x_muinus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
-                        if(self%x_muinus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
-                        if(self%x_muinus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                        if(self%x_minus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
+                        if(self%x_minus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
+                        if(self%x_minus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
                     end if
                     face_index = face_index + 1
                     if(j == self%jmin)then
-                        if(self%y_muinus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
-                        if(self%y_muinus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
-                        if(self%y_muinus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                        if(self%y_minus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
+                        if(self%y_minus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
+                        if(self%y_minus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
                     end if
                     face_index = face_index + 1
                     if(k == self%kmin)then
-                        if(self%z_muinus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
-                        if(self%z_muinus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
-                        if(self%z_muinus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                        if(self%z_minus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
+                        if(self%z_minus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
+                        if(self%z_minus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
                     end if
                     face_index = face_index + 1
                 end do
                 ! # imax boundary cells
-                if(self%x_puls_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
-                if(self%x_puls_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
-                if(self%x_puls_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                if(self%x_plus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
+                if(self%x_plus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
+                if(self%x_plus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
                 face_index = face_index + 1
             end do
             ! # jmax boundary cells
             do i = self%imin, self%imax, 1
                 if(i == self%imin)then
-                    if(self%x_muinus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
-                    if(self%x_muinus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
-                    if(self%x_muinus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                    if(self%x_minus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
+                    if(self%x_minus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
+                    if(self%x_minus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
                 end if
                 face_index = face_index + 1
                 if(self%jmin == self%jmax)then
-                    if(self%y_muinus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
-                    if(self%y_muinus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
-                    if(self%y_muinus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                    if(self%y_minus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
+                    if(self%y_minus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
+                    if(self%y_minus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
                 end if
                 face_index = face_index + 1
                 if(k == self%kmin)then
-                    if(self%z_muinus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
-                    if(self%z_muinus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
-                    if(self%z_muinus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                    if(self%z_minus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
+                    if(self%z_minus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
+                    if(self%z_minus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
                 end if
                 face_index = face_index + 1
-                if(self%y_puls_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
-                if(self%y_puls_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
-                if(self%y_puls_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                if(self%y_plus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
+                if(self%y_plus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
+                if(self%y_plus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
                 face_index = face_index + 1
             end do
-            if(self%x_puls_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
-            if(self%x_puls_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
-            if(self%x_puls_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+            if(self%x_plus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
+            if(self%x_plus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
+            if(self%x_plus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
             face_index = face_index + 1
         end do
         ! # kmax boundary cells
         do j = self%jmin, self%jmax - 1, 1
             do i = self%imin, self%imax, 1
                 if(i == self%imin)then
-                    if(self%x_muinus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
-                    if(self%x_muinus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
-                    if(self%x_muinus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+                    if(self%x_minus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
+                    if(self%x_minus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
+                    if(self%x_minus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
                 end if
                 face_index = face_index + 1
                 if(j == self%jmin)then
-                    if(self%y_muinus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
-                    if(self%y_muinus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
-                    if(self%y_muinus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+                    if(self%y_minus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
+                    if(self%y_minus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
+                    if(self%y_minus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
                 end if
                 face_index = face_index + 1
                 if(self%kmin == self%kmax)then
-                    if(self%z_muinus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
-                    if(self%z_muinus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
-                    if(self%z_muinus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                    if(self%z_minus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
+                    if(self%z_minus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
+                    if(self%z_minus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
                 end if
                 face_index = face_index + 1
-                if(self%z_puls_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
-                if(self%z_puls_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
-                if(self%z_puls_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+                if(self%z_plus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
+                if(self%z_plus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
+                if(self%z_plus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
                 face_index = face_index + 1
             end do
-            if(self%x_puls_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
-            if(self%x_puls_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
-            if(self%x_puls_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+            if(self%x_plus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
+            if(self%x_plus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
+            if(self%x_plus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
             face_index = face_index + 1
         end do
         do i = self%imin, self%imax, 1
             if(i == self%imin)then
-                if(self%x_muinus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
-                if(self%x_muinus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
-                if(self%x_muinus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+                if(self%x_minus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
+                if(self%x_minus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
+                if(self%x_minus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
             end if
             face_index = face_index + 1
             if(self%jmin == self%jmax)then
-                if(self%y_muinus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
-                if(self%y_muinus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
-                if(self%y_muinus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                if(self%y_minus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
+                if(self%y_minus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
+                if(self%y_minus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
             end if
             face_index = face_index + 1
             if(self%kmin == self%kmax)then
-                if(self%z_muinus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
-                if(self%z_muinus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
-                if(self%z_muinus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                if(self%z_minus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
+                if(self%z_minus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
+                if(self%z_minus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
             end if
             face_index = face_index + 1
-            if(self%y_puls_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
-            if(self%y_puls_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
-            if(self%y_puls_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+            if(self%y_plus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
+            if(self%y_plus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
+            if(self%y_plus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
             face_index = face_index + 1
-            if(self%z_puls_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
-            if(self%z_puls_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
-            if(self%z_puls_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+            if(self%z_plus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
+            if(self%z_plus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
+            if(self%z_plus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
             face_index = face_index + 1
         end do
-        if(self%x_puls_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
-        if(self%x_puls_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
-        if(self%x_puls_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+        if(self%x_plus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
+        if(self%x_plus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
+        if(self%x_plus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
 #ifdef _DEBUG
         print *, "DEBUG: nlgrid parser:"
         print *, "Outflow-faces   (", outflow_index  -1, "/", self%get_number_of_outflow_faces  (), ") are assigned."
