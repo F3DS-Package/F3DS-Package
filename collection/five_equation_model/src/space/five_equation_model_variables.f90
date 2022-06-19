@@ -108,7 +108,7 @@ module five_equation_model_variables_module
                 primitive_variables(3) = rho_u / rho
                 primitive_variables(4) = rho_v / rho
                 primitive_variables(5) = rho_w / rho
-                primitive_variables(6) = max(eos%compute_pressure(ie, rho, z1), machine_epsilon)
+                primitive_variables(6) = eos%compute_pressure(ie, rho, z1)
             endif
         end associate
     end function conservative_to_primitive

@@ -57,7 +57,7 @@ program five_eq_model_solver
     integer(int_kind )              :: n_line_ids
 
     time_increment = 1.d-4
-    max_timestep   = 5*10**5
+    max_timestep   = 1*10**6
     n_output_file  = 100
     time           = 0.d0
 
@@ -99,7 +99,7 @@ program five_eq_model_solver
     allocate(line_ids(get_number_of_cells()))
     n_line_ids = 0
     do index = 1, get_number_of_cells(), 1
-        if  ( 0.0d0 < cells_centor_position(index, 1) .and. cells_centor_position(index, 1) < 10.d0  &
+        if  ( 0.0d0 < cells_centor_position(index, 1) .and. cells_centor_position(index, 1) < 30.d0  &
         .and. 0.d0  < cells_centor_position(index, 2) .and. cells_centor_position(index, 2) < 0.04d0 &
         .and. 0.d0  < cells_centor_position(index, 3) .and. cells_centor_position(index, 3) < 0.04d0 ) then
             n_line_ids = n_line_ids + 1
@@ -174,7 +174,7 @@ program five_eq_model_solver
                         z1     => primitive_variables_set(index, 7))
                         vtk_density   (vtk_index) = rho1 * z1 + rho2 * (1.d0 - z1)
                         vtk_soundspeed(vtk_index) = eos%compute_soundspeed(p, rho1 * z1 + rho2 * (1.d0 - z1), z1)
-                        vtk_wood_soundspeed(vtk_index) = eos%compute_wood_soundspeed(p, rho1, rho2, z1)
+                        vtk_wood_soundspeed(vtk_index) = eos%compute_k(p, rho1, rho2, z1)
                         vtk_cell_id   (vtk_index) = index
                     end associate
                     vtk_index = vtk_index + 1

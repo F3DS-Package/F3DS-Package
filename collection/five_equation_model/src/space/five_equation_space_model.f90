@@ -228,8 +228,8 @@ module five_equation_space_model_module
             rhc_p       => rhc_primitive(6), &
             rhc_z1      => rhc_primitive(7)  &
         )
-            lhc_k = eos%compute_k(lhc_p, lhc_rho1, lhc_rho2, lhc_z1)
-            rhc_k = eos%compute_k(rhc_p, rhc_rho1, rhc_rho2, rhc_z1)
+            lhc_k = 0.d0!eos%compute_k(lhc_p, lhc_rho1, lhc_rho2, lhc_z1)
+            rhc_k = 0.d0!eos%compute_k(rhc_p, rhc_rho1, rhc_rho2, rhc_z1)
             element(1, 7) = element(1, 7) &
                           + (-lhc_z1 - lhc_k) * (-1.d0 / lhc_cell_volume) * numerical_velocity * face_area
             element(2, 7) = element(2, 7) &
