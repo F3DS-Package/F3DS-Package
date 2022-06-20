@@ -77,7 +77,7 @@ module weno5_module
         real   (real_kind) :: w(3), p(3), cell_pos_l(3), cell_pos_r(3), face_pos(3)
         real   (real_kind) :: cell_cell_distance, cell_face_distanse, s
 
-        n_primitives = size(primitive_values_set(:,0))
+        n_primitives = size(primitive_values_set(1,:))
 
         do i = 1, n_primitives, 1
             cell_pos_l(1:3) = cell_positions(face_to_cell_index(face_index, num_ghost_cells_+0), 1:3)
@@ -85,7 +85,7 @@ module weno5_module
             face_pos  (1:3) = face_positions(face_index, 1:3)
             cell_cell_distance = vector_distance(cell_pos_l, cell_pos_r)
             cell_face_distanse = vector_distance(cell_pos_l, face_pos  )
-            s = cell_face_distanse / cell_cell_distance
+            s = 0.5d0
             associate(                                                                                              &
                 v_m2 => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_-2), i), &
                 v_m1 => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_-1), i), &
@@ -118,7 +118,7 @@ module weno5_module
         real   (real_kind) :: w(3), p(3), cell_pos_l(3), cell_pos_r(3), face_pos(3)
         real   (real_kind) :: cell_cell_distance, cell_face_distanse, s
 
-        n_primitives = size(primitive_values_set(:,0))
+        n_primitives = size(primitive_values_set(1,:))
 
         do i = 1, n_primitives, 1
             cell_pos_l(1:3) = cell_positions(face_to_cell_index(face_index, num_ghost_cells_+0), 1:3)
@@ -126,7 +126,7 @@ module weno5_module
             face_pos  (1:3) = face_positions(face_index, 1:3)
             cell_cell_distance = vector_distance(cell_pos_l, cell_pos_r)
             cell_face_distanse = vector_distance(cell_pos_l, face_pos  )
-            s = - 1.d0 * cell_face_distanse / cell_cell_distance
+            s = - 0.5d0
             associate(                                                                                              &
                 v_m2       => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_-1), i), &
                 v_m1       => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_+0), i), &
