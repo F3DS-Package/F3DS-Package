@@ -42,6 +42,7 @@ We are currently working on improving to modify methods/parameters from external
     - [x] WENO5 (5th order)
         - [x] with original smoothing indicator (WENO5) [Liu 1994]
         - [x] with smoothing indicator proposed by Jiang & Shu (WENO5-JS) [Jiang 1996]
+        - [x] with monotonicity-preserving schemes (MP-WENO5-JS) [Balsara 2000]
 - For unstructure grid
     - [ ] Unstructured-MUSCL (3rd order)
     - [ ] Unstructured-MUSCL + Unstructure-THINC (3rd order)
