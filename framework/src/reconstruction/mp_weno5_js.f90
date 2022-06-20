@@ -104,7 +104,7 @@ module mp_weno5_js_module
         integer(int_kind ) :: n_primitives, i
         real   (real_kind) :: w(3), p(3), cell_pos_l(3), cell_pos_r(3), face_pos(3)
         real   (real_kind) :: cell_cell_distance, cell_face_distanse, s
-        real   (real_kind) :: d, d_p1, dm4
+        real   (real_kind) :: d_p1, d, d_m1, dm4
         real   (real_kind) :: v_ul, v_md, v_lc, v_min, v_max
 
         n_primitives = size(primitive_values_set(1, :))
@@ -128,9 +128,10 @@ module mp_weno5_js_module
                 p(1:3) = compute_polynomials(s, v_m2, v_m1, v, v_p1, v_p2)
                 reconstructed_primitive(i) = w(1) * p(1) + w(2) * p(2) + w(3) * p(3)
                 ! MP
+                d_m1 = curvature_measure(v_m2, v_m1, v   )
                 d    = curvature_measure(v_m1, v   , v_p1)
                 d_p1 = curvature_measure(v   , v_p1, v_p2)
-                dm4  = minmod(minmod(4.d0 * d - d_p1, 4.d0 * d_p1), minmod(d, d_p1))
+                dm4  = minmod(minmod(4.d0 * d - d_p1, 4.d0 * d_p1 - d), minmod(d, d_p1))
                 v_ul = v + alpha_ * (v - v_m1)
                 v_md = 0.5d0 * (v + v_p1 - dm4)
                 v_lc = v + 0.5d0 * (v - v_m1) + (beta_ / 3.d0) * dm4
@@ -158,7 +159,7 @@ module mp_weno5_js_module
         integer(int_kind ) :: n_primitives, i
         real   (real_kind) :: w(3), p(3), cell_pos_l(3), cell_pos_r(3), face_pos(3)
         real   (real_kind) :: cell_cell_distance, cell_face_distanse, s
-        real   (real_kind) :: d, d_m1, dm4
+        real   (real_kind) :: d_p1, d, d_m1, dm4
         real   (real_kind) :: v_ul, v_md, v_lc, v_min, v_max
 
         n_primitives = size(primitive_values_set(1, :))
@@ -184,12 +185,13 @@ module mp_weno5_js_module
                 ! MP
                 d_m1 = curvature_measure(v_m2, v_m1, v   )
                 d    = curvature_measure(v_m1, v   , v_p1)
-                dm4  = minmod(minmod(4.d0 * d - d_m1, 4.d0 * d_m1), minmod(d, d_m1))
-                v_ul = v + alpha_ * (v - v_m1)
-                v_md = 0.5d0 * (v + v_p1 - dm4)
-                v_lc = v + 0.5d0 * (v - v_m1) + (beta_ / 3.d0) * dm4
-                v_min = max(min(v, v_p1, v_md), min(v, v_ul, v_lc))
-                v_max = min(max(v, v_p1, v_md), max(v, v_ul, v_lc))
+                d_p1 = curvature_measure(v   , v_p1, v_p2)
+                dm4  = minmod(minmod(4.d0 * d - d_m1, 4.d0 * d_m1 - d), minmod(d, d_m1))
+                v_ul = v + alpha_ * (v - v_p1)
+                v_md = 0.5d0 * (v + v_m1 - dm4)
+                v_lc = v + 0.5d0 * (v - v_p1) + (beta_ / 3.d0) * dm4
+                v_min = max(min(v, v_m1, v_md), min(v, v_ul, v_lc))
+                v_max = min(max(v, v_m1, v_md), max(v, v_ul, v_lc))
                 reconstructed_primitive(i) = median(reconstructed_primitive(i), v_min, v_max)
             end associate
         end do
