@@ -60,9 +60,7 @@ module class_nlgrid_parser
         procedure, pass(self) :: get_number_of_faces
         procedure, pass(self) :: get_number_of_ghost_cells
 
-        procedure, pass(self) :: get_number_of_outflow_faces
-        procedure, pass(self) :: get_number_of_slipwall_faces
-        procedure, pass(self) :: get_number_of_symmetric_faces
+        procedure, pass(self) :: get_number_of_boundary_faces
         procedure, pass(self) :: get_number_of_points
 
         procedure, pass(self) :: get_cells
@@ -76,7 +74,6 @@ module class_nlgrid_parser
         procedure, private, pass(self) :: assign_lower_x_face
         procedure, private, pass(self) :: assign_lower_y_face
         procedure, private, pass(self) :: assign_lower_z_face
-        procedure, private, pass(self) :: assign_boundary
     end type nlgrid_parser
 
     contains
@@ -279,9 +276,11 @@ module class_nlgrid_parser
         n = self%num_ghost_cells_ ! nlgrid format is followed only 2 ghost cell. But we extend to 3 ghost cell system.
     end function get_number_of_ghost_cells
 
-    function get_number_of_outflow_faces(self) result(n)
-        class  (nlgrid_parser), intent(in) :: self
-        integer(int_kind     )             :: n
+    function get_number_of_boundary_faces(self, type) result(n)
+        class  (nlgrid_parser)      , intent(in) :: self
+        integer(kind(boundary_type)), intent(in) :: type
+
+        integer(int_kind) :: n
 
         if(.not. self%parsed)then
             call call_error("'parse' method of nlgrid_parser is not called yet. But you call 'get_number_of_outflow_faces' method.")
@@ -289,49 +288,13 @@ module class_nlgrid_parser
 
         n = 0
 
-        if(self%x_plus_direction   == outflow_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
-        if(self%y_plus_direction   == outflow_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
-        if(self%z_plus_direction   == outflow_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
-        if(self%x_minus_direction == outflow_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
-        if(self%y_minus_direction == outflow_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
-        if(self%z_minus_direction == outflow_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
-    end function get_number_of_outflow_faces
-
-    function get_number_of_slipwall_faces(self) result(n)
-        class  (nlgrid_parser), intent(in) :: self
-        integer(int_kind     )             :: n
-
-        if(.not. self%parsed)then
-            call call_error("'parse' method of nlgrid_parser is not called yet. But you call 'get_number_of_slipwall_faces' method.")
-        end if
-
-        n = 0
-
-        if(self%x_plus_direction   == slipwall_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
-        if(self%y_plus_direction   == slipwall_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
-        if(self%z_plus_direction   == slipwall_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
-        if(self%x_minus_direction == slipwall_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
-        if(self%y_minus_direction == slipwall_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
-        if(self%z_minus_direction == slipwall_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
-    end function get_number_of_slipwall_faces
-
-    function get_number_of_symmetric_faces(self) result(n)
-        class  (nlgrid_parser), intent(in) :: self
-        integer(int_kind     )             :: n
-
-        if(.not. self%parsed)then
-            call call_error("'parse' method of nlgrid_parser is not called yet. But you call 'get_number_of_symmetric_faces' method.")
-        end if
-
-        n = 0
-
-        if(self%x_plus_direction   == symmetric_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
-        if(self%y_plus_direction   == symmetric_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
-        if(self%z_plus_direction   == symmetric_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
-        if(self%x_minus_direction == symmetric_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
-        if(self%y_minus_direction == symmetric_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
-        if(self%z_minus_direction == symmetric_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
-    end function get_number_of_symmetric_faces
+        if(self%x_plus_direction  == type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
+        if(self%y_plus_direction  == type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
+        if(self%z_plus_direction  == type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
+        if(self%x_minus_direction == type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
+        if(self%y_minus_direction == type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
+        if(self%z_minus_direction == type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
+    end function get_number_of_boundary_faces
 
     function get_number_of_points(self) result(n)
         class  (nlgrid_parser), intent(in) :: self
@@ -1033,16 +996,6 @@ module class_nlgrid_parser
         face_types(face_index) = self%x_plus_direction
 
     end subroutine get_boundaries
-
-    subroutine assign_boundary(self, boundary_face_indexs, boundary_index, face_index)
-        class  (nlgrid_parser), intent(in   ) :: self
-        integer(int_kind     ), intent(inout) :: boundary_face_indexs(:)
-        integer(int_kind     ), intent(inout) :: boundary_index
-        integer(int_kind     ), intent(in   ) :: face_index
-
-        boundary_face_indexs(boundary_index) = face_index
-        boundary_index = boundary_index + 1
-    end subroutine assign_boundary
 
     subroutine get_cell_geometries(self, points, cell_geometries)
         class  (nlgrid_parser), intent(in   ) :: self

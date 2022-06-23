@@ -13,9 +13,7 @@ module abstract_grid_parser
         procedure(get_number_of_ghost_cells_interface), pass(self), deferred :: get_number_of_ghost_cells
         procedure(get_number_of_points_interface)     , pass(self), deferred :: get_number_of_points
 
-        procedure(get_number_of_outflow_faces_interface)  , pass(self), deferred :: get_number_of_outflow_faces
-        procedure(get_number_of_slipwall_faces_interface) , pass(self), deferred :: get_number_of_slipwall_faces
-        procedure(get_number_of_symmetric_faces_interface), pass(self), deferred :: get_number_of_symmetric_faces
+        procedure(get_number_of_boundary_faces_interface)  , pass(self), deferred :: get_number_of_boundary_faces
 
         procedure(get_cells_interface          ), pass(self), deferred :: get_cells
         procedure(get_faces_interface          ), pass(self), deferred :: get_faces
@@ -56,26 +54,14 @@ module abstract_grid_parser
             integer(int_kind)                :: n
         end function get_number_of_ghost_cells_interface
 
-        function get_number_of_outflow_faces_interface(self) result(n)
+        function get_number_of_boundary_faces_interface(self, type) result(n)
             use typedef_module
+            use boundary_type_module
             import grid_parser
-            class  (grid_parser), intent(in) :: self
+            class  (grid_parser        ), intent(in) :: self
+            integer(kind(boundary_type)), intent(in) :: type
             integer(int_kind)                :: n
-        end function get_number_of_outflow_faces_interface
-
-        function get_number_of_slipwall_faces_interface(self) result(n)
-            use typedef_module
-            import grid_parser
-            class  (grid_parser), intent(in) :: self
-            integer(int_kind)                :: n
-        end function get_number_of_slipwall_faces_interface
-
-        function get_number_of_symmetric_faces_interface(self) result(n)
-            use typedef_module
-            import grid_parser
-            class  (grid_parser), intent(in) :: self
-            integer(int_kind)                :: n
-        end function get_number_of_symmetric_faces_interface
+        end function get_number_of_boundary_faces_interface
 
         function get_number_of_points_interface(self) result(n)
             use typedef_module
