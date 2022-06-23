@@ -3,7 +3,7 @@ module five_equation_model_rho_thinc_module
     use vector_module
     use math_constant_module
     use abstract_mixture_eos
-    use minmod_muscl3_module
+    use mp_weno5_js_module
 
     implicit none
 
@@ -183,15 +183,15 @@ module five_equation_model_rho_thinc_module
         lhc_index = face_to_cell_index(face_index, num_ghost_cells_+0)
         rhc_index = face_to_cell_index(face_index, num_ghost_cells_+1)
 
-        ! u, v, w, and p are reconstructed by minmod MUSCL
-        lhc_primitive = reconstruct_lhc_minmod_muscl3(    &
+        ! u, v, w, and p are reconstructed
+        lhc_primitive = reconstruct_lhc_mp_weno5_js(    &
             primitive_values_set                       , &
             face_to_cell_index                         , &
             cell_centor_positions                      , &
             face_centor_positions                      , &
             face_index                                   &
         )
-        rhc_primitive = reconstruct_rhc_minmod_muscl3(    &
+        rhc_primitive = reconstruct_rhc_mp_weno5_js(    &
             primitive_values_set                       , &
             face_to_cell_index                         , &
             cell_centor_positions                      , &

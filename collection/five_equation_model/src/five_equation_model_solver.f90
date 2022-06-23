@@ -10,7 +10,10 @@ program five_eq_model_solver
     ! Scheme
     use second_order_tvd_rk_module
     use third_order_tvd_rk_module
-    use jiang_weno5_module
+    use weno5_js_module
+    use mp_weno5_js_module
+    use minmod_muscl3_module
+    use five_equation_model_rho_thinc_module
     use five_equation_model_rho_thinc_module
     use five_equation_space_model_module
     use five_equation_model_hllc_module
@@ -32,7 +35,8 @@ program five_eq_model_solver
 
     implicit none
 
-    real   (real_kind)  :: time_increment, time
+    real   (real_kind)  :: time_increment, time, curant_number
+    real   (real_kind)  :: local_time_increment, cell_length
     integer(int_kind )  :: max_timestep, timestep
     integer(int_kind )  :: index
     ! Grid & initial condition I/O
@@ -56,13 +60,13 @@ program five_eq_model_solver
     integer(int_kind ), allocatable :: line_ids(:)
     integer(int_kind )              :: n_line_ids
 
-    time_increment = 1.d-4
-    max_timestep   = 1*10**6
+    max_timestep   = 1200
     n_output_file  = 100
     time           = 0.d0
+    curant_number  = 0.2d0
 
 #ifdef _OPENMP
-    call omp_set_num_threads(16)
+    call omp_set_num_threads(14)
 #endif
 
     ! parse grid file
@@ -87,26 +91,26 @@ program five_eq_model_solver
     call a_init_parser%close()
 
     ! sensor
-    call pressure_sensor%initialize("sensor.dat", 5.d3, 13633)
+    !call pressure_sensor%initialize("sensor.dat", 5.d3, 13633)
 
     ! measurement surface
     normal(1) = 0.d0
     normal(2) = 1.d0
     normal(3) = 0.d0
-    call surface%initialize("surface.dat", 5.d3, 10.d0+0.04d0, 10.d0-0.04d0, 1.d0, 0.d0, 7.d0, 0.d0, normal, faces_to_cell_index, faces_position, faces_normal_vector, cells_is_real_cell)
+    !call surface%initialize("surface.dat", 5.d3, 10.d0+0.04d0, 10.d0-0.04d0, 1.d0, 0.d0, 7.d0, 0.d0, normal, faces_to_cell_index, faces_position, faces_normal_vector, cells_is_real_cell)
 
     ! line plot
     allocate(line_ids(get_number_of_cells()))
     n_line_ids = 0
     do index = 1, get_number_of_cells(), 1
-        if  ( 0.0d0 < cells_centor_position(index, 1) .and. cells_centor_position(index, 1) < 30.d0  &
-        .and. 0.d0  < cells_centor_position(index, 2) .and. cells_centor_position(index, 2) < 0.04d0 &
-        .and. 0.d0  < cells_centor_position(index, 3) .and. cells_centor_position(index, 3) < 0.04d0 ) then
+        if  ( 0.0d0 < cells_centor_position(index, 1) .and. cells_centor_position(index, 1) < 1.d0  &
+        .and. 0.d0  < cells_centor_position(index, 2) .and. cells_centor_position(index, 2) < 0.01d0 &
+        .and. 0.d0  < cells_centor_position(index, 3) .and. cells_centor_position(index, 3) < 0.01d0 ) then
             n_line_ids = n_line_ids + 1
             line_ids(n_line_ids) = index
         end if
     end do
-    call line%initialize("line", 0.05d3, line_ids(1:n_line_ids))
+    call line%initialize("line", 1d6, line_ids(1:n_line_ids))
     deallocate(line_ids)
 
     ! VTK
@@ -140,21 +144,36 @@ program five_eq_model_solver
     call make_dir("result/field")
 
     ! EoS and primitive-valiables
-    !call eos%initialize(1.4d0, 2.35d0, 0.d0, 7.142d3) ![Pelanti 2019]
-    call eos%initialize(1.4d0, 4.4d0, 0.d0, 4.286d3) ![Garick 2019]
-    !call eos%initialize(1.4d0, 4.4d0, 0.d0, 4.3d-2) ![Garick 2019]
-    !call eos%initialize(1.4d0, 7.0d0, 0.d0, 2.142d3) ![Lou 2004]
-    !call eos%initialize(1.4d0, 6.12d0, 0.d0, 2.450d3) ! [Nishida]
+    call eos%initialize(1.4d0, 1.4d0, 0.d0, 0.d0)
     do index = 1, get_number_of_cells(), 1
         primitive_variables_set(index, :) = conservative_to_primitive(conservative_variables_set(index, :), eos)
     end do
 
     ! time-stepping
-    call initialize_second_order_tvd_rk(conservative_variables_set)
+    call initialize_third_order_tvd_rk(conservative_variables_set)
 
     ! solver timestepping loop
     do timestep = 0, max_timestep, 1
-        print *, "step ", timestep
+
+        time_increment = 1.d8
+        do index = 1, get_number_of_cells(), 1
+            if(cells_is_real_cell(index))then
+                associate(                                       &
+                    v      => cells_volume           (index)   , &
+                    rho1   => primitive_variables_set(index, 1), &
+                    rho2   => primitive_variables_set(index, 2), &
+                    p      => primitive_variables_set(index, 6), &
+                    z1     => primitive_variables_set(index, 7))
+                    cell_length = v**(1.d0/3.d0)
+                    local_time_increment = curant_number * cell_length / eos%compute_soundspeed(p, rho1 * z1 + rho2 * (1.d0 - z1), z1)
+                end associate
+                if(time_increment > local_time_increment)then
+                    time_increment = local_time_increment
+                end if
+            end if
+        end do
+
+        print *, "step ", timestep, ", time incriment ", time_increment, ", time ", time
 
         if (mod(timestep, max_timestep / n_output_file) == 0) then
             write(vtk_filename, "(a, i5.5, a)") "result/field/", file_output_counter, ".vtu"
@@ -196,11 +215,11 @@ program five_eq_model_solver
             file_output_counter = file_output_counter + 1
         end if
 
-        call pressure_sensor%write(time, primitive_variables_set)
-        call surface%write(time, primitive_variables_set, faces_to_cell_index, faces_area)
+        !call pressure_sensor%write(time, primitive_variables_set)
+        !call surface%write(time, primitive_variables_set, faces_to_cell_index, faces_area)
         call line%write(time, primitive_variables_set, cells_centor_position)
 
-        call compute_next_state_second_order_tvd_rk(   &
+        call compute_next_state_third_order_tvd_rk(   &
             conservative_variables_set               , &
             primitive_variables_set                  , &
             derivative_variables_set                 , &
@@ -223,7 +242,7 @@ program five_eq_model_solver
             get_number_of_symmetric_faces()          , &
             time_increment                           , &
             eos                                      , &
-            reconstruct_rho_thinc                    , &
+            reconstruct_weno5_js               , &
             compute_space_element_five_equation_model, &
             compute_flux_five_equation_model_hllc    , &
             primitive_to_conservative                , &
