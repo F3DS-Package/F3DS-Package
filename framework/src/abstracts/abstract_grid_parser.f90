@@ -105,13 +105,12 @@ module abstract_grid_parser
             real   (real_kind  ), intent(inout) :: areas                (:)
         end subroutine get_faces_interface
 
-        subroutine get_boundaries_interface(self, outflow_face_indexs, slipwall_face_indexs, symmetric_face_indexs)
+        subroutine get_boundaries_interface(self, face_types)
             use typedef_module
+            use boundary_type_module
             import grid_parser
-            class  (grid_parser), intent(in   ) :: self
-            integer(int_kind   ), intent(inout) :: outflow_face_indexs  (:)
-            integer(int_kind   ), intent(inout) :: slipwall_face_indexs (:)
-            integer(int_kind   ), intent(inout) :: symmetric_face_indexs(:)
+            class  (grid_parser        ), intent(in   ) :: self
+            integer(kind(boundary_type)), intent(inout) :: face_types(:)
         end subroutine get_boundaries_interface
 
         subroutine get_cell_geometries_interface(self, points, cell_geometries)
