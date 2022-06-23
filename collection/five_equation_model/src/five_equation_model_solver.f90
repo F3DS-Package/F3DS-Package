@@ -74,13 +74,13 @@ program five_eq_model_solver
     ! allocate grid & variable data
     call initialise_faces             (a_grid_parser%get_number_of_faces()    , a_grid_parser%get_number_of_ghost_cells())
     call initialise_cell_geometries   (a_grid_parser%get_number_of_points()   , a_grid_parser%get_number_of_cells())
-    call initialise_boundary_reference(a_grid_parser%get_number_of_ghost_cells(), &
-                                       a_grid_parser%get_number_of_outflow_faces(), a_grid_parser%get_number_of_slipwall_faces(), a_grid_parser%get_number_of_symmetric_faces())
+    !call initialise_boundary_reference(a_grid_parser%get_number_of_ghost_cells(), &
+    !                                   a_grid_parser%get_number_of_outflow_faces(), a_grid_parser%get_number_of_slipwall_faces(), a_grid_parser%get_number_of_symmetric_faces())
     call initialise_variables         (a_grid_parser%get_number_of_cells())
     ! get grid data
     call a_grid_parser%get_cells          (cells_centor_position, cells_volume, cells_is_real_cell)
     call a_grid_parser%get_faces          (faces_to_cell_index, faces_normal_vector, faces_tangential1_vector, faces_tangential2_vector, faces_position, faces_area)
-    call a_grid_parser%get_boundaries     (outflow_face_indexs, slipwall_face_indexs, symmetric_face_indexs)
+    !call a_grid_parser%get_boundaries     (outflow_face_indexs, slipwall_face_indexs, symmetric_face_indexs)
     call a_grid_parser%get_cell_geometries(points, cell_geometries)
     ! close file
     call a_grid_parser%close()
