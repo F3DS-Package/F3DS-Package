@@ -1,10 +1,11 @@
 module class_cellsystem
+    use json_module
     use typedef_module
     use stdio_module
+    use boundary_type_module
     use class_point_id_list
     use abstract_grid_parser
-    use boundary_type_module
-    use abstract_initial_condition_parser
+    use abstract_result_writer
 
     implicit none
 
@@ -95,6 +96,9 @@ module class_cellsystem
         ! Elm. 1) 1 : {@code num_cells}, cell index
         class(point_id_list), allocatable :: cell_geometries(:)
 
+        ! Elm. 1) 1 : {@code num_cells}, cell index
+        integer(type_kind), allocatable :: cell_types(:)
+
         ! ### Boundary References ###
 
         ! Elements are stored boundary face index.
@@ -105,10 +109,11 @@ module class_cellsystem
 
         contains
 
-        ! ### Initial condition Reader ###
-        procedure, public, pass(self) :: read_initial_condition
+        ! ### Result writer ###
+        procedure, public, pass(self) :: initialize_result_writer
+        procedure, public, pass(self) :: write_result
 
-        ! ### Cellsystem Reader ###
+        ! ### Cellsystem reader ###
         procedure, public, pass(self) :: read
 
         ! ### Getter ###
@@ -120,30 +125,41 @@ module class_cellsystem
         procedure, public, pass(self) :: get_number_of_slipwall_faces
         procedure, public, pass(self) :: get_number_of_symmetric_faces
 
-        ! ### Initializer ###
-        procedure, public, pass(self) :: initialise_faces
-        procedure, public, pass(self) :: initialise_cells
-        procedure, public, pass(self) :: initialise_boundary_references
-
         ! ### Finalizer ###
-        procedure, public, pass(self) :: finalize_faces
-        procedure, public, pass(self) :: finalize_cells
-        procedure, public, pass(self) :: finalize_boundary_references
+        procedure, public, pass(self) :: finalize
 
         ! ### Utils ###
+        procedure, private, pass(self) :: initialise_faces
+        procedure, private, pass(self) :: initialise_cells
+        procedure, private, pass(self) :: initialise_boundary_references
+        procedure, private, pass(self) :: finalize_faces
+        procedure, private, pass(self) :: finalize_cells
+        procedure, private, pass(self) :: finalize_boundary_references
         procedure, private, pass(self) :: assign_boundary
     end type
 
     contains
 
-    ! ### Initial condition Reader ###
-    subroutine read_initial_condition(self, parser, filepath)
-        class(cellsystem              ), intent(inout) :: self
-        class(initial_condition_parser), intent(inout) :: parser
-        character(len=*               ), intent(in   ) :: filepath
-    end subroutine read_initial_condition
+    ! ###  Result writer ###
+    subroutine initialize_result_writer(self, parser, json)
+        class(cellsystem   ), intent(inout) :: self
+        class(result_writer), intent(inout) :: parser
+        class(json_file    ), intent(in   ) :: json
 
-    ! ### Cellsystem Reader ###
+        call parser%initialize(self%is_real_cell, self%cell_geometries, self%cell_types, json)
+    end subroutine initialize_result_writer
+
+    subroutine write_result(self, parser, scolar_variables, vector_variables, time)
+        class(cellsystem   ), intent(inout) :: self
+        class(result_writer), intent(inout) :: parser
+        real (real_kind    ), intent(in   ) :: scolar_variables(:,:)
+        real (real_kind    ), intent(in   ) :: vector_variables(:,:)
+        real (real_kind    ), intent(in   ) :: time
+
+        call parser%write(scolar_variables, vector_variables, time)
+    end subroutine write_result
+
+    ! ### Cellsystem reader ###
     subroutine read(self, parser, filepath)
         class(cellsystem ), intent(inout) :: self
         class(grid_parser), intent(inout) :: parser
@@ -153,6 +169,9 @@ module class_cellsystem
 
         ! parse grid file
         call parser%parse(filepath)
+
+        ! initialize
+        allocate(face_types(parser%get_number_of_faces()))
 
         ! allocate grid
         call self%initialise_faces              (parser%get_number_of_faces (), parser%get_number_of_ghost_cells())
@@ -173,32 +192,6 @@ module class_cellsystem
         ! close file
         call parser%close()
     end subroutine read
-
-    subroutine assign_boundary(self, face_types)
-        class  (cellsystem         ), intent(inout) :: self
-        integer(kind(boundary_type)), intent(in   ) :: face_types(:)
-
-        integer(int_kind) :: index, outflow_index, slipwall_index, symmetric_index
-
-        outflow_index   = 1
-        slipwall_index  = 1
-        symmetric_index = 1
-
-        do index = 1, self%num_faces, 1
-            if (face_types(index) == outflow_boundary_type) then
-                self%outflow_face_indexs(outflow_index) = index
-                outflow_index = outflow_index + 1
-            else if (face_types(index) == slipwall_boundary_type) then
-                self%slipwall_face_indexs(slipwall_index) = index
-                slipwall_index = slipwall_index + 1
-            else if (face_types(index) == symmetric_boundary_type) then
-                self%symmetric_face_indexs(symmetric_index) = index
-                symmetric_index = symmetric_index + 1
-            else
-                call call_error("Unknown boundary type found.")
-            end if
-        end do
-    end subroutine assign_boundary
 
     ! ### Getter ###
     pure function get_number_of_faces(self) result(n)
@@ -243,7 +236,41 @@ module class_cellsystem
         n = self%num_symmetric_faces
     end function get_number_of_symmetric_faces
 
-    ! ### Initializer ###
+    ! ### Finalizer ###
+    subroutine finalize(self)
+        class(cellsystem), intent(inout) :: self
+        call self%finalize_cells()
+        call self%finalize_faces()
+        call self%finalize_boundary_references()
+    end subroutine finalize
+
+    ! ### Inner utils ###
+    subroutine assign_boundary(self, face_types)
+        class  (cellsystem         ), intent(inout) :: self
+        integer(kind(boundary_type)), intent(in   ) :: face_types(:)
+
+        integer(int_kind) :: index, outflow_index, slipwall_index, symmetric_index
+
+        outflow_index   = 1
+        slipwall_index  = 1
+        symmetric_index = 1
+
+        do index = 1, self%num_faces, 1
+            if (face_types(index) == outflow_boundary_type) then
+                self%outflow_face_indexs(outflow_index) = index
+                outflow_index = outflow_index + 1
+            else if (face_types(index) == slipwall_boundary_type) then
+                self%slipwall_face_indexs(slipwall_index) = index
+                slipwall_index = slipwall_index + 1
+            else if (face_types(index) == symmetric_boundary_type) then
+                self%symmetric_face_indexs(symmetric_index) = index
+                symmetric_index = symmetric_index + 1
+            else
+                call call_error("Unknown boundary type found.")
+            end if
+        end do
+    end subroutine assign_boundary
+
     subroutine initialise_faces(self, num_faces, num_local_cells)
         class(cellsystem), intent(inout) :: self
         integer(int_kind), intent(in) :: num_faces
@@ -328,6 +355,11 @@ module class_cellsystem
             call call_error("Array cell_geometries is already allocated. But you call the initialiser for cells.")
         end if
         allocate(self%cell_geometries(self%num_cells))
+
+        if(allocated(self%cell_types))then
+            call call_error("Array cell_types is already allocated. But you call the initialiser for cells.")
+        end if
+        allocate(self%cell_types(self%num_cells))
     end subroutine initialise_cells
 
     subroutine initialise_boundary_references(self, num_outflow_faces, num_slipwall_faces, num_symetric_faces)
@@ -367,7 +399,6 @@ module class_cellsystem
         allocate(self%symmetric_face_indexs(self%num_symmetric_faces))
     end subroutine initialise_boundary_references
 
-    ! ### Finalizer ###
     subroutine finalize_faces(self)
         class(cellsystem), intent(inout) :: self
 
@@ -432,6 +463,11 @@ module class_cellsystem
             call call_error("Array cell_geometries is not allocated. But you call the finalizer for cell_geometries_module.")
         end if
         deallocate(self%cell_geometries)
+
+        if(.not. allocated(self%cell_types))then
+            call call_error("Array cell_types is not allocated. But you call the finalizer for cell_geometries_module.")
+        end if
+        deallocate(self%cell_types)
 
         self%num_points = 0
         self%num_cells  = 0

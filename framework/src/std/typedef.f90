@@ -7,4 +7,5 @@ module typedef_module
 
     integer, parameter :: real_kind  = real64
     integer, parameter :: int_kind   = int32
+    integer, parameter :: type_kind  = int8
 end module typedef_module
