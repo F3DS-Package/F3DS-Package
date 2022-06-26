@@ -22,10 +22,11 @@ module abstract_grid_parser
     end type grid_parser
 
     abstract interface
-        subroutine parse_interface(self, filepath)
+        subroutine parse_interface(self, json)
+            use json_module
             import grid_parser
-            class    (grid_parser), intent(inout) :: self
-            character(len=*)      , intent(in  ) :: filepath
+            class(grid_parser), intent(inout) :: self
+            class(json_file  ), intent(in   ) :: json
         end subroutine parse_interface
 
         subroutine close_interface(self)
@@ -99,13 +100,14 @@ module abstract_grid_parser
             integer(kind(boundary_type)), intent(inout) :: face_types(:)
         end subroutine get_boundaries_interface
 
-        subroutine get_cell_geometries_interface(self, points, cell_geometries)
+        subroutine get_cell_geometries_interface(self, points, cell_geometries, cell_types)
             use typedef_module
             use class_point_id_list
             import grid_parser
             class  (grid_parser  ), intent(in   ) :: self
             real   (real_kind    ), intent(inout) :: points         (:, :)
             class  (point_id_list), intent(inout) :: cell_geometries(:)
+            integer(type_kind    ), intent(inout) :: cell_types     (:)
         end subroutine get_cell_geometries_interface
     end interface
 end module abstract_grid_parser

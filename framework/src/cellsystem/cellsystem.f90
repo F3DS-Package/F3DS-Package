@@ -96,6 +96,7 @@ module class_cellsystem
         ! Elm. 1) 1 : {@code num_cells}, cell index
         class(point_id_list), allocatable :: cell_geometries(:)
 
+        ! Followed VTK cell type
         ! Elm. 1) 1 : {@code num_cells}, cell index
         integer(type_kind), allocatable :: cell_types(:)
 

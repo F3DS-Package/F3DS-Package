@@ -997,10 +997,11 @@ module class_nlgrid_parser
 
     end subroutine get_boundaries
 
-    subroutine get_cell_geometries(self, points, cell_geometries)
+    subroutine get_cell_geometries(self, points, cell_geometries, cell_types)
         class  (nlgrid_parser), intent(in   ) :: self
         real   (real_kind    ), intent(inout) :: points         (:, :)
         class  (point_id_list), intent(inout) :: cell_geometries(:)
+        integer(type_kind    ), intent(inout) :: cell_types     (:)
 
         integer(int_kind) :: i, j, k, n, n_assigned_point, n_assigned_geom
         integer(int_kind) :: p(8)
@@ -1065,6 +1066,8 @@ module class_nlgrid_parser
                     call cell_geometries(n)%set_point_id(6, p(6))
                     call cell_geometries(n)%set_point_id(7, p(7))
                     call cell_geometries(n)%set_point_id(8, p(8))
+
+                    cell_types(n) = 12
 
                     n_assigned_geom = n_assigned_geom + 1
                 end do
