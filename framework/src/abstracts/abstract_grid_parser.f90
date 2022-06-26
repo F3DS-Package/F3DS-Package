@@ -22,11 +22,11 @@ module abstract_grid_parser
     end type grid_parser
 
     abstract interface
-        subroutine parse_interface(self, json)
-            use json_module
+        subroutine parse_interface(self, config)
+            use abstract_configuration
             import grid_parser
-            class(grid_parser), intent(inout) :: self
-            class(json_file  ), intent(in   ) :: json
+            class(grid_parser  ), intent(inout) :: self
+            class(configuration), intent(in   ) :: config
         end subroutine parse_interface
 
         subroutine close_interface(self)

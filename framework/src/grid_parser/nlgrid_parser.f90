@@ -1,6 +1,7 @@
 module class_nlgrid_parser
     use, intrinsic :: iso_fortran_env
     use json_module
+    use abstract_configuration
     use typedef_module
     use stdio_module
     use boundary_type_module
@@ -78,9 +79,9 @@ module class_nlgrid_parser
 
     contains
 
-    subroutine parse(self, filepath)
-        class    (nlgrid_parser), intent(inout) :: self
-        character(len=*)        , intent(in   ) :: filepath
+    subroutine parse(self, config)
+        class(nlgrid_parser), intent(inout) :: self
+        class(configuration), intent(in   ) :: config
 
         integer(int_kind)  :: i,j,k,n
         integer(int_kind)  :: unit_number
@@ -88,7 +89,7 @@ module class_nlgrid_parser
 
         type(json_file) :: json
         character(len=:), allocatable :: error_msg
-        logical :: status_ok, found
+        logical :: found
         character(kind=json_CK,len=:), allocatable :: string_value
 
         if(self%parsed)then
@@ -96,7 +97,8 @@ module class_nlgrid_parser
         end if
 
         ! Real a grid file
-        open(newunit=unit_number, file=filepath, access = 'stream', form = 'unformatted', status = 'old')
+        config%get_char("Grid.Filepath", string_value, found, "grid.nlgrid")
+        open(newunit=unit_number, file=string_value, access = 'stream', form = 'unformatted', status = 'old')
         read(unit_number) self%imin, self%jmin, self%kmin
         read(unit_number) self%imax, self%jmax, self%kmax
         read(unit_number) dtheta
@@ -160,7 +162,8 @@ module class_nlgrid_parser
         ! Read a boundary condition infomation
         call json%initialize()
 
-        call json%load(filename="boundary_condition.json")
+        config%get_char("Grid.Boundary condition filepath", string_value, found, "boundary_condition.json")
+        call json%load(filename=string_value)
         if (json%failed()) then
             call json%check_for_errors(status_ok, error_msg)
             call json%clear_exceptions()
@@ -170,7 +173,7 @@ module class_nlgrid_parser
             print *, error_msg
             print *, "---------------------------------"
 #endif
-            call call_error("Can not read boundary_condition.json that is writen boundary condition infomation.")
+            call call_error("Can not read boundary condition file.")
         end if
 
         call json%get("Xi plus direction", string_value, found)

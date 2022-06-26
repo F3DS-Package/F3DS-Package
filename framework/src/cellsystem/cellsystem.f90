@@ -1,11 +1,11 @@
 module class_cellsystem
-    use json_module
     use typedef_module
     use stdio_module
     use boundary_type_module
     use class_point_id_list
     use abstract_grid_parser
     use abstract_result_writer
+    use abstract_configuration
 
     implicit none
 
@@ -48,7 +48,7 @@ module class_cellsystem
 
         ! Reference for cell index
         ! Elm. 1) 1 : Number of faces                               , Face number
-        ! Elm. 2) -Number of ghost cells + 1: Number of ghost cells , Local cell index
+        ! Elm. 2) -Number of local cells + 1: Number of local cells , Local cell index
         integer(int_kind), allocatable :: face_to_cell_indexs(:,:)
 
         ! Normal vectors that is directed right-hand cell (local index is one)
@@ -67,8 +67,8 @@ module class_cellsystem
         real(real_kind), allocatable :: face_tangential2_vectors(:,:)
 
         ! Face centor position
-        ! Elm. 1) 1 : 3              , vector compornents
-        ! Elm. 2) 1 : Number of faces, face number
+        ! Elm. 1) 1 : Number of faces, face number
+        ! Elm. 2) 1 : 3              , vector compornents
         real(real_kind), allocatable :: face_positions(:,:)
 
         ! Face area
@@ -78,8 +78,8 @@ module class_cellsystem
         ! ### Cells ###
 
         ! Cell centor positions
-        ! Elm. 1) 1 : 3                , vector compornents
-        ! Elm. 2) 1 : {@code num_cells}, cell index
+        ! Elm. 1) 1 : {@code num_cells}, cell index
+        ! Elm. 2) 1 : 3                , vector compornents
         real(real_kind), allocatable :: cell_centor_positions(:,:)
 
         ! Cell volumes
@@ -89,8 +89,8 @@ module class_cellsystem
         ! Elm. 1) 1 : {@code num_cells}, cell index
         logical, allocatable :: is_real_cell(:)
 
-        ! Elm. 1) 1:3 = x, y, z
-        ! Elm. 2) 1:{@code num_points}
+        ! Elm. 1) 1:{@code num_points}
+        ! Elm. 2) 1:3 = x, y, z
         real(real_kind), allocatable :: points(:, :)
 
         ! Elm. 1) 1 : {@code num_cells}, cell index
@@ -142,12 +142,12 @@ module class_cellsystem
     contains
 
     ! ###  Result writer ###
-    subroutine initialize_result_writer(self, parser, json)
+    subroutine initialize_result_writer(self, parser, config)
         class(cellsystem   ), intent(inout) :: self
         class(result_writer), intent(inout) :: parser
-        class(json_file    ), intent(in   ) :: json
+        class(configuration), intent(in   ) :: config
 
-        call parser%initialize(self%is_real_cell, self%cell_geometries, self%cell_types, json)
+        call parser%initialize(self%is_real_cell, self%cell_geometries, self%cell_types, config)
     end subroutine initialize_result_writer
 
     subroutine write_result(self, parser, scolar_variables, vector_variables, time)
@@ -161,17 +161,17 @@ module class_cellsystem
     end subroutine write_result
 
     ! ### Cellsystem reader ###
-    subroutine read(self, parser, filepath)
-        class(cellsystem ), intent(inout) :: self
-        class(grid_parser), intent(inout) :: parser
-        character(len=*)  , intent(in   ) :: filepath
+    subroutine read(self, parser, config)
+        class(cellsystem   ), intent(inout) :: self
+        class(grid_parser  ), intent(inout) :: parser
+        class(configuration), intent(in   ) :: config
 
         integer(kind(boundary_type)), allocatable :: face_types(:)
 
         ! parse grid file
-        call parser%parse(filepath)
+        call parser%parse(config)
 
-        ! initialize
+        ! initialize local valiables
         allocate(face_types(parser%get_number_of_faces()))
 
         ! allocate grid
