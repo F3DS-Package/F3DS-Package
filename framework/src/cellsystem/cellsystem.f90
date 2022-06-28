@@ -28,6 +28,7 @@ module class_cellsystem
         private
 
         ! Time
+        real(real_kind) :: num_steps
         real(real_kind) :: time
         real(real_kind) :: time_increment
 
@@ -53,7 +54,7 @@ module class_cellsystem
         ! Reference for cell index
         ! Elm. 1) 1 : Number of faces                               , Face number
         ! Elm. 2) -Number of local cells + 1: Number of local cells , Local cell index
-        integer(int_kind), allocatable :: face_to_cell_indexs(:,:)
+        integer(int_kind), allocatable :: face_to_cell_indexes(:,:)
 
         ! Normal vectors that is directed right-hand cell (local index is one)
         ! Elm. 1) 1 : Number of faces, face number
@@ -108,14 +109,21 @@ module class_cellsystem
 
         ! Elements are stored boundary face index.
         ! Elm. 1) 1 : num_{boundary condition}_faces
-        integer(int_kind), public, allocatable :: outflow_face_indexs (:)
-        integer(int_kind), public, allocatable :: slipwall_face_indexs(:)
-        integer(int_kind), public, allocatable :: symmetric_face_indexs(:)
+        integer(int_kind), public, allocatable :: outflow_face_indexes (:)
+        integer(int_kind), public, allocatable :: slipwall_face_indexes(:)
+        integer(int_kind), public, allocatable :: symmetric_face_indexes(:)
 
         contains
+        ! ### Common ###
+        procedure, public, pass(self) :: initialize  => result_writer_initialize
+        procedure, public, pass(self) :: open_file   => result_writer_open_file
+        procedure, public, pass(self) :: close_file  => result_writer_close_file
+        procedure, public, pass(self) :: is_writable => result_writer_is_writable
 
-        ! ### Result writer ###
-        procedure, public, pass(self) :: initialize_result_writer
+        ! ### Result Writer ###
+        procedure, public, pass(self) :: write_scolar
+        procedure, public, pass(self) :: write_vector
+        procedure, public, pass(self) :: get_filename
 
         ! ### Cellsystem reader ###
         procedure, public, pass(self) :: read
@@ -128,6 +136,9 @@ module class_cellsystem
         procedure, public, pass(self) :: get_number_of_outflow_faces
         procedure, public, pass(self) :: get_number_of_slipwall_faces
         procedure, public, pass(self) :: get_number_of_symmetric_faces
+        procedure, public, pass(self) :: get_number_of_steps
+        procedure, public, pass(self) :: get_time
+        procedure, public, pass(self) :: get_time_increment
 
         ! ### Finalizer ###
         procedure, public, pass(self) :: finalize
@@ -145,13 +156,61 @@ module class_cellsystem
     contains
 
     ! ###  Result writer ###
-    subroutine initialize_result_writer(self, parser, config)
+    subroutine result_writer_initialize(self, writer, config)
         class(cellsystem   ), intent(inout) :: self
-        class(result_writer), intent(inout) :: parser
+        class(result_writer), intent(inout) :: writer
         class(configuration), intent(inout) :: config
 
-        call parser%initialize(self%num_cells, self%num_points, self%is_real_cell, self%cell_geometries, self%cell_types, config)
-    end subroutine initialize_result_writer
+        call writer%initialize(self%num_cells, self%num_points, self%is_real_cell, self%cell_geometries, self%cell_types, config)
+    end subroutine result_writer_initialize
+
+    subroutine result_writer_open_file(self, writer)
+        class(cellsystem   ), intent(inout) :: self
+        class(result_writer), intent(inout) :: writer
+
+        call writer%open_file(self%time, self%points)
+    end subroutine result_writer_open_file
+
+    subroutine result_writer_close_file(self, writer)
+        class(cellsystem   ), intent(inout) :: self
+        class(result_writer), intent(inout) :: writer
+
+        call writer%close_file()
+    end subroutine result_writer_close_file
+
+    pure function result_writer_is_writable(self, writer) result(yes)
+        class(cellsystem   ), intent(in) :: self
+        class(result_writer), intent(in) :: writer
+        logical                          :: yes
+
+        yes = writer%is_writable(self%time)
+    end function result_writer_is_writable
+
+    subroutine write_scolar(self, writer, name, scolar_variables)
+        class    (cellsystem   ), intent(inout) :: self
+        class    (result_writer), intent(inout) :: writer
+        character(len=*        ), intent(in   ) :: name
+        real     (real_kind    ), intent(in   ) :: scolar_variables(:)
+
+        call writer%write_scolar(self%is_real_cell, name, scolar_variables)
+    end subroutine write_scolar
+
+    subroutine write_vector(self, writer, name, vector_variables)
+        class    (cellsystem   ), intent(inout) :: self
+        class    (result_writer), intent(inout) :: writer
+        character(len=*        ), intent(in   ) :: name
+        real     (real_kind    ), intent(in   ) :: vector_variables(:,:)
+
+        call writer%write_vector(self%is_real_cell, name, vector_variables)
+    end subroutine write_vector
+
+    function get_filename(self, writer) result(name)
+        class    (cellsystem   ), intent(inout) :: self
+        class    (result_writer), intent(inout) :: writer
+        character(len=:        ), allocatable :: name
+
+        name = writer%get_filename()
+    end function get_filename
 
     ! ### Cellsystem reader ###
     subroutine read(self, parser, config)
@@ -176,7 +235,7 @@ module class_cellsystem
 
         ! get grid data
         call parser%get_cells          (self%cell_centor_positions, self%cell_volumes, self%is_real_cell)
-        call parser%get_faces          (self%face_to_cell_indexs, self%face_normal_vectors, self%face_tangential1_vectors, self%face_tangential2_vectors, self%face_positions, self%face_areas)
+        call parser%get_faces          (self%face_to_cell_indexes, self%face_normal_vectors, self%face_tangential1_vectors, self%face_tangential2_vectors, self%face_positions, self%face_areas)
         call parser%get_cell_geometries(self%points, self%cell_geometries, self%cell_types)
         call parser%get_boundaries     (face_types)
 
@@ -230,6 +289,24 @@ module class_cellsystem
         n = self%num_symmetric_faces
     end function get_number_of_symmetric_faces
 
+    pure function get_number_of_steps(self) result(n)
+        class(cellsystem), intent(in) :: self
+        integer(int_kind) :: n
+        n = self%num_steps
+    end function get_number_of_steps
+
+    pure function get_time(self) result(t)
+        class(cellsystem), intent(in) :: self
+        real(real_kind) :: t
+        t = self%time
+    end function get_time
+
+    pure function get_time_increment(self) result(dt)
+        class(cellsystem), intent(in) :: self
+        real(real_kind) :: dt
+        dt = self%time_increment
+    end function get_time_increment
+
     ! ### Finalizer ###
     subroutine finalize(self)
         class(cellsystem), intent(inout) :: self
@@ -251,13 +328,13 @@ module class_cellsystem
 
         do index = 1, self%num_faces, 1
             if (face_types(index) == outflow_boundary_type) then
-                self%outflow_face_indexs(outflow_index) = index
+                self%outflow_face_indexes(outflow_index) = index
                 outflow_index = outflow_index + 1
             else if (face_types(index) == slipwall_boundary_type) then
-                self%slipwall_face_indexs(slipwall_index) = index
+                self%slipwall_face_indexes(slipwall_index) = index
                 slipwall_index = slipwall_index + 1
             else if (face_types(index) == symmetric_boundary_type) then
-                self%symmetric_face_indexs(symmetric_index) = index
+                self%symmetric_face_indexes(symmetric_index) = index
                 symmetric_index = symmetric_index + 1
             else
                 call call_error("Unknown boundary type found.")
@@ -280,10 +357,10 @@ module class_cellsystem
         end if
         self%num_local_cells = num_local_cells
 
-        if(allocated(self%face_to_cell_indexs))then
-            call call_error("Array face_to_cell_indexs is already allocated. But you call the initialiser for faces.")
+        if(allocated(self%face_to_cell_indexes))then
+            call call_error("Array face_to_cell_indexes is already allocated. But you call the initialiser for faces.")
         end if
-        allocate(self%face_to_cell_indexs(self%num_faces, -self%num_local_cells + 1:self%num_local_cells))
+        allocate(self%face_to_cell_indexes(self%num_faces, -self%num_local_cells + 1:self%num_local_cells))
 
         if(allocated(self%face_normal_vectors))then
             call call_error("Array face_normal_vectors is already allocated. But you call the initialiser for faces.")
@@ -377,29 +454,29 @@ module class_cellsystem
         end if
         self%num_symmetric_faces = num_symetric_faces
 
-        if(allocated(self%outflow_face_indexs))then
-            call call_error("Array outflow_face_indexs is already allocated. But you call the initialiser for boundary_reference.")
+        if(allocated(self%outflow_face_indexes))then
+            call call_error("Array outflow_face_indexes is already allocated. But you call the initialiser for boundary_reference.")
         end if
-        allocate(self%outflow_face_indexs(self%num_outflow_faces))
+        allocate(self%outflow_face_indexes(self%num_outflow_faces))
 
-        if(allocated(self%slipwall_face_indexs))then
-            call call_error("Array slipwall_face_indexs is already allocated. But you call the initialiser for boundary_reference.")
+        if(allocated(self%slipwall_face_indexes))then
+            call call_error("Array slipwall_face_indexes is already allocated. But you call the initialiser for boundary_reference.")
         end if
-        allocate(self%slipwall_face_indexs(self%num_slipwall_faces))
+        allocate(self%slipwall_face_indexes(self%num_slipwall_faces))
 
-        if(allocated(self%symmetric_face_indexs))then
-            call call_error("Array symmetric_face_indexs is already allocated. But you call the initialiser for boundary_reference.")
+        if(allocated(self%symmetric_face_indexes))then
+            call call_error("Array symmetric_face_indexes is already allocated. But you call the initialiser for boundary_reference.")
         end if
-        allocate(self%symmetric_face_indexs(self%num_symmetric_faces))
+        allocate(self%symmetric_face_indexes(self%num_symmetric_faces))
     end subroutine initialise_boundary_references
 
     subroutine finalize_faces(self)
         class(cellsystem), intent(inout) :: self
 
-        if(.not. allocated(self%face_to_cell_indexs))then
-            call call_error("Array face_to_cell_indexs are not allocated. But you call the finalizer for faces.")
+        if(.not. allocated(self%face_to_cell_indexes))then
+            call call_error("Array face_to_cell_indexes are not allocated. But you call the finalizer for faces.")
         end if
-        deallocate(self%face_to_cell_indexs)
+        deallocate(self%face_to_cell_indexes)
 
         if(.not. allocated(self%face_normal_vectors))then
             call call_error("Array face_normal_vectors is not allocated. But you call the finalizer for faces.")
@@ -470,20 +547,20 @@ module class_cellsystem
     subroutine finalize_boundary_references(self)
         class(cellsystem), intent(inout) :: self
 
-        if(.not. allocated(self%outflow_face_indexs))then
-            call call_error("Array outflow_face_indexs is not allocated. But you call the finalizer for boundary_reference module.")
+        if(.not. allocated(self%outflow_face_indexes))then
+            call call_error("Array outflow_face_indexes is not allocated. But you call the finalizer for boundary_reference module.")
         end if
-        deallocate(self%outflow_face_indexs)
+        deallocate(self%outflow_face_indexes)
 
-        if(.not. allocated(self%slipwall_face_indexs))then
-            call call_error("Array slipwall_face_indexs is not allocated. But you call the finalizer for boundary_reference module.")
+        if(.not. allocated(self%slipwall_face_indexes))then
+            call call_error("Array slipwall_face_indexes is not allocated. But you call the finalizer for boundary_reference module.")
         end if
-        deallocate(self%slipwall_face_indexs)
+        deallocate(self%slipwall_face_indexes)
 
-        if(.not. allocated(self%symmetric_face_indexs))then
-            call call_error("Array symmetric_face_indexs is not allocated. But you call the finalizer for boundary_reference module.")
+        if(.not. allocated(self%symmetric_face_indexes))then
+            call call_error("Array symmetric_face_indexes is not allocated. But you call the finalizer for boundary_reference module.")
         end if
-        deallocate(self%symmetric_face_indexs)
+        deallocate(self%symmetric_face_indexes)
 
         self%num_local_cells     = 0
         self%num_outflow_faces   = 0
