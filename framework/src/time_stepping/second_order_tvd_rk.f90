@@ -1,6 +1,6 @@
 module second_order_tvd_rk_module
     use typedef_module
-    use abstract_mixture_eos
+    use abstract_eos
 
     implicit none
 
@@ -46,7 +46,7 @@ module second_order_tvd_rk_module
             n_slipwall_faces                         , &
             n_symmetric_faces                        , &
             time_increment                           , &
-            eos                                      , &
+            an_eos                                      , &
             reconstruction_function                  , &
             integrated_element_function              , &
             flux_function                            , &
@@ -76,7 +76,7 @@ module second_order_tvd_rk_module
         integer(int_kind )  , intent(in   ) :: n_slipwall_faces
         integer(int_kind )  , intent(in   ) :: n_symmetric_faces
         real   (real_kind)  , intent(in   ) :: time_increment
-        class  (mixture_eos), intent(in   ) :: eos
+        class  (eos), intent(in   ) :: an_eos
 
         interface
             pure function reconstruction_function(  &
@@ -92,13 +92,13 @@ module second_order_tvd_rk_module
                 face_index                        , &
                 n_conservative_values             , &
                 n_derivative_values               , &
-                eos                               , &
+                an_eos                               , &
                 flux_function                     , &
                 primitive_to_conservative_function, &
                 integrated_element_function             ) result(element)
 
                 use typedef_module
-                use abstract_mixture_eos
+                use abstract_eos
 
                 real   (real_kind  ), intent(in) :: primitive_values_set     (:, :)
                 real   (real_kind  ), intent(in) :: cell_centor_positions    (:, :)
@@ -112,7 +112,7 @@ module second_order_tvd_rk_module
                 integer(int_kind   ), intent(in) :: face_index
                 integer(int_kind   ), intent(in) :: n_conservative_values
                 integer(int_kind   ), intent(in) :: n_derivative_values
-                class  (mixture_eos), intent(in) :: eos
+                class  (eos), intent(in) :: an_eos
 
                 real   (real_kind) :: element(2, n_conservative_values+n_derivative_values)
 
@@ -143,11 +143,11 @@ module second_order_tvd_rk_module
                         real(real_kind)             :: flux(size(left_conservative))
                     end function flux_function
 
-                    pure function primitive_to_conservative_function(primitive, eos) result(conservative)
+                    pure function primitive_to_conservative_function(primitive, an_eos) result(conservative)
                         use typedef_module
-                        use abstract_mixture_eos
+                        use abstract_eos
                         real (real_kind  ), intent(in)  :: primitive   (:)
-                        class(mixture_eos), intent(in)  :: eos
+                        class(eos), intent(in)  :: an_eos
                         real (real_kind  ), allocatable :: conservative(:)
                     end function
 
@@ -164,12 +164,12 @@ module second_order_tvd_rk_module
                         face_area                         , &
                         n_conservative_values             , &
                         n_derivative_values               , &
-                        eos                               , &
+                        an_eos                               , &
                         flux_function                     , &
                         primitive_to_conservative_function   ) result(element)
 
                         use typedef_module
-                        use abstract_mixture_eos
+                        use abstract_eos
 
                         real   (real_kind  ), intent(in ) :: reconstructed_lhc_primitive (:)
                         real   (real_kind  ), intent(in ) :: reconstructed_rhc_primitive (:)
@@ -183,7 +183,7 @@ module second_order_tvd_rk_module
                         real   (real_kind  ), intent(in ) :: face_area
                         integer(int_kind   ), intent(in ) :: n_conservative_values
                         integer(int_kind   ), intent(in ) :: n_derivative_values
-                        class  (mixture_eos), intent(in ) :: eos
+                        class  (eos), intent(in ) :: an_eos
                         real   (real_kind)                :: element        (2, n_conservative_values+n_derivative_values)
 
                         interface
@@ -213,11 +213,11 @@ module second_order_tvd_rk_module
                                 real(real_kind)             :: flux(size(left_conservative))
                             end function flux_function
 
-                            pure function primitive_to_conservative_function(primitive, eos) result(conservative)
+                            pure function primitive_to_conservative_function(primitive, an_eos) result(conservative)
                                 use typedef_module
-                                use abstract_mixture_eos
+                                use abstract_eos
                                 real (real_kind  ), intent(in)  :: primitive   (:)
-                                class(mixture_eos), intent(in)  :: eos
+                                class(eos), intent(in)  :: an_eos
                                 real (real_kind  ), allocatable :: conservative(:)
                             end function primitive_to_conservative_function
                         end interface
@@ -238,12 +238,12 @@ module second_order_tvd_rk_module
                 face_area                         , &
                 n_conservative_values             , &
                 n_derivative_values               , &
-                eos                               , &
+                an_eos                               , &
                 flux_function                     , &
                 primitive_to_conservative_function   ) result(element)
 
                 use typedef_module
-                use abstract_mixture_eos
+                use abstract_eos
 
                 real   (real_kind  ), intent(in ) :: reconstructed_lhc_primitive (:)
                 real   (real_kind  ), intent(in ) :: reconstructed_rhc_primitive (:)
@@ -257,7 +257,7 @@ module second_order_tvd_rk_module
                 real   (real_kind  ), intent(in ) :: face_area
                 integer(int_kind   ), intent(in ) :: n_conservative_values
                 integer(int_kind   ), intent(in ) :: n_derivative_values
-                class  (mixture_eos), intent(in ) :: eos
+                class  (eos), intent(in ) :: an_eos
                 real   (real_kind)                :: element        (2, n_conservative_values+n_derivative_values)
 
                 interface
@@ -287,11 +287,11 @@ module second_order_tvd_rk_module
                         real(real_kind)             :: flux(size(left_conservative))
                     end function flux_function
 
-                    pure function primitive_to_conservative_function(primitive, eos) result(conservative)
+                    pure function primitive_to_conservative_function(primitive, an_eos) result(conservative)
                         use typedef_module
-                        use abstract_mixture_eos
+                        use abstract_eos
                         real (real_kind  ), intent(in)  :: primitive   (:)
-                        class(mixture_eos), intent(in)  :: eos
+                        class(eos), intent(in)  :: an_eos
                         real (real_kind  ), allocatable :: conservative(:)
                     end function primitive_to_conservative_function
                 end interface
@@ -323,19 +323,19 @@ module second_order_tvd_rk_module
                 real(real_kind)             :: flux(size(left_conservative))
             end function flux_function
 
-            pure function primitive_to_conservative_function(primitive, eos) result(conservative)
+            pure function primitive_to_conservative_function(primitive, an_eos) result(conservative)
                 use typedef_module
-                use abstract_mixture_eos
+                use abstract_eos
                 real (real_kind  ), intent(in)  :: primitive   (:)
-                class(mixture_eos), intent(in)  :: eos
+                class(eos), intent(in)  :: an_eos
                 real (real_kind  ), allocatable :: conservative(:)
             end function primitive_to_conservative_function
 
-            pure function conservative_to_primitive_function(conservative, eos) result(primitive)
+            pure function conservative_to_primitive_function(conservative, an_eos) result(primitive)
                 use typedef_module
-                use abstract_mixture_eos
+                use abstract_eos
                 real (real_kind  ), intent(in)  :: conservative(:)
-                class(mixture_eos), intent(in)  :: eos
+                class(eos), intent(in)  :: an_eos
                 real (real_kind  ), allocatable :: primitive   (:)
             end function conservative_to_primitive_function
 
@@ -415,7 +415,7 @@ module second_order_tvd_rk_module
                 j                                  , &
                 n_conservative_values              , &
                 n_derivative_values                , &
-                eos                                , &
+                an_eos                                , &
                 flux_function                      , &
                 primitive_to_conservative_function , &
                 integrated_element_function          &
@@ -430,7 +430,7 @@ module second_order_tvd_rk_module
         do i = 1, n_cells, 1
             stage1_conservative_variables_set(i, :) = conservative_variables_set(i, :) &
                 + time_increment * residual_set(i, :)
-            primitive_variables_set(i, :) = conservative_to_primitive_function(stage1_conservative_variables_set(i, :), eos)
+            primitive_variables_set(i, :) = conservative_to_primitive_function(stage1_conservative_variables_set(i, :), an_eos)
             residual_set(i, :) = 0.d0
             derivative_variables_set(i, :) = 0.d0
         end do
@@ -467,7 +467,7 @@ module second_order_tvd_rk_module
                 j                                  , &
                 n_conservative_values              , &
                 n_derivative_values                , &
-                eos                                , &
+                an_eos                                , &
                 flux_function                      , &
                 primitive_to_conservative_function , &
                 integrated_element_function          &
@@ -481,7 +481,7 @@ module second_order_tvd_rk_module
 !$omp parallel do private(i)
         do i = 1, n_cells, 1
             conservative_variables_set(i, :) = 0.5d0 * (conservative_variables_set(i, :) + stage1_conservative_variables_set(i, :) + time_increment * residual_set(i, :))
-            primitive_variables_set(i, :) = conservative_to_primitive_function(conservative_variables_set(i, :), eos)
+            primitive_variables_set(i, :) = conservative_to_primitive_function(conservative_variables_set(i, :), an_eos)
             residual_set(i, :) = 0.d0
         end do
 

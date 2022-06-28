@@ -1,7 +1,7 @@
 module five_equation_model_variables_module
     use typedef_module
     use stdio_module
-    use abstract_mixture_eos
+    use abstract_eos
     use math_constant_module
 
     implicit none
@@ -39,9 +39,9 @@ module five_equation_model_variables_module
 
     contains
 
-    pure function primitive_to_conservative(primitive_variables, eos) result(conservative_variables)
+    pure function primitive_to_conservative(primitive_variables, an_eos) result(conservative_variables)
         real(real_kind   ), intent(in)  :: primitive_variables   (:)
-        class(mixture_eos), intent(in)  :: eos
+        class(eos), intent(in)  :: an_eos
         real(real_kind   ), allocatable :: conservative_variables(:)
 
         real(8) :: rho
@@ -63,14 +63,14 @@ module five_equation_model_variables_module
             conservative_variables(3) = u  * rho
             conservative_variables(4) = v  * rho
             conservative_variables(5) = w  * rho
-            conservative_variables(6) = eos%compute_internal_energy_density(p, rho, z1) + 0.5d0 * (u**2.d0 + v**2.d0 + w**2.d0) * rho
+            conservative_variables(6) = an_eos%compute_internal_energy_density(p, rho, z1) + 0.5d0 * (u**2.d0 + v**2.d0 + w**2.d0) * rho
             conservative_variables(7) = z1
         end associate
     end function primitive_to_conservative
 
-    pure function conservative_to_primitive(conservative_variables, eos) result(primitive_variables)
+    pure function conservative_to_primitive(conservative_variables, an_eos) result(primitive_variables)
         real (real_kind  ), intent(in)  :: conservative_variables(:)
-        class(mixture_eos), intent(in)  :: eos
+        class(eos), intent(in)  :: an_eos
         real (real_kind  ), allocatable :: primitive_variables   (:)
 
         real(real_kind) :: rho, ie
@@ -108,7 +108,7 @@ module five_equation_model_variables_module
                 primitive_variables(3) = rho_u / rho
                 primitive_variables(4) = rho_v / rho
                 primitive_variables(5) = rho_w / rho
-                primitive_variables(6) = eos%compute_pressure(ie, rho, z1)
+                primitive_variables(6) = an_eos%compute_pressure(ie, rho, z1)
             endif
         end associate
     end function conservative_to_primitive

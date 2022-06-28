@@ -18,7 +18,7 @@ program five_eq_model_solver
     use five_equation_space_model_module
     use five_equation_model_hllc_module
     ! Model
-    use class_stiffened_gas_mixture_eos
+    use class_stiffened_gas_eos
     ! Grid & initial condition reader
     use class_nlinit_parser
     use class_nlgrid_parser
@@ -52,7 +52,7 @@ program five_eq_model_solver
     integer  (I1P), allocatable :: vtk_cell_type(:)
     integer  (I4P), allocatable :: vtk_offset(:), vtk_connect(:)
 
-    type(stiffened_gas_mixture_eos) :: eos
+    type(stiffened_gas_eos) :: an_eos
     type(sensor             ) :: pressure_sensor
     type(measurement_surface) :: surface
     type(line_plot          ) :: line
@@ -144,9 +144,9 @@ program five_eq_model_solver
     call make_dir("result/field")
 
     ! EoS and primitive-valiables
-    call eos%initialize(1.4d0, 1.4d0, 0.d0, 0.d0)
+    call an_eos%initialize(1.4d0, 1.4d0, 0.d0, 0.d0)
     do index = 1, get_number_of_cells(), 1
-        primitive_variables_set(index, :) = conservative_to_primitive(conservative_variables_set(index, :), eos)
+        primitive_variables_set(index, :) = conservative_to_primitive(conservative_variables_set(index, :), an_eos)
     end do
 
     ! time-stepping
@@ -165,7 +165,7 @@ program five_eq_model_solver
                     p      => primitive_variables_set(index, 6), &
                     z1     => primitive_variables_set(index, 7))
                     cell_length = v**(1.d0/3.d0)
-                    local_time_increment = curant_number * cell_length / eos%compute_soundspeed(p, rho1 * z1 + rho2 * (1.d0 - z1), z1)
+                    local_time_increment = curant_number * cell_length / an_eos%compute_soundspeed(p, rho1 * z1 + rho2 * (1.d0 - z1), z1)
                 end associate
                 if(time_increment > local_time_increment)then
                     time_increment = local_time_increment
@@ -192,8 +192,8 @@ program five_eq_model_solver
                         p      => primitive_variables_set(index, 6), &
                         z1     => primitive_variables_set(index, 7))
                         vtk_density   (vtk_index) = rho1 * z1 + rho2 * (1.d0 - z1)
-                        vtk_soundspeed(vtk_index) = eos%compute_soundspeed(p, rho1 * z1 + rho2 * (1.d0 - z1), z1)
-                        vtk_wood_soundspeed(vtk_index) = eos%compute_k(p, rho1, rho2, z1)
+                        vtk_soundspeed(vtk_index) = an_eos%compute_soundspeed(p, rho1 * z1 + rho2 * (1.d0 - z1), z1)
+                        vtk_wood_soundspeed(vtk_index) = an_eos%compute_k(p, rho1, rho2, z1)
                         vtk_cell_id   (vtk_index) = index
                     end associate
                     vtk_index = vtk_index + 1
@@ -241,7 +241,7 @@ program five_eq_model_solver
             get_number_of_slipwall_faces()           , &
             get_number_of_symmetric_faces()          , &
             time_increment                           , &
-            eos                                      , &
+            an_eos                                      , &
             reconstruct_weno5_js               , &
             compute_space_element_five_equation_model, &
             compute_flux_five_equation_model_hllc    , &

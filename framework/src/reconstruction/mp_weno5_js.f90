@@ -6,7 +6,7 @@ module mp_weno5_js_module
 
     use typedef_module
     use vector_module
-    use abstract_mixture_eos
+    use abstract_eos
 
     implicit none
 
@@ -210,7 +210,7 @@ module mp_weno5_js_module
         face_index                        , &
         n_conservative_values             , &
         n_derivative_values               , &
-        eos                               , &
+        an_eos                               , &
         flux_function                     , &
         primitive_to_conservative_function, &
         integrated_element_function             ) result(element)
@@ -227,7 +227,7 @@ module mp_weno5_js_module
         integer(int_kind   ), intent(in) :: face_index
         integer(int_kind   ), intent(in) :: n_conservative_values
         integer(int_kind   ), intent(in) :: n_derivative_values
-        class  (mixture_eos), intent(in) :: eos
+        class  (eos), intent(in) :: an_eos
 
         real   (real_kind)              :: element(2, n_conservative_values+n_derivative_values)
 
@@ -258,11 +258,11 @@ module mp_weno5_js_module
                 real(real_kind)             :: flux(size(left_conservative))
             end function flux_function
 
-            pure function primitive_to_conservative_function(primitive, eos) result(conservative)
+            pure function primitive_to_conservative_function(primitive, an_eos) result(conservative)
                 use typedef_module
-                use abstract_mixture_eos
+                use abstract_eos
                 real (real_kind  ), intent(in)  :: primitive   (:)
-                class(mixture_eos), intent(in)  :: eos
+                class(eos), intent(in)  :: an_eos
                 real (real_kind  ), allocatable :: conservative(:)
             end function primitive_to_conservative_function
 
@@ -279,12 +279,12 @@ module mp_weno5_js_module
                 face_area                         , &
                 n_conservative_values             , &
                 n_derivative_values               , &
-                eos                               , &
+                an_eos                               , &
                 flux_function                     , &
                 primitive_to_conservative_function   ) result(element)
 
                 use typedef_module
-                use abstract_mixture_eos
+                use abstract_eos
 
                 real   (real_kind  ), intent(in) :: reconstructed_lhc_primitive (:)
                 real   (real_kind  ), intent(in) :: reconstructed_rhc_primitive (:)
@@ -298,7 +298,7 @@ module mp_weno5_js_module
                 real   (real_kind  ), intent(in) :: face_area
                 integer(int_kind   ), intent(in) :: n_conservative_values
                 integer(int_kind   ), intent(in) :: n_derivative_values
-                class  (mixture_eos), intent(in) :: eos
+                class  (eos), intent(in) :: an_eos
                 real   (real_kind)               :: element        (2, n_conservative_values+n_derivative_values)
 
                 interface
@@ -328,11 +328,11 @@ module mp_weno5_js_module
                         real(real_kind)             :: flux(size(left_conservative))
                     end function flux_function
 
-                    pure function primitive_to_conservative_function(primitive, eos) result(conservative)
+                    pure function primitive_to_conservative_function(primitive, an_eos) result(conservative)
                         use typedef_module
-                        use abstract_mixture_eos
+                        use abstract_eos
                         real (real_kind  ), intent(in)  :: primitive   (:)
-                        class(mixture_eos), intent(in)  :: eos
+                        class(eos), intent(in)  :: an_eos
                         real (real_kind  ), allocatable :: conservative(:)
                     end function primitive_to_conservative_function
                 end interface
@@ -376,7 +376,7 @@ module mp_weno5_js_module
             face_areas              (face_index)     , &
             n_conservative_values                    , &
             n_derivative_values                      , &
-            eos                                      , &
+            an_eos                                      , &
             flux_function                            , &
             primitive_to_conservative_function         &
         )

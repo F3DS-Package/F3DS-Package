@@ -1,6 +1,6 @@
 module five_equation_space_model_module
     use vector_module
-    use abstract_mixture_eos
+    use abstract_eos
 
     implicit none
 
@@ -23,7 +23,7 @@ module five_equation_space_model_module
         face_area                                         , &
         n_conservative_values                             , &
         n_derivative_values                               , &
-        eos                                               , &
+        an_eos                                               , &
         flux_function                                     , &
         primitive_to_conservative_function                 ) result(element)
 
@@ -41,7 +41,7 @@ module five_equation_space_model_module
         real   (real_kind  ), intent(in) :: face_area
         integer(int_kind   ), intent(in) :: n_conservative_values
         integer(int_kind   ), intent(in) :: n_derivative_values
-        class  (mixture_eos), intent(in) :: eos
+        class  (eos), intent(in) :: an_eos
         real   (real_kind)               :: element        (2, n_conservative_values+n_derivative_values) ! 1 -> left, 2-> right
 
         interface
@@ -71,11 +71,11 @@ module five_equation_space_model_module
                 real(real_kind)             :: flux(size(left_conservative))
             end function flux_function
 
-            pure function primitive_to_conservative_function(primitive, eos) result(conservative)
+            pure function primitive_to_conservative_function(primitive, an_eos) result(conservative)
                 use typedef_module
-                use abstract_mixture_eos
+                use abstract_eos
                 real (real_kind  ), intent(in)  :: primitive   (:)
-                class(mixture_eos), intent(in)  :: eos
+                class(eos), intent(in)  :: an_eos
                 real (real_kind  ), allocatable :: conservative(:)
             end function
         end interface
@@ -125,11 +125,11 @@ module five_equation_space_model_module
         ! # compute conservative-variables
         lhc_conservative = primitive_to_conservative_function( &
             local_coordinate_lhc_primitive,                    &
-            eos                                                &
+            an_eos                                                &
         )
         rhc_conservative = primitive_to_conservative_function( &
             local_coordinate_rhc_primitive,                    &
-            eos                                                &
+            an_eos                                                &
         )
 
         ! # compute EoS, main velosity, and fluxs
@@ -144,7 +144,7 @@ module five_equation_space_model_module
             )
             lhc_density    = rho1 * z1 + rho2 * (1.d0 - z1)
             lhc_pressure   = p
-            lhc_soundspeed = eos%compute_soundspeed(p, lhc_density, z1)
+            lhc_soundspeed = an_eos%compute_soundspeed(p, lhc_density, z1)
             lhc_main_velocity = u
         end associate
         associate(                        &
@@ -158,7 +158,7 @@ module five_equation_space_model_module
             )
             rhc_density    = rho1 * z1 + rho2 * (1.d0 - z1)
             rhc_pressure   = p
-            rhc_soundspeed = eos%compute_soundspeed(p, rhc_density, z1)
+            rhc_soundspeed = an_eos%compute_soundspeed(p, rhc_density, z1)
             rhc_main_velocity = u
         end associate
 
@@ -228,8 +228,8 @@ module five_equation_space_model_module
             rhc_p       => rhc_primitive(6), &
             rhc_z1      => rhc_primitive(7)  &
         )
-            lhc_k = eos%compute_k(lhc_p, lhc_rho1, lhc_rho2, lhc_z1)
-            rhc_k = eos%compute_k(rhc_p, rhc_rho1, rhc_rho2, rhc_z1)
+            lhc_k = an_eos%compute_k(lhc_p, lhc_rho1, lhc_rho2, lhc_z1)
+            rhc_k = an_eos%compute_k(rhc_p, rhc_rho1, rhc_rho2, rhc_z1)
             element(1, 7) = element(1, 7) &
                           + (-lhc_z1 - lhc_k) * (-1.d0 / lhc_cell_volume) * numerical_velocity * face_area
             element(2, 7) = element(2, 7) &
