@@ -12,7 +12,7 @@ module abstract_configuration
         procedure(get_real_interface), pass(self), deferred :: get_real
         procedure(get_int_interface ), pass(self), deferred :: get_int
         procedure(get_bool_interface), pass(self), deferred :: get_bool
-        procedure(get_bool_interface), pass(self), deferred :: get_char
+        procedure(get_char_interface), pass(self), deferred :: get_char
 
         procedure(add_real_interface), pass(self), deferred :: add_real
         procedure(add_int_interface ), pass(self), deferred :: add_int
@@ -38,8 +38,8 @@ module abstract_configuration
             class    (configuration), intent(inout)            :: self
             character(len=*        ), intent(in   )            :: tag
             real     (real_kind    ), intent(inout)            :: value
-            logical                 , intent(inout), parameter :: found
-            real     (real_kind    ), intent(inout), parameter :: default
+            logical                 , intent(inout), optional  :: found
+            real     (real_kind    ), intent(in   ), optional  :: default
         end subroutine get_real_interface
 
         subroutine get_int_interface(self, tag, value, found, default)
@@ -48,8 +48,8 @@ module abstract_configuration
             class    (configuration), intent(inout)            :: self
             character(len=*        ), intent(in   )            :: tag
             integer  (int_kind     ), intent(inout)            :: value
-            logical                 , intent(inout), parameter :: found
-            integer  (int_kind     ), intent(inout), parameter :: default
+            logical                 , intent(inout), optional  :: found
+            integer  (int_kind     ), intent(in   ), optional  :: default
         end subroutine get_int_interface
 
         subroutine get_bool_interface(self, tag, value, found, default)
@@ -58,18 +58,18 @@ module abstract_configuration
             class    (configuration), intent(inout)            :: self
             character(len=*        ), intent(in   )            :: tag
             logical                 , intent(inout)            :: value
-            logical                 , intent(inout), parameter :: found
-            logical                 , intent(inout), parameter :: default
+            logical                 , intent(inout), optional  :: found
+            logical                 , intent(in   ), optional  :: default
         end subroutine get_bool_interface
 
         subroutine get_char_interface(self, tag, value, found, default)
             use typedef_module
             import configuration
-            class    (configuration), intent(inout)            :: self
-            character(len=*        ), intent(in   )            :: tag
-            character(len=:        ), intent(inout)            :: value
-            logical                 , intent(inout), parameter :: found
-            character(len=*        ), intent(inout), parameter :: default
+            class    (configuration), intent(inout)              :: self
+            character(len=*        ), intent(in   )              :: tag
+            character(len=:        ), intent(inout), allocatable :: value
+            logical                 , intent(inout), optional    :: found
+            character(len=*        ), intent(in   ), optional    :: default
         end subroutine get_char_interface
 
         subroutine add_real_interface(self, tag, value)
@@ -101,7 +101,7 @@ module abstract_configuration
             import configuration
             class    (configuration), intent(inout)            :: self
             character(len=*        ), intent(in   )            :: tag
-            character(len=:        ), intent(inout)            :: value
+            character(len=*        ), intent(inout)            :: value
         end subroutine add_char_interface
     end interface
 end module abstract_configuration

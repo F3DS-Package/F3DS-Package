@@ -26,7 +26,7 @@ module abstract_grid_parser
             use abstract_configuration
             import grid_parser
             class(grid_parser  ), intent(inout) :: self
-            class(configuration), intent(in   ) :: config
+            class(configuration), intent(inout) :: config
         end subroutine parse_interface
 
         subroutine close_interface(self)

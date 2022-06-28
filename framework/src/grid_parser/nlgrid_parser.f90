@@ -81,7 +81,7 @@ module class_nlgrid_parser
 
     subroutine parse(self, config)
         class(nlgrid_parser), intent(inout) :: self
-        class(configuration), intent(in   ) :: config
+        class(configuration), intent(inout) :: config
 
         integer(int_kind)  :: i,j,k,n
         integer(int_kind)  :: unit_number
@@ -89,15 +89,16 @@ module class_nlgrid_parser
 
         type(json_file) :: json
         character(len=:), allocatable :: error_msg
-        logical :: found
-        character(kind=json_CK,len=:), allocatable :: string_value
+        logical :: found, status_ok
+        character(len=:), allocatable :: string_value
 
         if(self%parsed)then
             call call_error("'parse' method of nlgrid_parser is already called. But you call 'parse' method.")
         end if
 
         ! Real a grid file
-        config%get_char("Grid.Filepath", string_value, found, "grid.nlgrid")
+        call config%get_char("Grid.Filepath", string_value, found, "grid.nlgrid")
+        if(.not. found) call write_warring("'Grid.Filepath' is not found in configuration you set. To be set default value.")
         open(newunit=unit_number, file=string_value, access = 'stream', form = 'unformatted', status = 'old')
         read(unit_number) self%imin, self%jmin, self%kmin
         read(unit_number) self%imax, self%jmax, self%kmax
@@ -162,7 +163,8 @@ module class_nlgrid_parser
         ! Read a boundary condition infomation
         call json%initialize()
 
-        config%get_char("Grid.Boundary condition filepath", string_value, found, "boundary_condition.json")
+        call config%get_char("Grid.Boundary condition filepath", string_value, found, "boundary_condition.json")
+        if(.not. found) call write_warring("'Grid.Boundary condition filepath' is not found in configuration you set. To be set default value.")
         call json%load(filename=string_value)
         if (json%failed()) then
             call json%check_for_errors(status_ok, error_msg)

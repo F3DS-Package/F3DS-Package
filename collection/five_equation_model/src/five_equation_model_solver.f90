@@ -25,7 +25,7 @@ program five_eq_model_solver
     ! Result file output
     use penf
     use vtk_fortran, only : vtk_file
-    use sytem_call_module
+    use system_call_module
     ! BC
     use five_equation_model_boundary_condition_module
     ! Measurement

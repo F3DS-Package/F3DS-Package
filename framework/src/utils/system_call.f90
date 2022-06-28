@@ -1,4 +1,4 @@
-module sytem_call_module
+module system_call_module
     implicit none
 
     private
@@ -11,4 +11,4 @@ module sytem_call_module
         character(len=*), intent(in) :: dir_name
         call system("if [ ! -d "//dir_name//" ]; then mkdir -p "//dir_name//"; fi")
     end subroutine
-end module sytem_call_module
+end module system_call_module

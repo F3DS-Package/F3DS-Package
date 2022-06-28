@@ -27,6 +27,10 @@ module class_cellsystem
     type, public :: cellsystem
         private
 
+        ! Time
+        real(real_kind) :: time
+        real(real_kind) :: time_increment
+
         ! Real cells only (NOT include points of ghost/dummy cells)
         integer(int_kind) :: num_points
 
@@ -112,7 +116,6 @@ module class_cellsystem
 
         ! ### Result writer ###
         procedure, public, pass(self) :: initialize_result_writer
-        procedure, public, pass(self) :: write_result
 
         ! ### Cellsystem reader ###
         procedure, public, pass(self) :: read
@@ -145,26 +148,16 @@ module class_cellsystem
     subroutine initialize_result_writer(self, parser, config)
         class(cellsystem   ), intent(inout) :: self
         class(result_writer), intent(inout) :: parser
-        class(configuration), intent(in   ) :: config
+        class(configuration), intent(inout) :: config
 
-        call parser%initialize(self%is_real_cell, self%cell_geometries, self%cell_types, config)
+        call parser%initialize(self%num_cells, self%num_points, self%is_real_cell, self%cell_geometries, self%cell_types, config)
     end subroutine initialize_result_writer
-
-    subroutine write_result(self, parser, scolar_variables, vector_variables, time)
-        class(cellsystem   ), intent(inout) :: self
-        class(result_writer), intent(inout) :: parser
-        real (real_kind    ), intent(in   ) :: scolar_variables(:,:)
-        real (real_kind    ), intent(in   ) :: vector_variables(:,:)
-        real (real_kind    ), intent(in   ) :: time
-
-        call parser%write(scolar_variables, vector_variables, time)
-    end subroutine write_result
 
     ! ### Cellsystem reader ###
     subroutine read(self, parser, config)
         class(cellsystem   ), intent(inout) :: self
         class(grid_parser  ), intent(inout) :: parser
-        class(configuration), intent(in   ) :: config
+        class(configuration), intent(inout) :: config
 
         integer(kind(boundary_type)), allocatable :: face_types(:)
 
@@ -184,7 +177,7 @@ module class_cellsystem
         ! get grid data
         call parser%get_cells          (self%cell_centor_positions, self%cell_volumes, self%is_real_cell)
         call parser%get_faces          (self%face_to_cell_indexs, self%face_normal_vectors, self%face_tangential1_vectors, self%face_tangential2_vectors, self%face_positions, self%face_areas)
-        call parser%get_cell_geometries(self%points, self%cell_geometries)
+        call parser%get_cell_geometries(self%points, self%cell_geometries, self%cell_types)
         call parser%get_boundaries     (face_types)
 
         ! assign boundary condition

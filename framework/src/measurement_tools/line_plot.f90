@@ -1,6 +1,6 @@
 module line_plot_class
     use typedef_module
-    use sytem_call_module
+    use system_call_module
 
     implicit none
 
