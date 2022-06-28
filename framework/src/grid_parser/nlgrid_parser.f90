@@ -46,9 +46,9 @@ module class_nlgrid_parser
         real(real_kind), private, allocatable :: y_poss_cell_edge(:,:,:)
         real(real_kind), private, allocatable :: z_poss_cell_edge(:,:,:)
 
-        integer(kind(boundary_type)), private :: x_plus_direction, x_minus_direction
-        integer(kind(boundary_type)), private :: y_plus_direction, y_minus_direction
-        integer(kind(boundary_type)), private :: z_plus_direction, z_minus_direction
+        integer(kind(face_type)), private :: x_plus_direction, x_minus_direction
+        integer(kind(face_type)), private :: y_plus_direction, y_minus_direction
+        integer(kind(face_type)), private :: z_plus_direction, z_minus_direction
 
         logical, private :: parsed = .false.
 
@@ -180,33 +180,33 @@ module class_nlgrid_parser
 
         call json%get("Xi plus direction", string_value, found)
         if(.not. found) call call_error("Keyword 'Xi plus direction' is not found.")
-        self%x_plus_direction = string_to_boundary_type(string_value)
-        if(self%x_plus_direction == unknown_boundary_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
+        self%x_plus_direction = string_to_face_type(string_value)
+        if(self%x_plus_direction == unknown_face_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
 
         call json%get("Xi minus direction", string_value, found)
         if(.not. found) call call_error("Keyword 'Xi minus direction' is not found.")
-        self%x_minus_direction = string_to_boundary_type(string_value)
-        if(self%x_minus_direction == unknown_boundary_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
+        self%x_minus_direction = string_to_face_type(string_value)
+        if(self%x_minus_direction == unknown_face_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
 
         call json%get("Eta plus direction", string_value, found)
         if(.not. found) call call_error("Keyword 'Eta plus direction' is not found.")
-        self%y_plus_direction = string_to_boundary_type(string_value)
-        if(self%y_plus_direction == unknown_boundary_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
+        self%y_plus_direction = string_to_face_type(string_value)
+        if(self%y_plus_direction == unknown_face_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
 
         call json%get("Eta minus direction", string_value, found)
         if(.not. found) call call_error("Keyword 'Eta minus direction' is not found.")
-        self%y_minus_direction = string_to_boundary_type(string_value)
-        if(self%y_minus_direction == unknown_boundary_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
+        self%y_minus_direction = string_to_face_type(string_value)
+        if(self%y_minus_direction == unknown_face_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
 
         call json%get("Zeta plus direction", string_value, found)
         if(.not. found) call call_error("Keyword 'Zeta plus direction' is not found.")
-        self%z_plus_direction = string_to_boundary_type(string_value)
-        if(self%z_plus_direction == unknown_boundary_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
+        self%z_plus_direction = string_to_face_type(string_value)
+        if(self%z_plus_direction == unknown_face_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
 
         call json%get("Zeta minus direction", string_value, found)
         if(.not. found) call call_error("Keyword 'Zeta minus direction' is not found.")
-        self%z_minus_direction = string_to_boundary_type(string_value)
-        if(self%z_minus_direction == unknown_boundary_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
+        self%z_minus_direction = string_to_face_type(string_value)
+        if(self%z_minus_direction == unknown_face_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
 
         call json%destroy()
 
@@ -283,7 +283,7 @@ module class_nlgrid_parser
 
     function get_number_of_boundary_faces(self, type) result(n)
         class  (nlgrid_parser)      , intent(in) :: self
-        integer(kind(boundary_type)), intent(in) :: type
+        integer(kind(face_type)), intent(in) :: type
 
         integer(int_kind) :: n
 
@@ -885,7 +885,7 @@ module class_nlgrid_parser
 
     subroutine get_boundaries(self, face_types)
         class  (nlgrid_parser      ), intent(in   ) :: self
-        integer(kind(boundary_type)), intent(inout) :: face_types(:)
+        integer(kind(face_type)), intent(inout) :: face_types(:)
 
         integer(int_kind) :: i, j, k
         integer(int_kind) :: face_index

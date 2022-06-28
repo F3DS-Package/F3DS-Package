@@ -218,7 +218,7 @@ module class_cellsystem
         class(grid_parser  ), intent(inout) :: parser
         class(configuration), intent(inout) :: config
 
-        integer(kind(boundary_type)), allocatable :: face_types(:)
+        integer(kind(face_type)), allocatable :: face_types(:)
 
         ! parse grid file
         call parser%parse(config)
@@ -229,9 +229,9 @@ module class_cellsystem
         ! allocate grid
         call self%initialise_faces              (parser%get_number_of_faces (), parser%get_number_of_ghost_cells())
         call self%initialise_cells              (parser%get_number_of_points(), parser%get_number_of_cells      ())
-        call self%initialise_boundary_references(parser%get_number_of_boundary_faces(outflow_boundary_type  ), &
-                                                 parser%get_number_of_boundary_faces(slipwall_boundary_type ), &
-                                                 parser%get_number_of_boundary_faces(symmetric_boundary_type))
+        call self%initialise_boundary_references(parser%get_number_of_boundary_faces(outflow_face_type  ), &
+                                                 parser%get_number_of_boundary_faces(slip_wall_face_type ), &
+                                                 parser%get_number_of_boundary_faces(symmetric_face_type))
 
         ! get grid data
         call parser%get_cells          (self%cell_centor_positions, self%cell_volumes, self%is_real_cell)
@@ -318,7 +318,7 @@ module class_cellsystem
     ! ### Inner utils ###
     subroutine assign_boundary(self, face_types)
         class  (cellsystem         ), intent(inout) :: self
-        integer(kind(boundary_type)), intent(in   ) :: face_types(:)
+        integer(kind(face_type)), intent(in   ) :: face_types(:)
 
         integer(int_kind) :: index, outflow_index, slipwall_index, symmetric_index
 
@@ -327,13 +327,13 @@ module class_cellsystem
         symmetric_index = 1
 
         do index = 1, self%num_faces, 1
-            if (face_types(index) == outflow_boundary_type) then
+            if (face_types(index) == outflow_face_type) then
                 self%outflow_face_indexes(outflow_index) = index
                 outflow_index = outflow_index + 1
-            else if (face_types(index) == slipwall_boundary_type) then
+            else if (face_types(index) == slip_wall_face_type) then
                 self%slipwall_face_indexes(slipwall_index) = index
                 slipwall_index = slipwall_index + 1
-            else if (face_types(index) == symmetric_boundary_type) then
+            else if (face_types(index) == symmetric_face_type) then
                 self%symmetric_face_indexes(symmetric_index) = index
                 symmetric_index = symmetric_index + 1
             else
