@@ -132,7 +132,7 @@ program five_eq_model_solver
         if(cells_is_real_cell(index))then
             n_cell_points = cell_geometries(index)%get_number_of_points()
             do cell_point_index = 1, n_cell_points, 1
-                vtk_connect((vtk_index - 1) * 8 + cell_point_index) = cell_geometries(index)%get_point_id(cell_point_index)
+                vtk_connect((vtk_index - 1) * 8 + cell_point_index) = cell_geometries(index)%get_point_id(cell_point_index) - 1 ! convert to vtk point numbering (beginning index is 0)
             end do
             vtk_cell_type(vtk_index) = 12_I1P
             vtk_offset   (vtk_index) = offset_incriment
@@ -178,7 +178,7 @@ program five_eq_model_solver
         if (mod(timestep, max_timestep / n_output_file) == 0) then
             write(vtk_filename, "(a, i5.5, a)") "result/field/", file_output_counter, ".vtu"
             print *, "write vtk "//vtk_filename//"..."
-            vtk_error = a_vtk_file%initialize                   (format="binary", filename=vtk_filename, mesh_topology="UnstructuredGrid")
+            vtk_error = a_vtk_file%initialize                   (format="raw", filename=vtk_filename, mesh_topology="UnstructuredGrid")
             vtk_error = a_vtk_file%xml_writer%write_piece       (np=n_output_points, nc=n_output_cells)
             vtk_error = a_vtk_file%xml_writer%write_geo         (np=n_output_points, nc=n_output_cells, x=points(:, 1), y=points(:, 2), z=points(:, 3))
             vtk_error = a_vtk_file%xml_writer%write_connectivity(nc=n_output_cells, connectivity=vtk_connect, offset=vtk_offset, cell_type=vtk_cell_type)
