@@ -58,7 +58,8 @@ module class_vtk_result_writer
 
         integer(int_kind ) :: index, vtk_index, cell_point_index
         integer(int_kind ) :: num_cell_points, offset_incriment
-        real   (real_kind) :: frequency
+        integer(int_kind ) :: n_output
+        real   (real_kind) :: end_time
         logical :: found
 
         ! count number of cells
@@ -80,7 +81,8 @@ module class_vtk_result_writer
             if(is_real_cell(index))then
                 num_cell_points = cell_geometries(index)%get_number_of_points()
                 do cell_point_index = 1, num_cell_points, 1
-                    self%connect((vtk_index - 1) * 8 + cell_point_index) = cell_geometries(index)%get_point_id(cell_point_index)
+                    ! Convert to VTK point number. We need {@code point_id} - 1.
+                    self%connect((vtk_index - 1) * 8 + cell_point_index) = cell_geometries(index)%get_point_id(cell_point_index) - 1
                 end do
                 self%cell_type(vtk_index) = cell_types(index)
                 offset_incriment = offset_incriment + num_cell_points
@@ -91,9 +93,11 @@ module class_vtk_result_writer
         end do
         self%n_output_points = num_points
         self%n_output_file   = 0
-        call config%get_real("Result writer.Output frequency", frequency, found, 1.d3)
-        if(.not. found) call write_warring("'Result writer.Output frequency' is not found in configration you set. To be set dafault value.")
-        self%output_timespan = 1.d0 / frequency
+        call config%get_int("Result writer.Number of output files", n_output, found, 100)
+        if(.not. found) call write_warring("'Result writer.Number of output files' is not found in configration you set. To be set dafault value.")
+        call config%get_real("Time stepping.End time", end_time, found, 0.d0)
+        if(.not. found) call call_error("'Time stepping.End time' is not found in configration you set.")
+        self%output_timespan = end_time / dble(n_output)
         self%next_output_time = 0.d0
 
         ! make directory
@@ -118,7 +122,7 @@ module class_vtk_result_writer
             self%vtk_error = self%a_vtk_file%xml_writer%write_geo         (np=self%n_output_points, nc=self%n_output_cells, x=points(:, 1), y=points(:, 2), z=points(:, 3))
             self%vtk_error = self%a_vtk_file%xml_writer%write_connectivity(nc=self%n_output_cells, connectivity=self%connect, offset=self%offset, cell_type=self%cell_type)
             self%vtk_error = self%a_vtk_file%xml_writer%write_dataarray   (location="cell", action="open")
-            self%vtk_error = self%a_vtk_file%xml_writer%write_dataarray(data_name="cell id", x=self%cell_id)
+            self%vtk_error = self%a_vtk_file%xml_writer%write_dataarray   (data_name="cell id", x=self%cell_id)
 
             self%file_is_opened = .true.
         end if
