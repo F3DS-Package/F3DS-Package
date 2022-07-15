@@ -10,7 +10,8 @@ program five_eq_model_solver
     ! Scheme
     use second_order_tvd_rk_module
     use third_order_tvd_rk_module
-    use jiang_weno5_module
+    use weno5_js_module
+    use mp_weno5_js_module
     use five_equation_model_rho_thinc_module
     use five_equation_space_model_module
     use five_equation_model_hllc_module
@@ -87,13 +88,13 @@ program five_eq_model_solver
     call a_init_parser%close()
 
     ! sensor
-    call pressure_sensor%initialize("sensor.dat", 5.d3, 13633)
+    call pressure_sensor%initialize("sensor.dat", 5.d3, 10647)
 
     ! measurement surface
     normal(1) = 0.d0
     normal(2) = 1.d0
     normal(3) = 0.d0
-    call surface%initialize("surface.dat", 5.d3, 10.d0+0.04d0, 10.d0-0.04d0, 1.d0, 0.d0, 7.d0, 0.d0, normal, faces_to_cell_index, faces_position, faces_normal_vector, cells_is_real_cell)
+    call surface%initialize("surface.dat", 5.d3, 12.d0+0.04d0, 12.d0-0.04d0, 1.d0, 0.d0, 7.d0, 0.d0, normal, faces_to_cell_index, faces_position, faces_normal_vector, cells_is_real_cell)
 
     ! line plot
     allocate(line_ids(get_number_of_cells()))
@@ -128,7 +129,7 @@ program five_eq_model_solver
         if(cells_is_real_cell(index))then
             n_cell_points = cell_geometries(index)%get_number_of_points()
             do cell_point_index = 1, n_cell_points, 1
-                vtk_connect((vtk_index - 1) * 8 + cell_point_index) = cell_geometries(index)%get_point_id(cell_point_index)
+                vtk_connect((vtk_index - 1) * 8 + cell_point_index) = cell_geometries(index)%get_point_id(cell_point_index) - 1
             end do
             vtk_cell_type(vtk_index) = 12_I1P
             vtk_offset   (vtk_index) = offset_incriment
@@ -223,7 +224,7 @@ program five_eq_model_solver
             get_number_of_symmetric_faces()          , &
             time_increment                           , &
             eos                                      , &
-            reconstruct_rho_thinc                    , &
+            reconstruct_mp_weno5_js                  , &
             compute_space_element_five_equation_model, &
             compute_flux_five_equation_model_hllc    , &
             primitive_to_conservative                , &

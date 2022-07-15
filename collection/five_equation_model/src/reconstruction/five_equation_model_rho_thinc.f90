@@ -9,7 +9,9 @@ module five_equation_model_rho_thinc_module
 
     private
 
-    real(real_kind)  , parameter :: specified_slope_parameter_ = 0.5d0
+    real(real_kind), parameter :: specified_slope_parameter_ = 0.5d0
+    real(real_kind), parameter :: epsilon_ = 5.d-5
+
     integer(int_kind), parameter :: num_ghost_cells_ = 3
 
     public :: reconstruct_rho_thinc
@@ -173,17 +175,20 @@ module five_equation_model_rho_thinc_module
             end function integrated_element_function
         end interface
 
-        integer(int_kind )              :: lhc_index, rhc_index
+        integer(int_kind )              :: lhc_index, rhc_index, llhc_index, rrhc_index
         real   (real_kind), allocatable :: lhc_primitive   (:)
         real   (real_kind), allocatable :: rhc_primitive   (:)
 
         real   (real_kind)              :: lhc_interface_location, lhc_sign, lhc_a, lhc_b, lhc_d, lhc_e
         real   (real_kind)              :: rhc_interface_location, rhc_sign, rhc_a, rhc_b, rhc_d, rhc_e
+        logical                         :: lhc_is_monotonicity, rhc_is_monotonicity
 
-        lhc_index = face_to_cell_index(face_index, num_ghost_cells_+0)
-        rhc_index = face_to_cell_index(face_index, num_ghost_cells_+1)
+        llhc_index = face_to_cell_index(face_index, num_ghost_cells_-1)
+        lhc_index  = face_to_cell_index(face_index, num_ghost_cells_+0)
+        rhc_index  = face_to_cell_index(face_index, num_ghost_cells_+1)
+        rrhc_index = face_to_cell_index(face_index, num_ghost_cells_+2)
 
-        ! u, v, w, and p are reconstructed by minmod MUSCL
+        ! u, v, w, and p are reconstructed
         lhc_primitive = reconstruct_lhc_minmod_muscl3(    &
             primitive_values_set                       , &
             face_to_cell_index                         , &
@@ -201,16 +206,20 @@ module five_equation_model_rho_thinc_module
 
         ! # rho1, rho2, and z1 are reconstructed by rho-THINC
         ! ## LHC
-        lhc_sign = sign(1.d0, primitive_values_set(rhc_index, 7) - primitive_values_set(lhc_index, 7))
+        lhc_sign = sign(1.d0, primitive_values_set(rhc_index, 7) - primitive_values_set(llhc_index, 7))
+        lhc_is_monotonicity = (primitive_values_set(rhc_index, 7) - primitive_values_set(lhc_index, 7)) * (primitive_values_set(lhc_index, 7) - primitive_values_set(llhc_index, 7)) > 0.d0
         associate(                                          &
             lhc_rho1 => primitive_values_set(lhc_index, 1), &
             lhc_rho2 => primitive_values_set(lhc_index, 2), &
             lhc_z1   => primitive_values_set(lhc_index, 7)  &
         )
-            lhc_a    = exp (2.d0 * lhc_sign * specified_slope_parameter_)
-            lhc_b    = exp (2.d0 * lhc_sign * specified_slope_parameter_ * lhc_z1)
-            ! Following condition means "lhc_z1 = rhc_z1 = 1 or lhc_z1 = rhc_z1 = 0". If this condition is NOT satisfied, we use MUSCL.
-            if ((.not. lhc_b == 1.d0) .and. (.not. lhc_a == lhc_b)) then
+            if (lhc_z1 < epsilon_) then
+                lhc_primitive(7) = 0.d0
+            else if (lhc_z1 > 1.d0 - epsilon_) then
+                lhc_primitive(7) = 1.d0
+            else if (lhc_is_monotonicity) then
+                lhc_a    = exp (2.d0 * lhc_sign * specified_slope_parameter_)
+                lhc_b    = exp (2.d0 * lhc_sign * specified_slope_parameter_ * lhc_z1)
                 lhc_interface_location = 1.d0 / (2.d0 * specified_slope_parameter_) * log((lhc_b - 1.d0) / (lhc_a - lhc_b))
                 lhc_d = exp(2.d0 * specified_slope_parameter_ * lhc_interface_location)
                 lhc_e = log((lhc_a * lhc_d + 1.d0)**2.d0 / (lhc_a * (lhc_d + 1.d0)**2.d0))
@@ -222,16 +231,20 @@ module five_equation_model_rho_thinc_module
             end if
         end associate
         ! ## RHC
-        rhc_sign = sign(1.d0, primitive_values_set(rhc_index, 7) - primitive_values_set(lhc_index, 7))
+        rhc_sign = sign(1.d0, primitive_values_set(rrhc_index, 7) - primitive_values_set(lhc_index, 7))
+        rhc_is_monotonicity = (primitive_values_set(rrhc_index, 7) - primitive_values_set(rhc_index, 7)) * (primitive_values_set(rhc_index, 7) - primitive_values_set(lhc_index, 7)) > 0.d0
         associate(                                          &
             rhc_rho1 => primitive_values_set(rhc_index, 1), &
             rhc_rho2 => primitive_values_set(rhc_index, 2), &
             rhc_z1   => primitive_values_set(rhc_index, 7)  &
         )
-            rhc_a    = exp (2.d0 * rhc_sign * specified_slope_parameter_)
-            rhc_b    = exp (2.d0 * rhc_sign * specified_slope_parameter_ * rhc_z1)
-            ! Following condition means "lhc_z1 = rhc_z1 = 1 or lhc_z1 = rhc_z1 = 0". If this condition is NOT satisfied, we use MUSCL.
-            if ((.not. rhc_b == 1.d0) .and. (.not. rhc_a == rhc_b)) then
+            if (rhc_z1 < epsilon_) then
+                rhc_primitive(7) = 0.d0
+            else if (rhc_z1 > 1.d0 - epsilon_) then
+                rhc_primitive(7) = 1.d0
+            else if (rhc_is_monotonicity) then
+                rhc_a    = exp (2.d0 * rhc_sign * specified_slope_parameter_)
+                rhc_b    = exp (2.d0 * rhc_sign * specified_slope_parameter_ * rhc_z1)
                 rhc_interface_location = 1.d0 / (2.d0 * specified_slope_parameter_) * log((rhc_b - 1.d0) / (rhc_a - rhc_b))
                 rhc_d = exp(2.d0 * specified_slope_parameter_ * rhc_interface_location)
                 rhc_e = log((rhc_a * rhc_d + 1.d0)**2.d0 / (rhc_a * (rhc_d + 1.d0)**2.d0))

@@ -422,8 +422,6 @@ module second_order_tvd_rk_module
             )
             residual_set(lhc_index, :) = residual_set(lhc_index, :) + element(1, 1:n_conservative_values)
             residual_set(rhc_index, :) = residual_set(rhc_index, :) + element(2, 1:n_conservative_values)
-            derivative_variables_set(lhc_index, :) = derivative_variables_set(lhc_index, :) + element(1, n_conservative_values+1:n_conservative_values+n_derivative_values)
-            derivative_variables_set(rhc_index, :) = derivative_variables_set(rhc_index, :) + element(2, n_conservative_values+1:n_conservative_values+n_derivative_values)
         end do
 
 !$omp parallel do private(i)
@@ -432,7 +430,6 @@ module second_order_tvd_rk_module
                 + time_increment * residual_set(i, :)
             primitive_variables_set(i, :) = conservative_to_primitive_function(stage1_conservative_variables_set(i, :), eos)
             residual_set(i, :) = 0.d0
-            derivative_variables_set(i, :) = 0.d0
         end do
 
         err = set_boundary_condition_function( &
@@ -474,8 +471,6 @@ module second_order_tvd_rk_module
             )
             residual_set(lhc_index, :) = residual_set(lhc_index, :) + element(1, 1:n_conservative_values)
             residual_set(rhc_index, :) = residual_set(rhc_index, :) + element(2, 1:n_conservative_values)
-            derivative_variables_set(lhc_index, :) = derivative_variables_set(lhc_index, :) + element(1, n_conservative_values+1:n_conservative_values+n_derivative_values)
-            derivative_variables_set(rhc_index, :) = derivative_variables_set(rhc_index, :) + element(2, n_conservative_values+1:n_conservative_values+n_derivative_values)
         end do
 
 !$omp parallel do private(i)

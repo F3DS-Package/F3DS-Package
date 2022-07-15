@@ -14,6 +14,9 @@ module mp_weno5_js_module
 
     integer(int_kind) :: num_ghost_cells_ = 3
 
+    ! WENO
+    real   (real_kind) :: epsilon_ = 1.d-6
+
     ! monotonicity-preserving (MP)
     real   (real_kind) :: alpha_ = 10.d0
     real   (real_kind) :: beta_  = 4.d0
@@ -42,80 +45,253 @@ module mp_weno5_js_module
         c = v_p1 - 2.d0 * v + v_m1
     end function curvature_measure
 
-    pure function compute_weights(s, v_m2, v_m1, v, v_p1, v_p2) result(w)
-        real(real_kind), intent(in) :: s, v_m2, v_m1, v, v_p1, v_p2
+    ! See Appendix C in [Coralic 2014, JCP].
+    !  i-5/2     i-3/2     i-1/2     i+1/2     i+3/2     i+5/2
+    !  p_m3      p_m2      p_m1       p        p_p1      p_p2
+    !   *---------*---------*---------*---------*---------*
+    !   |         |         |         |         |         |
+    !   |    o    |    o    |    o    x    o    |    o    |
+    !   |   v_m2  |   v_m1  |    v    |   v_p1  |   v_p2  |
+    !   *---------*---------*---------*---------*---------*
+    ! I will rewrite follows to pre-calculate coefficients and weights.
+    pure function compute_ideal_weights_left_side(p_m3, p_m2, p_m1, p, p_p1, p_p2) result(g)
+        real(real_kind), intent(in) :: p_m3(3), p_m2(3), p_m1(3), p(3), p_p1(3), p_p2(3) ! face position
+        real(real_kind)             :: g(3)
+
+        g(1) = vector_multiply((p    - p_m3), (p    - p_m2)) &
+             / vector_multiply((p_p2 - p_m3), (p_p2 - p_m2))
+        g(3) = vector_multiply((p_p1 - p   ), (p_p2 - p   )) &
+             / vector_multiply((p_p1 - p_m3), (p_p2 - p_m3))
+        g(2) = 1.0d0 - g(1) - g(3)
+    end function compute_ideal_weights_left_side
+
+    pure function compute_indicator_coefficients_left_side(p_m3, p_m2, p_m1, p, p_p1, p_p2) result(b_coef)
+        real(real_kind), intent(in) :: p_m3(3), p_m2(3), p_m1(3), p(3), p_p1(3), p_p2(3) ! face position
+        real(real_kind)             :: b_coef(3,3)
+
+        b_coef(1,1) = (10.d0*vector_squared(p - p_m1) + vector_multiply((p - p_m1), (p_p1 - p_m1) + (p_p2 - p)) + vector_squared((p_p1 - p_m1) + (p_p2 - p))) &
+                    / vector_multiply((p_p1 - p_m1), (p_p2 - p_m1))**2.d0
+        b_coef(1,2) = -(19.d0*vector_squared(p - p_m1) - vector_multiply((p - p_m1), (p_p2 - p)) + 2.d0*vector_multiply((p_p1 - p_m1), ((p_p1 - p_m1) + (p_p2 - p)))) &
+                    / (vector_multiply((p_p1 - p_m1), (p_p2 - p))*vector_squared(p_p2 - p_m1))
+        b_coef(1,3) = (10.d0*vector_squared(p - p_m1) + vector_multiply((p - p_m1), (p_p1 - p)) + vector_squared(p_p1 - p)) &
+                    / vector_multiply((p_p2 - p_m1), (p_p2 - p))**2.d0
+
+        b_coef(2,1) = -(vector_multiply((p - p_m1), ((p_m1 - p_m2) + 20.d0*(p - p_m1))) - vector_multiply((p_p1 - p_m1), (2.d0*(p_m1 - p_m2) + (p - p_m1)))) &
+                    / (vector_multiply((p - p_m2), (p_p1 - p_m1))*vector_squared(p_p1 - p_m2))
+        b_coef(2,2) = (10.d0*vector_squared(p - p_m1) + vector_multiply((p - p_m1), (p_p1 - p)) + vector_squared(p_p1 - p)) &
+                    / vector_multiply((p - p_m2), (p_p1 - p_m2))**2.d0
+        b_coef(2,3) = (10.d0*vector_squared(p - p_m1) + vector_multiply((p_m1 - p_m2), (p - p_m1)) + vector_squared(p_m1 - p_m2)) &
+                    / vector_multiply((p_p1 - p_m2), (p_p1 - p_m1))**2.d0
+
+        b_coef(3,1) = (12.d0*vector_squared(p - p_m1) + 3.d0*vector_multiply((p - p_m1), ((p_m1 - p_m3) + (p_m1 - p_m2))) + vector_squared((p_m1 - p_m3) + (p_m1 - p_m2))) &
+                    / vector_multiply((p - p_m3), (p - p_m2))**2.d0
+        b_coef(3,2) = (-19.d0*vector_squared(p - p_m1) - vector_multiply((p_m1 - p_m3), (p - p_m1)) + 2.d0*vector_multiply((p - p_m2), (p_m1 - p_m3) + (p - p_m2))) &
+                    / (vector_multiply((p_m1 - p_m3), (p - p_m2))*vector_squared(p - p_m3))
+        b_coef(3,3) = (10.d0*vector_squared(p - p_m1) + vector_multiply((p_m1 - p_m2), (p - p_m1)) + vector_squared(p_m1 - p_m2)) &
+                    / vector_multiply((p_m1 - p_m3), (p - p_m3))**2.d0
+
+        b_coef(:,:) =  b_coef(:,:) * 4.d0 * vector_squared(p - p_m1)
+    end function compute_indicator_coefficients_left_side
+
+    pure function compute_polynomials_coefficients_left_side(p_m3, p_m2, p_m1, p, p_p1, p_p2) result(p_coef)
+        real(real_kind), intent(in) :: p_m3(3), p_m2(3), p_m1(3), p(3), p_p1(3), p_p2(3) ! face position
+        real(real_kind)             :: p_coef(3,2)
+
+        p_coef(1,1) = + vector_multiply((p    - p_m1), ((p_p1 - p_m1) + (p_p2 - p))) &
+                      / vector_multiply((p_p1 - p_m1), (p_p2 - p_m1))
+        p_coef(1,2) = - vector_multiply((p    - p_m1), (p_p1 - p   )) &
+                      / vector_multiply((p_p2 - p_m1), (p_p2 - p   ))
+        p_coef(2,1) = + vector_multiply((p    - p_m1), (p_p1 - p   )) &
+                      / vector_multiply((p    - p_m2), (p_p1 - p_m2))
+        p_coef(2,2) = + vector_multiply((p    - p_m2), (p    - p_m1)) &
+                      / vector_multiply((p_p1 - p_m2), (p_p1 - p_m1))
+        p_coef(3,1) = - vector_multiply((p    - p_m2), (p    - p_m1)) &
+                      / vector_multiply((p_m1 - p_m3), (p    - p_m3))
+        p_coef(3,2) = + vector_multiply((p    - p_m1), ((p - p_m3) + (p - p_m2))) &
+                      / vector_multiply((p    - p_m3), (p    - p_m2))
+    end function compute_polynomials_coefficients_left_side
+
+    pure function compute_weights_left_side(v_m2, v_m1, v, v_p1, v_p2, g, b_coef) result(w)
+        real(real_kind), intent(in) :: v_m2, v_m1, v, v_p1, v_p2 ! value
+        real(real_kind), intent(in) :: g(3), b_coef(3,3)
         real(real_kind)             :: w(3)
-        real(real_kind)             :: b(3), g(3)
+        real(real_kind)             :: b(3)
         real(real_kind)             :: total_w
 
-        if(s>0)then ! left-side
-            g(1) = 0.1d0
-            g(2) = 0.6d0
-            g(3) = 0.3d0
-        else
-            g(1) = 0.3d0
-            g(2) = 0.6d0
-            g(3) = 0.1d0
-        endif
-        b(1) = (13.d0 / 12.d0) * (v_m2 - 2.d0 * v_m1 + v)**2.d0 &
-             + (1.d0  / 4.d0 ) * (v_m2 - 4.d0 * v_m1 + 3.d0 * v)**2.d0
-        b(2) = (13.d0 / 12.d0) * (v_m1 - 2.d0 * v + v_p1)**2.d0 &
-             + (1.d0  / 4.d0 ) * (v_m1 - v_p1)**2.d0
-        b(3) = (13.d0 / 12.d0) * (v - 2.d0 * v_p1 + v_p2)**2.d0 &
-             + (1.d0  / 4.d0 ) * (3.d0 * v - 4.d0 * v_p1 + v_p2)**2.d0
-        w(1) = g(1) / (b(1) + 1.d-8)**2.d0
-        w(2) = g(2) / (b(2) + 1.d-8)**2.d0
-        w(3) = g(3) / (b(3) + 1.d-8)**2.d0
+        b(1) = b_coef(1,1) * (v_p1 - v)**2.d0 &
+             + b_coef(1,2) * (v_p1 - v)*(v_p2 - v_p1) &
+             + b_coef(1,3) * (v_p2 - v_p1)**2.d0
+        b(2) = b_coef(2,1) * (v - v_m1)*(v_p1 - v) &
+             + b_coef(2,2) * (v - v_m1)**2.d0 &
+             + b_coef(2,3) * (v_p1 - v)**2.d0
+        b(3) = b_coef(3,1) * (v - v_m1)**2.d0 &
+             + b_coef(3,2) * (v_m1 - v_m2)*(v - v_m1) &
+             + b_coef(3,3) * (v_m1 - v_m2)**2.d0
+
+        w(1) = g(1) / (b(1) + epsilon_)**2.d0
+        w(2) = g(2) / (b(2) + epsilon_)**2.d0
+        w(3) = g(3) / (b(3) + epsilon_)**2.d0
         total_w = w(1) + w(2) + w(3)
         w(1) = w(1) / total_w
         w(2) = w(2) / total_w
         w(3) = w(3) / total_w
-    end function compute_weights
+    end function compute_weights_left_side
 
-    pure function compute_polynomials(s, v_m2, v_m1, v, v_p1, v_p2) result(p)
-        real(real_kind), intent(in) :: s, v_m2, v_m1, v, v_p1, v_p2
+    pure function compute_polynomials_left_side(v_m2, v_m1, v, v_p1, v_p2, p_coef) result(p)
+        real(real_kind), intent(in) :: v_m2, v_m1, v, v_p1, v_p2       ! value
+        real(real_kind), intent(in) :: p_coef(3,2)
         real(real_kind)             :: p(3)
 
-        if(s>0)then ! left-side
-            p(1) =  1.d0 / 3.d0 * v_m2 - 7.d0 / 6.d0 * v_m1 + 11.d0 / 6.d0 * v
-            p(2) = -1.d0 / 6.d0 * v_m1 + 5.d0 / 6.d0 * v    + 1.d0  / 3.d0 * v_p1
-            p(3) =  1.d0 / 3.d0 * v    + 5.d0 / 6.d0 * v_p1 - 1.d0  / 6.d0 * v_p2
-        else
-            p(1) = -1.d0  / 6.d0 * v_m2 + 5.d0 / 6.d0 * v_m1 + 1.d0 / 3.d0 * v
-            p(2) =  1.d0  / 3.d0 * v_m1 + 5.d0 / 6.d0 * v    - 1.d0 / 6.d0 * v_p1
-            p(3) =  11.d0 / 6.d0 * v    - 7.d0 / 6.d0 * v_p1 + 1.d0 / 3.d0 * v_p2
-        endif
-    end function compute_polynomials
+        p(1) = v + p_coef(1,1) * (v_p1 - v)    + p_coef(1,2) * (v_p2 - v_p1)
+        p(2) = v + p_coef(2,1) * (v - v_m1)    + p_coef(2,2) * (v_p1 - v)
+        p(3) = v + p_coef(3,1) * (v_m1 - v_m2) + p_coef(3,2) * (v - v_m1)
+    end function compute_polynomials_left_side
+
+    ! See Appendix C in [Coralic 2014, JCP].
+    !  i-5/2     i-3/2     i-1/2     i+1/2     i+3/2     i+5/2
+    !  p_m3      p_m2      p_m1       p        p_p1      p_p2
+    !   *---------*---------*---------*---------*---------*
+    !   |         |         |         |         |         |
+    !   |    o    |    o    x    o    |    o    |    o    |
+    !   |   v_m2  |   v_m1  |    v    |   v_p1  |   v_p2  |
+    !   *---------*---------*---------*---------*---------*
+    ! I will rewrite follows to pre-calculate coefficients and weights.
+    pure function compute_ideal_weights_right_side(p_m3, p_m2, p_m1, p, p_p1, p_p2) result(g)
+        real(real_kind), intent(in) :: p_m3(3), p_m2(3), p_m1(3), p(3), p_p1(3), p_p2(3) ! face position
+        real(real_kind)             :: g(3)
+
+        g(1) = vector_multiply((p_m1 - p_m3), (p_m1 - p_m2)) &
+             / vector_multiply((p_p2 - p_m3), (p_p2 - p_m2))
+        g(3) = vector_multiply((p_p1 - p_m1), (p_p2 - p_m1)) &
+             / vector_multiply((p_p1 - p_m3), (p_p2 - p_m3))
+        g(2) = 1.0d0 - g(1) - g(3)
+    end function compute_ideal_weights_right_side
+
+    pure function compute_indicator_coefficients_right_side(p_m3, p_m2, p_m1, p, p_p1, p_p2) result(b_coef)
+        real(real_kind), intent(in) :: p_m3(3), p_m2(3), p_m1(3), p(3), p_p1(3), p_p2(3) ! face position
+        real(real_kind)             :: b_coef(3,3)
+
+        b_coef(1,1) = (10.d0*vector_squared(p - p_m1) + vector_multiply((p - p_m1), (p_p1 - p_m1) + (p_p2 - p)) + vector_squared((p_p1 - p_m1) + (p_p2 - p))) &
+                    / vector_multiply((p_p1 - p_m1), (p_p2 - p_m1))**2.d0
+        b_coef(1,2) = -(19.d0*vector_squared(p - p_m1) - vector_multiply((p - p_m1), (p_p2 - p)) + 2.d0*vector_multiply((p_p1 - p_m1), ((p_p1 - p_m1) + (p_p2 - p)))) &
+                    / (vector_multiply((p_p1 - p_m1), (p_p2 - p))*vector_squared(p_p2 - p_m1))
+        b_coef(1,3) = (10.d0*vector_squared(p - p_m1) + vector_multiply((p - p_m1), (p_p1 - p)) + vector_squared(p_p1 - p)) &
+                    / vector_multiply((p_p2 - p_m1), (p_p2 - p))**2.d0
+
+        b_coef(2,1) = -(vector_multiply((p - p_m1), ((p_m1 - p_m2) + 20.d0*(p - p_m1))) - vector_multiply((p_p1 - p_m1), (2.d0*(p_m1 - p_m2) + (p - p_m1)))) &
+                    / (vector_multiply((p - p_m2), (p_p1 - p_m1))*vector_squared(p_p1 - p_m2))
+        b_coef(2,2) = (10.d0*vector_squared(p - p_m1) + vector_multiply((p - p_m1), (p_p1 - p)) + vector_squared(p_p1 - p)) &
+                    / vector_multiply((p - p_m2), (p_p1 - p_m2))**2.d0
+        b_coef(2,3) = (10.d0*vector_squared(p - p_m1) + vector_multiply((p_m1 - p_m2), (p - p_m1)) + vector_squared(p_m1 - p_m2)) &
+                    / vector_multiply((p_p1 - p_m2), (p_p1 - p_m1))**2.d0
+
+        b_coef(3,1) = (12.d0*vector_squared(p - p_m1) + 3.d0*vector_multiply((p - p_m1), ((p_m1 - p_m3) + (p_m1 - p_m2))) + vector_squared((p_m1 - p_m3) + (p_m1 - p_m2))) &
+                    / vector_multiply((p - p_m3), (p - p_m2))**2.d0
+        b_coef(3,2) = (-19.d0*vector_squared(p - p_m1) - vector_multiply((p_m1 - p_m3), (p - p_m1)) + 2.d0*vector_multiply((p - p_m2), (p_m1 - p_m3) + (p - p_m2))) &
+                    / (vector_multiply((p_m1 - p_m3), (p - p_m2))*vector_squared(p - p_m3))
+        b_coef(3,3) = (10.d0*vector_squared(p - p_m1) + vector_multiply((p_m1 - p_m2), (p - p_m1)) + vector_squared(p_m1 - p_m2)) &
+                    / vector_multiply((p_m1 - p_m3), (p - p_m3))**2.d0
+
+        b_coef(:,:) =  b_coef(:,:) * 4.d0 * vector_squared(p - p_m1)
+    end function compute_indicator_coefficients_right_side
+
+    pure function compute_polynomials_coefficients_right_side(p_m3, p_m2, p_m1, p, p_p1, p_p2) result(p_coef)
+        real(real_kind), intent(in) :: p_m3(3), p_m2(3), p_m1(3), p(3), p_p1(3), p_p2(3) ! face position
+        real(real_kind)             :: p_coef(3,2)
+
+        p_coef(1,1) = - vector_multiply((p    - p_m1), ((p_p1 - p_m1) + (p_p2 - p))) &
+                      / vector_multiply((p_p1 - p_m1), (p_p2 - p_m1))
+        p_coef(1,2) = + vector_multiply((p    - p_m1), (p_p1 - p   )) &
+                      / vector_multiply((p_p2 - p_m1), (p_p2 - p   ))
+        p_coef(2,1) = - vector_multiply((p    - p_m1), (p_p1 - p   )) &
+                      / vector_multiply((p    - p_m2), (p_p1 - p_m2))
+        p_coef(2,2) = - vector_multiply((p    - p_m2), (p    - p_m1)) &
+                      / vector_multiply((p_p1 - p_m2), (p_p1 - p_m1))
+        p_coef(3,1) = + vector_multiply((p    - p_m2), (p    - p_m1)) &
+                      / vector_multiply((p_m1 - p_m3), (p    - p_m3))
+        p_coef(3,2) = - vector_multiply((p    - p_m1), ((p - p_m3) + (p - p_m2))) &
+                      / vector_multiply((p    - p_m3), (p    - p_m2))
+    end function compute_polynomials_coefficients_right_side
+
+    pure function compute_weights_right_side(v_m2, v_m1, v, v_p1, v_p2, g, b_coef) result(w)
+        real(real_kind), intent(in) :: v_m2, v_m1, v, v_p1, v_p2 ! value
+        real(real_kind), intent(in) :: g(3), b_coef(3,3)
+        real(real_kind)             :: w(3)
+        real(real_kind)             :: b(3)
+        real(real_kind)             :: total_w
+
+        b(1) = b_coef(1,1) * (v_p1 - v)**2.d0 &
+             + b_coef(1,2) * (v_p1 - v)*(v_p2 - v_p1) &
+             + b_coef(1,3) * (v_p2 - v_p1)**2.d0
+        b(2) = b_coef(2,1) * (v - v_m1)*(v_p1 - v) &
+             + b_coef(2,2) * (v - v_m1)**2.d0 &
+             + b_coef(2,3) * (v_p1 - v)**2.d0
+        b(3) = b_coef(3,1) * (v - v_m1)**2.d0 &
+             + b_coef(3,2) * (v_m1 - v_m2)*(v - v_m1) &
+             + b_coef(3,3) * (v_m1 - v_m2)**2.d0
+
+        w(1) = g(1) / (b(1) + epsilon_)**2.d0
+        w(2) = g(2) / (b(2) + epsilon_)**2.d0
+        w(3) = g(3) / (b(3) + epsilon_)**2.d0
+        total_w = w(1) + w(2) + w(3)
+        w(1) = w(1) / total_w
+        w(2) = w(2) / total_w
+        w(3) = w(3) / total_w
+    end function compute_weights_right_side
+
+    pure function compute_polynomials_right_side(v_m2, v_m1, v, v_p1, v_p2, p_coef) result(p)
+        real(real_kind), intent(in) :: v_m2, v_m1, v, v_p1, v_p2       ! value
+        real(real_kind), intent(in) :: p_coef(3,2)
+        real(real_kind)             :: p(3)
+
+        p(1) = v + p_coef(1,1) * (v_p1 - v)    + p_coef(1,2) * (v_p2 - v_p1)
+        p(2) = v + p_coef(2,1) * (v - v_m1)    + p_coef(2,2) * (v_p1 - v)
+        p(3) = v + p_coef(3,1) * (v_m1 - v_m2) + p_coef(3,2) * (v - v_m1)
+    end function compute_polynomials_right_side
 
     pure function reconstruct_lhc_mp_weno5_js( &
         primitive_values_set             , &
-        face_to_cell_index        , &
+        face_to_cell_index               , &
         cell_positions                   , &
         face_positions                   , &
         face_index                          ) result(reconstructed_primitive)
 
         real   (real_kind), intent(in) :: primitive_values_set      (:, :)
-        integer(int_kind ), intent(in) :: face_to_cell_index (:, :)
+        integer(int_kind ), intent(in) :: face_to_cell_index        (:, :)
         real   (real_kind), intent(in) :: cell_positions            (:, :)
         real   (real_kind), intent(in) :: face_positions            (:, :)
         integer(int_kind ), intent(in) :: face_index
         real   (real_kind)             :: reconstructed_primitive   (size(primitive_values_set(1, :)))
 
         integer(int_kind ) :: n_primitives, i
-        real   (real_kind) :: w(3), p(3), cell_pos_l(3), cell_pos_r(3), face_pos(3)
-        real   (real_kind) :: cell_cell_distance, cell_face_distanse, s
+        ! WENO
+        real   (real_kind) :: w(3), p(3)
+        real   (real_kind) :: ideal_w(3), b_coef(3,3), p_coef(3,2)
+        real   (real_kind) :: p_m3(3), p_m2(3), p_m1(3), p_0(3), p_p1(3), p_p2(3)
+        ! MP
         real   (real_kind) :: d_p1, d, d_m1, dm4
         real   (real_kind) :: v_ul, v_md, v_lc, v_min, v_max
 
         n_primitives = size(primitive_values_set(1, :))
 
+        !p_m3 => 1.5d0 * cell_positions(face_to_cell_index(face_index, num_ghost_cells_-2), 1:3) + 0.5d0 * cell_positions(face_to_cell_index(face_index, num_ghost_cells_-1), 1:3), &
+        !p_m2 => 0.5d0 * (cell_positions(face_to_cell_index(face_index, num_ghost_cells_-2), 1:3) + cell_positions(face_to_cell_index(face_index, num_ghost_cells_-1), 1:3)), &
+        !p_m1 => 0.5d0 * (cell_positions(face_to_cell_index(face_index, num_ghost_cells_-1), 1:3) + cell_positions(face_to_cell_index(face_index, num_ghost_cells_+0), 1:3)), &
+        !p    => 0.5d0 * (cell_positions(face_to_cell_index(face_index, num_ghost_cells_+0), 1:3) + cell_positions(face_to_cell_index(face_index, num_ghost_cells_+1), 1:3)), &
+        !p_p1 => 0.5d0 * (cell_positions(face_to_cell_index(face_index, num_ghost_cells_+1), 1:3) + cell_positions(face_to_cell_index(face_index, num_ghost_cells_+2), 1:3)), &
+        !p_p2 => 0.5d0 * (cell_positions(face_to_cell_index(face_index, num_ghost_cells_+2), 1:3) + cell_positions(face_to_cell_index(face_index, num_ghost_cells_+3), 1:3))  &
+        p_m3(1:3) = cell_positions(face_to_cell_index(face_index, num_ghost_cells_-2), 1:3)
+        p_m2(1:3) = cell_positions(face_to_cell_index(face_index, num_ghost_cells_-1), 1:3)
+        p_m1(1:3) = cell_positions(face_to_cell_index(face_index, num_ghost_cells_+0), 1:3)
+        p_0 (1:3) = cell_positions(face_to_cell_index(face_index, num_ghost_cells_+1), 1:3)
+        p_p1(1:3) = cell_positions(face_to_cell_index(face_index, num_ghost_cells_+2), 1:3)
+        p_p2(1:3) = cell_positions(face_to_cell_index(face_index, num_ghost_cells_+3), 1:3)
+        ideal_w = compute_ideal_weights_left_side           (p_m3, p_m2, p_m1, p_0, p_p1, p_p2)
+        b_coef  = compute_indicator_coefficients_left_side  (p_m3, p_m2, p_m1, p_0, p_p1, p_p2)
+        p_coef  = compute_polynomials_coefficients_left_side(p_m3, p_m2, p_m1, p_0, p_p1, p_p2)
+
+
         do i = 1, n_primitives, 1
-            cell_pos_l(1:3) = cell_positions(face_to_cell_index(face_index, num_ghost_cells_+0), 1:3)
-            cell_pos_r(1:3) = cell_positions(face_to_cell_index(face_index, num_ghost_cells_+1), 1:3)
-            face_pos  (1:3) = face_positions(face_index, 1:3)
-            cell_cell_distance = vector_distance(cell_pos_l, cell_pos_r)
-            cell_face_distanse = vector_distance(cell_pos_l, face_pos  )
-            s = 1.d0!cell_face_distanse / cell_cell_distance
             associate(                                                                                              &
                 v_m2 => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_-2), i), &
                 v_m1 => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_-1), i), &
@@ -124,8 +300,8 @@ module mp_weno5_js_module
                 v_p2 => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_+2), i)  &
             )
                 ! WENO-JS
-                w(1:3) = compute_weights    (s, v_m2, v_m1, v, v_p1, v_p2)
-                p(1:3) = compute_polynomials(s, v_m2, v_m1, v, v_p1, v_p2)
+                w(1:3) = compute_weights_left_side    (v_m2, v_m1, v, v_p1, v_p2, ideal_w, b_coef)
+                p(1:3) = compute_polynomials_left_side(v_m2, v_m1, v, v_p1, v_p2, p_coef)
                 reconstructed_primitive(i) = w(1) * p(1) + w(2) * p(2) + w(3) * p(3)
                 ! MP
                 d_m1 = curvature_measure(v_m2, v_m1, v   )
@@ -157,20 +333,35 @@ module mp_weno5_js_module
         real   (real_kind)             :: reconstructed_primitive   (size(primitive_values_set(1, :)))
 
         integer(int_kind ) :: n_primitives, i
-        real   (real_kind) :: w(3), p(3), cell_pos_l(3), cell_pos_r(3), face_pos(3)
-        real   (real_kind) :: cell_cell_distance, cell_face_distanse, s
+        ! WENO
+        real   (real_kind) :: w(3), p(3)
+        real   (real_kind) :: ideal_w(3), b_coef(3,3), p_coef(3,2)
+        real   (real_kind) :: p_m3(3), p_m2(3), p_m1(3), p_0(3), p_p1(3), p_p2(3)
+        ! MP
         real   (real_kind) :: d_p1, d, d_m1, dm4
         real   (real_kind) :: v_ul, v_md, v_lc, v_min, v_max
 
         n_primitives = size(primitive_values_set(1, :))
 
+        !p_m3 => 0.5d0 * (cell_positions(face_to_cell_index(face_index, num_ghost_cells_-2), 1:3) + cell_positions(face_to_cell_index(face_index, num_ghost_cells_-1), 1:3)), &
+        !p_m2 => 0.5d0 * (cell_positions(face_to_cell_index(face_index, num_ghost_cells_-1), 1:3) + cell_positions(face_to_cell_index(face_index, num_ghost_cells_+0), 1:3)), &
+        !p_m1 => 0.5d0 * (cell_positions(face_to_cell_index(face_index, num_ghost_cells_+0), 1:3) + cell_positions(face_to_cell_index(face_index, num_ghost_cells_+1), 1:3)), &
+        !p    => 0.5d0 * (cell_positions(face_to_cell_index(face_index, num_ghost_cells_+1), 1:3) + cell_positions(face_to_cell_index(face_index, num_ghost_cells_+2), 1:3)), &
+        !p_p1 => 0.5d0 * (cell_positions(face_to_cell_index(face_index, num_ghost_cells_+2), 1:3) + cell_positions(face_to_cell_index(face_index, num_ghost_cells_+3), 1:3)), &
+        !p_p2 => 1.5d0 * cell_positions(face_to_cell_index(face_index, num_ghost_cells_+3), 1:3) + 0.5d0 * cell_positions(face_to_cell_index(face_index, num_ghost_cells_+2), 1:3) &
+
+        p_m3(1:3) = cell_positions(face_to_cell_index(face_index, num_ghost_cells_-2), 1:3)
+        p_m2(1:3) = cell_positions(face_to_cell_index(face_index, num_ghost_cells_-1), 1:3)
+        p_m1(1:3) = cell_positions(face_to_cell_index(face_index, num_ghost_cells_+0), 1:3)
+        p_0 (1:3) = cell_positions(face_to_cell_index(face_index, num_ghost_cells_+1), 1:3)
+        p_p1(1:3) = cell_positions(face_to_cell_index(face_index, num_ghost_cells_+2), 1:3)
+        p_p2(1:3) = cell_positions(face_to_cell_index(face_index, num_ghost_cells_+3), 1:3)
+
+        ideal_w = compute_ideal_weights_right_side           (p_m3, p_m2, p_m1, p_0, p_p1, p_p2)
+        b_coef  = compute_indicator_coefficients_right_side  (p_m3, p_m2, p_m1, p_0, p_p1, p_p2)
+        p_coef  = compute_polynomials_coefficients_right_side(p_m3, p_m2, p_m1, p_0, p_p1, p_p2)
+
         do i = 1, n_primitives, 1
-            cell_pos_l(1:3) = cell_positions(face_to_cell_index(face_index, num_ghost_cells_+0), 1:3)
-            cell_pos_r(1:3) = cell_positions(face_to_cell_index(face_index, num_ghost_cells_+1), 1:3)
-            face_pos  (1:3) = face_positions(face_index, 1:3)
-            cell_cell_distance = vector_distance(cell_pos_l, cell_pos_r)
-            cell_face_distanse = vector_distance(cell_pos_l, face_pos  )
-            s = - 1.d0! * cell_face_distanse / cell_cell_distance
             associate(                                                                                              &
                 v_m2       => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_-1), i), &
                 v_m1       => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_+0), i), &
@@ -179,8 +370,8 @@ module mp_weno5_js_module
                 v_p2       => primitive_values_set(face_to_cell_index(face_index, num_ghost_cells_+3), i)  &
             )
                 ! WENO5-JS
-                w(1:3) = compute_weights    (s, v_m2, v_m1, v, v_p1, v_p2)
-                p(1:3) = compute_polynomials(s, v_m2, v_m1, v, v_p1, v_p2)
+                w(1:3) = compute_weights_right_side    (v_m2, v_m1, v, v_p1, v_p2, ideal_w, b_coef)
+                p(1:3) = compute_polynomials_right_side(v_m2, v_m1, v, v_p1, v_p2, p_coef)
                 reconstructed_primitive(i) = w(1) * p(1) + w(2) * p(2) + w(3) * p(3)
                 ! MP
                 d_m1 = curvature_measure(v_m2, v_m1, v   )

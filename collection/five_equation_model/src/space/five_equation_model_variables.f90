@@ -87,12 +87,12 @@ module five_equation_model_variables_module
                 z1      => conservative_variables(7)  &
             )
             rho = rho1_z1 + rho2_z2
-            if(z1 < machine_epsilon)then
+            if(z1 <= machine_epsilon)then
                 primitive_variables(1) = 0.d0
-                primitive_variables(2) = rho
+                primitive_variables(2) = rho2_z2
                 primitive_variables(7) = 0.d0
-            else if(z1 > 1.d0 - machine_epsilon)then
-                primitive_variables(1) = rho
+            else if(z1 >= 1.d0 - machine_epsilon)then
+                primitive_variables(1) = rho1_z1
                 primitive_variables(2) = 0.d0
                 primitive_variables(7) = 1.d0
             else
@@ -101,7 +101,7 @@ module five_equation_model_variables_module
                 primitive_variables(7) = z1
             end if
 
-            if(rho < machine_epsilon)then
+            if(rho <= 0.d0)then
                 primitive_variables(3:6) = 0.d0
             else
                 ie  = e / rho - 0.5d0 * (rho_u**2.d0 + rho_v**2.d0 + rho_w**2.d0) / rho**2.d0

@@ -173,7 +173,7 @@ module five_equation_model_boundary_condition_module
         real   (real_kind) :: ghost_primitive_variables(7)
         real   (real_kind) :: local_inner_vector(3), local_ghost_vector(3)
         ghost_primitive_variables(1:2) = primitive_variables_set(inner_cell_index, 1:2)
-        local_inner_vector(:) = rotate_vector(           &
+        local_inner_vector(:) = vector_rotate(           &
             primitive_variables_set   (inner_cell_index, 3:5), &
             face_normal_vectors       (face_index      ,  : ), &
             face_tangential1_vectors  (face_index      ,  : ), &
@@ -182,7 +182,7 @@ module five_equation_model_boundary_condition_module
         local_ghost_vector(1) = local_inner_vector(1)
         local_ghost_vector(2) = local_inner_vector(2)
         local_ghost_vector(3) = local_inner_vector(3)
-        ghost_primitive_variables(3:5) = reverse_vector( &
+        ghost_primitive_variables(3:5) = vector_unrotate( &
             local_ghost_vector        (:)             , &
             face_normal_vectors       (face_index, : ), &
             face_tangential1_vectors  (face_index, : ), &
@@ -207,7 +207,7 @@ module five_equation_model_boundary_condition_module
         real   (real_kind) :: ghost_primitive_variables(7)
         real   (real_kind) :: local_inner_vector(3), local_ghost_vector(3)
         ghost_primitive_variables(1:2) = primitive_variables_set(inner_cell_index, 1:2)
-        local_inner_vector(:) = rotate_vector(           &
+        local_inner_vector(:) = vector_rotate(           &
             primitive_variables_set   (inner_cell_index, 3:5), &
             face_normal_vectors       (face_index      ,  : ), &
             face_tangential1_vectors  (face_index      ,  : ), &
@@ -216,7 +216,7 @@ module five_equation_model_boundary_condition_module
         local_ghost_vector(1) = -1.d0 * local_inner_vector(1)
         local_ghost_vector(2) = local_inner_vector(2)
         local_ghost_vector(3) = local_inner_vector(3)
-        ghost_primitive_variables(3:5) = reverse_vector( &
+        ghost_primitive_variables(3:5) = vector_unrotate( &
             local_ghost_vector        (:)             , &
             face_normal_vectors       (face_index, : ), &
             face_tangential1_vectors  (face_index, : ), &
@@ -241,7 +241,7 @@ module five_equation_model_boundary_condition_module
         real   (real_kind) :: ghost_primitive_variables(7)
         real   (real_kind) :: local_inner_vector(3), local_ghost_vector(3)
         ghost_primitive_variables(1:2) = primitive_variables_set(inner_cell_index, 1:2)
-        local_inner_vector(:) = rotate_vector(           &
+        local_inner_vector(:) = vector_rotate(           &
             primitive_variables_set   (inner_cell_index, 3:5), &
             face_normal_vectors       (face_index      ,  : ), &
             face_tangential1_vectors  (face_index      ,  : ), &
@@ -250,7 +250,7 @@ module five_equation_model_boundary_condition_module
         local_ghost_vector(1) = -1.d0 * local_inner_vector(1)
         local_ghost_vector(2) = local_inner_vector(2)
         local_ghost_vector(3) = local_inner_vector(3)
-        ghost_primitive_variables(3:5) = reverse_vector( &
+        ghost_primitive_variables(3:5) = vector_unrotate( &
             local_ghost_vector        (:)             , &
             face_normal_vectors       (face_index, : ), &
             face_tangential1_vectors  (face_index, : ), &
