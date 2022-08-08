@@ -57,7 +57,7 @@ module abstract_grid_parser
 
         function get_number_of_boundary_faces_interface(self, type) result(n)
             use typedef_module
-            use boundary_type_module
+            use face_type_module
             import grid_parser
             class  (grid_parser        ), intent(in) :: self
             integer(kind(face_type)), intent(in) :: type
@@ -94,7 +94,7 @@ module abstract_grid_parser
 
         subroutine get_boundaries_interface(self, face_types)
             use typedef_module
-            use boundary_type_module
+            use face_type_module
             import grid_parser
             class  (grid_parser        ), intent(in   ) :: self
             integer(kind(face_type)), intent(inout) :: face_types(:)
