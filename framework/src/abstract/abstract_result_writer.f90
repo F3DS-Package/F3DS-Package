@@ -15,7 +15,7 @@ module abstract_result_writer
     end type result_writer
 
     abstract interface
-        subroutine initialize_interface(self, num_cells, num_points, is_real_cell, cell_geometries, cell_types, config)
+        subroutine initialize_interface(self, num_cells, num_points, is_real_cell, cell_geometries, cell_types, end_time, config)
             use typedef_module
             use class_point_id_list
             use abstract_configuration
@@ -26,6 +26,7 @@ module abstract_result_writer
             logical               , intent(in   ) :: is_real_cell   (:)
             class  (point_id_list), intent(in   ) :: cell_geometries(:)
             integer(type_kind    ), intent(in   ) :: cell_types     (:)
+            real   (real_kind    ), intent(in   ) :: end_time
             class  (configuration), intent(inout) :: config
         end subroutine initialize_interface
 

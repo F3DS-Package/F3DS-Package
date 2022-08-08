@@ -34,9 +34,8 @@ module class_cellsystem
     type, public :: cellsystem
         private
 
-        ! Variables
-        integer(int_kind) :: num_conservative_variables
-        integer(int_kind) :: num_primitive_variables
+        ! Termination condition
+        real(real_kind) :: end_time
 
         ! Time
         real(real_kind) :: num_steps
@@ -217,17 +216,14 @@ module class_cellsystem
         end if
         allocate(residual_set(1:num_conservative_variables, 1:self%num_cells))
 
-        self%num_conservative_variables = num_conservative_variables
-        self%num_primitive_variables = num_primitive_variables
-
         self%initialized_variables = .true.
     end subroutine variables_initialize
 
     ! ### Gradient Schemes ###
     subroutine gradient_scheme_initialize(self, a_gradient_scheme, config)
-        class(cellsystem     ), intent(inout) :: self
-        class(gradient_scheme), intent(inout) :: a_gradient_scheme
-        class(configuration  ), intent(inout) :: config
+        class  (cellsystem     ), intent(inout) :: self
+        class  (gradient_scheme), intent(inout) :: a_gradient_scheme
+        class  (configuration  ), intent(inout) :: config
 
         call a_gradient_scheme%initialize(config)
     end subroutine gradient_scheme_initialize
@@ -272,21 +268,27 @@ module class_cellsystem
 
     ! ### EoS ###
     subroutine eos_initialize(self, an_eos, config)
-        class(cellsystem    ), intent(inout) :: self
-        class(eos           ), intent(inout) :: an_eos
-        class(configuration ), intent(inout) :: config
+        class  (cellsystem    ), intent(inout) :: self
+        class  (eos           ), intent(inout) :: an_eos
+        class  (configuration ), intent(inout) :: config
 
         call an_eos%initialize(config)
     end subroutine eos_initialize
 
     ! ### Flux ###
-    subroutine integrate_flux(self, a_reconstruction, a_riemann_solver, an_eos, primitive_variables_set, residual_set)
-        class(cellsystem    ), intent(in   ) :: self
-        class(reconstruction), intent(in   ) :: a_reconstruction
-        class(riemann_solver), intent(in   ) :: a_riemann_solver
-        class(eos           ), intent(in   ) :: an_eos
-        real (real_kind     ), intent(in   ) :: primitive_variables_set (:,:)
-        real (real_kind     ), intent(inout) :: residual_set            (:,:)
+    subroutine integrate_flux(self, a_reconstruction, a_riemann_solver, an_eos,                                           &
+                              primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
+                              primitive_to_conservative_function, compute_rotate_matrix_primitive_function,               &
+                              compute_unrotate_matrix_conservative_function, model_function                                 )
+
+        class  (cellsystem    ), intent(in   ) :: self
+        class  (reconstruction), intent(in   ) :: a_reconstruction
+        class  (riemann_solver), intent(in   ) :: a_riemann_solver
+        class  (eos           ), intent(in   ) :: an_eos
+        real   (real_kind     ), intent(in   ) :: primitive_variables_set (:,:)
+        real   (real_kind     ), intent(inout) :: residual_set            (:,:)
+        integer(int_kind      ), intent(in   ) :: num_conservative_variables
+        integer(int_kind      ), intent(in   ) :: num_primitive_variables
 
         interface
             pure function primitive_to_conservative_function(primitive, an_eos) result(conservative)
@@ -351,15 +353,15 @@ module class_cellsystem
         integer(int_kind ) :: i
         integer(int_kind ) :: lhc_index
         integer(int_kind ) :: rhc_index
-        real   (real_kind) :: rotate_matrix                        (self%num_primitive_variables, self%num_primitive_variables)
-        real   (real_kind) :: reconstructed_primitive_variables_lhc(self%num_primitive_variables)
-        real   (real_kind) :: reconstructed_primitive_variables_rhc(self%num_primitive_variables)
-        real   (real_kind) :: rotated_primitive_variables_lhc      (self%num_primitive_variables)
-        real   (real_kind) :: rotated_primitive_variables_rhc      (self%num_primitive_variables)
-        real   (real_kind) :: rotated_conservative_variables_lhc   (self%num_conservative_variables)
-        real   (real_kind) :: rotated_conservative_variables_rhc   (self%num_conservative_variables)
-        real   (real_kind) :: local_coordinate_flux                (self%num_conservative_variables)
-        real   (real_kind) :: global_coordinate_flux               (self%num_conservative_variables)
+        real   (real_kind) :: rotate_matrix                        (num_primitive_variables, num_primitive_variables)
+        real   (real_kind) :: reconstructed_primitive_variables_lhc(num_primitive_variables)
+        real   (real_kind) :: reconstructed_primitive_variables_rhc(num_primitive_variables)
+        real   (real_kind) :: rotated_primitive_variables_lhc      (num_primitive_variables)
+        real   (real_kind) :: rotated_primitive_variables_rhc      (num_primitive_variables)
+        real   (real_kind) :: rotated_conservative_variables_lhc   (num_conservative_variables)
+        real   (real_kind) :: rotated_conservative_variables_rhc   (num_conservative_variables)
+        real   (real_kind) :: local_coordinate_flux                (num_conservative_variables)
+        real   (real_kind) :: global_coordinate_flux               (num_conservative_variables)
 
 !$omp parallel do private(i,lhc_index,rhc_index,rotate_matrix,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,rotated_primitive_variables_lhc,rotated_conservative_variables_rhc,local_coordinate_flux,global_coordinate_flux)
         do i = 1, self%num_faces, 1
@@ -396,7 +398,7 @@ module class_cellsystem
                 rotated_primitive_variables_rhc   (:)           , &
                 rotated_conservative_variables_lhc(:)           , &
                 rotated_conservative_variables_rhc(:)           , &
-                self%num_conservative_variables                 , &
+                num_conservative_variables                      , &
                 an_eos                                          , &
                 a_riemann_solver                                  &
             )
@@ -414,28 +416,29 @@ module class_cellsystem
     end subroutine
 
     subroutine riemann_solver_initialize(self, a_riemann_solver, config)
-        class(cellsystem    ), intent(inout) :: self
-        class(riemann_solver), intent(inout) :: a_riemann_solver
-        class(configuration ), intent(inout) :: config
+        class  (cellsystem    ), intent(inout) :: self
+        class  (riemann_solver), intent(inout) :: a_riemann_solver
+        class  (configuration ), intent(inout) :: config
 
         call a_riemann_solver%initialize(config)
     end subroutine time_stepping_initialize
 
     subroutine reconstruction_initialize(self, a_reconstruction, config)
-        class(cellsystem    ), intent(inout) :: self
-        class(reconstruction), intent(inout) :: a_reconstruction
-        class(configuration ), intent(inout) :: config
+        class  (cellsystem    ), intent(inout) :: self
+        class  (reconstruction), intent(inout) :: a_reconstruction
+        class  (configuration ), intent(inout) :: config
 
         call reconstruction%initialize(config)
     end subroutine time_stepping_initialize
 
     ! ### Time stepping ###
-    subroutine time_stepping_initialize(self, a_time_stepping, config)
-        class(cellsystem   ), intent(inout) :: self
-        class(time_stepping), intent(inout) :: a_time_stepping
-        class(configuration), intent(inout) :: config
+    subroutine time_stepping_initialize(self, a_time_stepping, config, num_conservative_variables)
+        class  (cellsystem   ), intent(inout) :: self
+        class  (time_stepping), intent(inout) :: a_time_stepping
+        class  (configuration), intent(inout) :: config
+        integer(int_kind     ), intent(in   ) :: num_conservative_variables
 
-        call a_time_stepping%initialize(config, self%num_cells, self%num_conservative_variables)
+        call a_time_stepping%initialize(config, self%num_cells, num_conservative_variables)
     end subroutine time_stepping_initialize
 
     subroutine compute_next_state(self, a_time_stepping, an_eos, state_num, conservative_variables_set, primitive_variables_set, residual_set, &
@@ -498,11 +501,11 @@ module class_cellsystem
 
     ! ###  Result writer ###
     subroutine result_writer_initialize(self, writer, config)
-        class(cellsystem   ), intent(inout) :: self
-        class(result_writer), intent(inout) :: writer
-        class(configuration), intent(inout) :: config
+        class  (cellsystem   ), intent(inout) :: self
+        class  (result_writer), intent(inout) :: writer
+        class  (configuration), intent(inout) :: config
 
-        call writer%initialize(self%num_cells, self%num_points, self%is_real_cell, self%cell_geometries, self%cell_types, config)
+        call writer%initialize(self%num_cells, self%num_points, self%is_real_cell, self%cell_geometries, self%cell_types, self%end_time, config)
     end subroutine result_writer_initialize
 
     subroutine result_writer_open_file(self, writer)

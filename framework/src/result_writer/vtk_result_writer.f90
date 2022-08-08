@@ -47,19 +47,19 @@ module class_vtk_result_writer
 
     contains
 
-    subroutine initialize(self, num_cells, num_points, is_real_cell, cell_geometries, cell_types, config)
+    subroutine initialize(self, num_cells, num_points, is_real_cell, cell_geometries, cell_types, end_time, config)
         class  (vtk_result_writer), intent(inout) :: self
         integer(int_kind         ), intent(in   ) :: num_cells
         integer(int_kind         ), intent(in   ) :: num_points
         logical                   , intent(in   ) :: is_real_cell   (:)
         class  (point_id_list    ), intent(in   ) :: cell_geometries(:)
         integer(type_kind        ), intent(in   ) :: cell_types     (:)
+        real   (real_kind        ), intent(in   ) :: end_time
         class  (configuration    ), intent(inout) :: config
 
         integer(int_kind ) :: index, vtk_index, cell_point_index
         integer(int_kind ) :: num_cell_points, offset_incriment
         integer(int_kind ) :: n_output
-        real   (real_kind) :: end_time
         logical :: found
 
         ! count number of cells
@@ -95,8 +95,6 @@ module class_vtk_result_writer
         self%n_output_file   = 0
         call config%get_int("Result writer.Number of output files", n_output, found, 100)
         if(.not. found) call write_warring("'Result writer.Number of output files' is not found in configration you set. To be set dafault value.")
-        call config%get_real("Time stepping.End time", end_time, found, 0.d0)
-        if(.not. found) call call_error("'Time stepping.End time' is not found in configration you set.")
         self%output_timespan = end_time / dble(n_output)
         self%next_output_time = 0.d0
 
@@ -158,7 +156,7 @@ module class_vtk_result_writer
         real     (real_kind        ), intent(in   ) :: vector_variables(:,:)
 
         if(self%file_is_opened)then
-            self%vtk_error = self%a_vtk_file%xml_writer%write_dataarray(data_name=name, x=pack(vector_variables(:, 1), mask=is_real_cell), y=pack(vector_variables(:, 2), mask=is_real_cell), z=pack(vector_variables(:, 3), mask=is_real_cell))
+            self%vtk_error = self%a_vtk_file%xml_writer%write_dataarray(data_name=name, x=pack(vector_variables(1, :), mask=is_real_cell), y=pack(vector_variables(2, :), mask=is_real_cell), z=pack(vector_variables(3, :), mask=is_real_cell))
         end if
     end subroutine write_vector
 
