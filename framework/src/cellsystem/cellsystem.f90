@@ -10,7 +10,7 @@ module class_cellsystem
     use abstract_configuration
     use abstract_time_stepping
     use abstract_eos
-    use abstract_reconstruction
+    use abstract_reconstructor
     use abstract_riemann_solver
     use abstract_gradient_scheme
 
@@ -133,7 +133,7 @@ module class_cellsystem
         ! ### Common ###
         procedure, public, pass(self) :: initialize  => result_writer_initialize  , &
                                                         time_stepping_initialize  , &
-                                                        reconstruction_initialize , &
+                                                        reconstructor_initialize , &
                                                         riemann_solver_initialize , &
                                                         eos_initialize            , &
                                                         gradient_scheme_initialize, &
@@ -276,13 +276,13 @@ module class_cellsystem
     end subroutine eos_initialize
 
     ! ### Flux ###
-    subroutine integrate_flux(self, a_reconstruction, a_riemann_solver, an_eos,                                           &
+    subroutine integrate_flux(self, a_reconstructor, a_riemann_solver, an_eos,                                           &
                               primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
                               primitive_to_conservative_function, compute_rotate_matrix_primitive_function,               &
                               compute_unrotate_matrix_conservative_function, model_function                                 )
 
         class  (cellsystem    ), intent(in   ) :: self
-        class  (reconstruction), intent(in   ) :: a_reconstruction
+        class  (reconstructor ), intent(in   ) :: a_reconstructor
         class  (riemann_solver), intent(in   ) :: a_riemann_solver
         class  (eos           ), intent(in   ) :: an_eos
         real   (real_kind     ), intent(in   ) :: primitive_variables_set (:,:)
@@ -368,11 +368,13 @@ module class_cellsystem
             lhc_index = face_to_cell_index(self%num_local_cells+0, i)
             rhc_index = face_to_cell_index(self%num_local_cells+1, i)
 
-            reconstructed_primitive_variables_lhc(:) = a_reconstruction%reconstruct_lhc(                                      &
-                i, primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_centor_positions &
+            reconstructed_primitive_variables_lhc(:) = a_reconstructor%reconstruct_lhc(                                       &
+                i, primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_centor_positions, &
+                self%num_local_cells, num_primitive_variables                                                                  &
             )
-            reconstructed_primitive_variables_rhc(:) = a_reconstruction%reconstruct_rhc(                                      &
+            reconstructed_primitive_variables_rhc(:) = a_reconstructor%reconstruct_rhc(                                      &
                 i, primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_centor_positions &
+                self%num_local_cells, num_primitive_variables                                                                 &
             )
 
             rotate_matrix(:,:) = compute_rotate_matrix_primitive_function(                                            &
@@ -423,12 +425,12 @@ module class_cellsystem
         call a_riemann_solver%initialize(config)
     end subroutine time_stepping_initialize
 
-    subroutine reconstruction_initialize(self, a_reconstruction, config)
+    subroutine reconstructor_initialize(self, a_reconstructor, config)
         class  (cellsystem    ), intent(inout) :: self
-        class  (reconstruction), intent(inout) :: a_reconstruction
+        class  (reconstructor), intent(inout) :: a_reconstructor
         class  (configuration ), intent(inout) :: config
 
-        call reconstruction%initialize(config)
+        call reconstructor%initialize(config)
     end subroutine time_stepping_initialize
 
     ! ### Time stepping ###
