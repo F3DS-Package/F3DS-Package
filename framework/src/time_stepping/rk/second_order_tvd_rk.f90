@@ -10,7 +10,7 @@ module class_second_order_tvd_rk
     type, public, extends(time_stepping) :: second_order_tvd_rk
         private
 
-        integer(int_kind ), parameter :: nmu_stage_ = 3
+        integer(int_kind ), parameter :: nmu_stage_ = 2
         real   (real_kind), parameter :: alpha_(1:3) = [real(real_kind) :: 1, 1/2]
         real   (real_kind), parameter :: beta_ (1:3) = [real(real_kind) :: 1, 1/2]
 
