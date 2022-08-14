@@ -71,8 +71,12 @@ module mp_weno5_js_module
         real   (real_kind )             :: reconstructed_primitive_variables(num_primitive_variables)
 
         integer(int_kind  ) :: i
+        ! WENO
         real   (real_kind ) :: w(3), p(3)
         real   (real_kind ) :: ideal_w(3), b_coef(3,3), p_coef(3,2)
+        ! MP
+        real   (real_kind) :: d_p1, d, d_m1, dm4
+        real   (real_kind) :: v_ul, v_md, v_lc, v_min, v_max
 
         associate(                                                                                &
             p_m3 = cell_centor_positions(1:3, face_to_cell_index(num_local_cells-2, face_index)), &
@@ -88,16 +92,28 @@ module mp_weno5_js_module
         end associate
 
         do i = 1, num_primitive_variables, 1
-            associate(                                                                               &
-                v_m2 => primitive_values_set(i, face_to_cell_index(num_ghost_cells_-2, face_index)), &
-                v_m1 => primitive_values_set(i, face_to_cell_index(num_ghost_cells_-1, face_index)), &
-                v    => primitive_values_set(i, face_to_cell_index(num_ghost_cells_+0, face_index)), &
-                v_p1 => primitive_values_set(i, face_to_cell_index(num_ghost_cells_+1, face_index)), &
-                v_p2 => primitive_values_set(i, face_to_cell_index(num_ghost_cells_+2, face_index))  &
+            associate(                                                                                  &
+                v_m2 => primitive_variables_set(i, face_to_cell_index(num_local_cells-2, face_index)), &
+                v_m1 => primitive_variables_set(i, face_to_cell_index(num_local_cells-1, face_index)), &
+                v    => primitive_variables_set(i, face_to_cell_index(num_local_cells+0, face_index)), &
+                v_p1 => primitive_variables_set(i, face_to_cell_index(num_local_cells+1, face_index)), &
+                v_p2 => primitive_variables_set(i, face_to_cell_index(num_local_cells+2, face_index))  &
             )
+                ! WENO
                 w(1:3) = compute_weights_left_side    (v_m2, v_m1, v, v_p1, v_p2, ideal_w, b_coef, self%epsilon_)
                 p(1:3) = compute_polynomials_left_side(v_m2, v_m1, v, v_p1, v_p2, p_coef)
-                reconstructed_primitive(i) = w(1) * p(1) + w(2) * p(2) + w(3) * p(3)
+                reconstructed_primitive_variables(i) = w(1) * p(1) + w(2) * p(2) + w(3) * p(3)
+                ! MP
+                d_m1 = curvature_measure(v_m2, v_m1, v   )
+                d    = curvature_measure(v_m1, v   , v_p1)
+                d_p1 = curvature_measure(v   , v_p1, v_p2)
+                dm4  = minmod(minmod(4.d0 * d - d_p1, 4.d0 * d_p1 - d), minmod(d, d_p1))
+                v_ul = v + alpha_ * (v - v_m1)
+                v_md = 0.5d0 * (v + v_p1 - dm4)
+                v_lc = v + 0.5d0 * (v - v_m1) + (beta_ / 3.d0) * dm4
+                v_min = max(min(v, v_p1, v_md), min(v, v_ul, v_lc))
+                v_max = min(max(v, v_p1, v_md), max(v, v_ul, v_lc))
+                reconstructed_primitive_variables(i) = median(reconstructed_primitive_variables(i), v_min, v_max)
             end associate
         end do
     end function reconstruct_lhc_interface
@@ -123,8 +139,12 @@ module mp_weno5_js_module
         real   (real_kind )             :: reconstructed_primitive_variables(num_primitive_variables)
 
         integer(int_kind  ) :: i
+        ! WENO
         real   (real_kind ) :: w(3), p(3)
         real   (real_kind ) :: ideal_w(3), b_coef(3,3), p_coef(3,2)
+        ! MP
+        real   (real_kind) :: d_p1, d, d_m1, dm4
+        real   (real_kind) :: v_ul, v_md, v_lc, v_min, v_max
 
         associate(                                                                                &
             p_m3 = cell_centor_positions(1:3, face_to_cell_index(num_local_cells-2, face_index)), &
@@ -140,16 +160,28 @@ module mp_weno5_js_module
         end associate
 
         do i = 1, num_primitive_variables, 1
-            associate(                                                                               &
-                v_m2 => primitive_values_set(i, face_to_cell_index(num_ghost_cells_-1, face_index)), &
-                v_m1 => primitive_values_set(i, face_to_cell_index(num_ghost_cells_+0, face_index)), &
-                v    => primitive_values_set(i, face_to_cell_index(num_ghost_cells_+1, face_index)), &
-                v_p1 => primitive_values_set(i, face_to_cell_index(num_ghost_cells_+2, face_index)), &
-                v_p2 => primitive_values_set(i, face_to_cell_index(num_ghost_cells_+3, face_index))  &
+            associate(                                                                              &
+                v_m2 => primitive_values_set(i, face_to_cell_index(num_local_cells-1, face_index)), &
+                v_m1 => primitive_values_set(i, face_to_cell_index(num_local_cells+0, face_index)), &
+                v    => primitive_values_set(i, face_to_cell_index(num_local_cells+1, face_index)), &
+                v_p1 => primitive_values_set(i, face_to_cell_index(num_local_cells+2, face_index)), &
+                v_p2 => primitive_values_set(i, face_to_cell_index(num_local_cells+3, face_index))  &
             )
+                ! WENO
                 w(1:3) = compute_weights_right_side    (v_m2, v_m1, v, v_p1, v_p2, ideal_w, b_coef, self%epsilon_)
                 p(1:3) = compute_polynomials_right_side(v_m2, v_m1, v, v_p1, v_p2, p_coef)
-                reconstructed_primitive(i) = w(1) * p(1) + w(2) * p(2) + w(3) * p(3)
+                reconstructed_primitive_variables(i) = w(1) * p(1) + w(2) * p(2) + w(3) * p(3)
+                ! MP
+                d_m1 = curvature_measure(v_m2, v_m1, v   )
+                d    = curvature_measure(v_m1, v   , v_p1)
+                d_p1 = curvature_measure(v   , v_p1, v_p2)
+                dm4  = minmod(minmod(4.d0 * d - d_m1, 4.d0 * d_m1 - d), minmod(d, d_m1))
+                v_ul = v + alpha_ * (v - v_p1)
+                v_md = 0.5d0 * (v + v_m1 - dm4)
+                v_lc = v + 0.5d0 * (v - v_p1) + (beta_ / 3.d0) * dm4
+                v_min = max(min(v, v_m1, v_md), min(v, v_ul, v_lc))
+                v_max = min(max(v, v_m1, v_md), max(v, v_ul, v_lc))
+                reconstructed_primitive_variables(i) = median(reconstructed_primitive_variables(i), v_min, v_max)
             end associate
         end do
     end function reconstruct_rhc_interface
