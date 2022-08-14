@@ -1,54 +1,52 @@
-module abstract_gradient_scheme
+module abstract_gradient_calculator
     implicit none
 
     private
 
-    type, public, abstract :: gradient_scheme
+    type, public, abstract :: gradient_calculator
         contains
 
-        procedure(initialize_interface              ), pass(self), deferred :: initialize
-        procedure(compute_gradient_interface        ), pass(self), deferred :: compute_gradient
-        procedure(compure_gradient_1darray_interface), pass(self), deferred :: compure_gradient_1darray
+        procedure(initialize_interface                     ), pass(self), deferred :: initialize
+        procedure(compute_gradient_residual_array_interface), pass(self), deferred :: compute_gradient_residual_array
+        procedure(compure_gradient_residual_interface      ), pass(self), deferred :: compure_gradient_residual
     end type
 
     abstract interface
 
         subroutine initialize_interface(self, a_configuration)
             use abstract_configuration
-            import gradient_scheme
-            class(gradient_scheme), intent(inout) :: self
-            class(configuration  ), intent(inout) :: a_configuration
+            import gradient_calculator
+            class(gradient_calculator), intent(inout) :: self
+            class(configuration      ), intent(inout) :: a_configuration
         end subroutine initialize_interface
 
-        subroutine compute_gradient_interface(self, variables_set, gradient_variables_set, cell_centor_positions, cell_volumes, face_to_cell_indexes, face_normal_vectors, face_positions, face_areas, num_faces)
+        pure function compute_gradient_residual_array_interface(self, rhc_variables, lhc_variables, rhc_position, lhc_position, face_normal_vector, face_area, num_variables) result(residual)
             use typedef_module
-            import gradient_scheme
-            class  (gradient_scheme), intent(inout) :: self
-            real   (real_kind      ), intent(in   ) :: variables_set            (:,:)
-            real   (real_kind      ), intent(in   ) :: gradient_variables_set   (:,:)
-            real   (real_kind      ), intent(in   ) :: cell_centor_positions    (:,:)
-            real   (real_kind      ), intent(in   ) :: cell_volumes             (:)
-            integer(int_kind       ), intent(in   ) :: face_to_cell_indexes     (:,:)
-            real   (real_kind      ), intent(in   ) :: face_normal_vectors      (:,:)
-            real   (real_kind      ), intent(in   ) :: face_positions           (:,:)
-            real   (real_kind      ), intent(in   ) :: face_areas               (:)
-            integer(int_kind       ), intent(in   ) :: num_faces
-        end subroutine compute_gradient_interface
+            import gradient_calculator
+            class  (gradient_calculator), intent(inout) :: self
+            real   (real_kind          ), intent(in   ) :: lhc_variables           (:)
+            real   (real_kind          ), intent(in   ) :: rhc_variables           (:)
+            real   (real_kind          ), intent(in   ) :: lhc_position            (:)
+            real   (real_kind          ), intent(in   ) :: rhc_position            (:)
+            real   (real_kind          ), intent(in   ) :: face_normal_vector      (:)
+            real   (real_kind          ), intent(in   ) :: face_position           (:)
+            real   (real_kind          ), intent(in   ) :: face_area
+            integer(int_kind           ), intent(in   ) :: num_variables
+            real   (real_kind          )                :: residual                (num_variables)
+        end function compute_gradient_residual_array_interface
 
-        subroutine compure_gradient_1darray_interface(self, variable_set, gradient_variable_set, cell_centor_positions, cell_volumes, face_to_cell_indexes, face_normal_vectors, face_positions, face_areas, num_faces)
+        pure function compure_gradient_residual_interface(self, rhc_variable, lhc_variable, rhc_position, lhc_position, face_normal_vector, face_area) result(residual)
             use typedef_module
-            import gradient_scheme
-            class  (gradient_scheme), intent(inout) :: self
-            real   (real_kind      ), intent(in   ) :: variable_set             (:)
-            real   (real_kind      ), intent(in   ) :: gradient_variable_set    (:)
-            real   (real_kind      ), intent(in   ) :: cell_centor_positions    (:,:)
-            real   (real_kind      ), intent(in   ) :: cell_volumes             (:)
-            integer(int_kind       ), intent(in   ) :: face_to_cell_indexes     (:,:)
-            real   (real_kind      ), intent(in   ) :: face_normal_vectors      (:,:)
-            real   (real_kind      ), intent(in   ) :: face_positions           (:,:)
-            real   (real_kind      ), intent(in   ) :: face_areas               (:)
-            integer(int_kind       ), intent(in   ) :: num_faces
-        end subroutine compure_gradient_1darray_interface
-
+            import gradient_calculator
+            class  (gradient_calculator), intent(inout) :: self
+            real   (real_kind          ), intent(in   ) :: rhc_variable
+            real   (real_kind          ), intent(in   ) :: lhc_variable
+            real   (real_kind          ), intent(in   ) :: lhc_position            (:)
+            real   (real_kind          ), intent(in   ) :: rhc_position            (:)
+            real   (real_kind          ), intent(in   ) :: face_normal_vector      (:)
+            real   (real_kind          ), intent(in   ) :: face_position           (:)
+            real   (real_kind          ), intent(in   ) :: face_area
+            real   (real_kind          )                :: residual
+        end function compure_gradient_residual_interface
     end interface
-end module abstract_gradient_scheme
+end module abstract_gradient_calculator
