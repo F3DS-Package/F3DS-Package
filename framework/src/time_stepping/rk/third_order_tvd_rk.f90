@@ -35,7 +35,7 @@ module class_third_order_tvd_rk
         integer(int_kind          ), intent(in   ) :: num_cells
         integer(int_kind          ), intent(in   ) :: num_conservative_variables
 
-        allocate(init_conservative_variables_set(1:n_conservative_variables, 1:n_cells))
+        allocate(init_conservative_variables_set(1:num_conservative_variables, 1:num_cells))
     end subroutine initialize
 
     subroutine compute_next_state(   &
