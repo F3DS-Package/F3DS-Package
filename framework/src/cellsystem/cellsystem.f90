@@ -4,6 +4,7 @@ module class_cellsystem
     use vector_module
     use matrix_module
     use face_type_module
+    use boundary_condition_module
     use class_point_id_list
     use abstract_grid_parser
     use abstract_result_writer
@@ -12,7 +13,7 @@ module class_cellsystem
     use abstract_eos
     use abstract_reconstructor
     use abstract_riemann_solver
-    use abstract_gradient_scheme
+    use abstract_gradient_calculator
 
     implicit none
 
@@ -116,35 +117,40 @@ module class_cellsystem
         ! Elm. 1) 1 : {@code num_cells}, cell index
         integer(type_kind), allocatable :: cell_types(:)
 
-        ! ### Boundary References ###
+        ! ### Boundary Condition ###
 
         ! Elements are stored boundary face index.
         ! Elm. 1) 1 : num_{boundary condition}_faces
-        integer(int_kind), public, allocatable :: outflow_face_indexes  (:)
-        integer(int_kind), public, allocatable :: slipwall_face_indexes (:)
-        integer(int_kind), public, allocatable :: symmetric_face_indexes(:)
-        integer(int_kind), public, allocatable :: empty_face_indexes    (:)
+        integer(int_kind), allocatable :: outflow_face_indexes  (:)
+        integer(int_kind), allocatable :: slipwall_face_indexes (:)
+        integer(int_kind), allocatable :: symmetric_face_indexes(:)
+        integer(int_kind), allocatable :: empty_face_indexes    (:)
 
         ! ### Status ###
         logical :: read_cellsystem = .false.
-        logical :: initialized_variables = .false.
 
         contains
         ! ### Common ###
         procedure, public, pass(self) :: initialize  => result_writer_initialize  , &
                                                         time_stepping_initialize  , &
-                                                        reconstructor_initialize , &
+                                                        reconstructor_initialize  , &
                                                         riemann_solver_initialize , &
                                                         eos_initialize            , &
-                                                        gradient_scheme_initialize, &
+                                                        gradient_calculator_initialize, &
                                                         variables_initialize
         procedure, public, pass(self) :: open_file   => result_writer_open_file
         procedure, public, pass(self) :: close_file  => result_writer_close_file
         procedure, public, pass(self) :: is_writable => result_writer_is_writable
 
-        ! ### Gradient Scheme ###
-        procedure, public, pass(self) :: compute_gradient => compute_gradient_2darray, &
-                                                             compute_gradient_1darray
+        ! ### Boundary Condition ###
+        procedure, public, pass(self) :: apply_outflow_condition
+        procedure, public, pass(self) :: apply_slipwall_condition
+        procedure, public, pass(self) :: apply_symmetric_condition
+        procedure, public, pass(self) :: apply_empty_condition
+
+        ! ### Gradient Calculator ###
+        procedure, public, pass(self) :: compute_gradient => compute_gradient_array, &
+                                                             compute_gradient_scolar
 
         ! ### Flux ###
         procedure, public, pass(self) :: integrate_flux
@@ -190,81 +196,350 @@ module class_cellsystem
 
     contains
 
+    ! ### Boundary Condition ###
+    subroutine apply_outflow_condition(self, primitive_variables_set, num_primitive_variables, &
+        compute_rotate_matrix_primitive_function, compute_unrotate_matrix_primitive_function, boundary_condition_function)
+        class  (cellsystem), intent(inout) :: self
+        real   (real_kind ), intent(inout) :: primitive_variables_set(:,:)
+        integer(int_kind  ), intent(in   ) :: num_primitive_variables
+
+        interface
+            pure function compute_rotate_matrix_primitive_function( &
+                face_normal_vector                                , &
+                face_tangential1_vector                           , &
+                face_tangential2_vector                           , &
+                num_primitive_variables                               ) result(matrix)
+
+                use typedef_module
+                real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
+                real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
+                real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
+                integer(int_kind      ), intent(in)  :: num_primitive_variables
+                real   (real_kind     )              :: matrix(num_primitive_variables, num_primitive_variables)
+            end function compute_rotate_matrix_primitive_function
+
+            pure function compute_unrotate_matrix_primitive_function( &
+                face_normal_vector                                  , &
+                face_tangential1_vector                             , &
+                face_tangential2_vector                             , &
+                num_primitive_variables                                 ) result(matrix)
+
+                use typedef_module
+                real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
+                real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
+                real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
+                integer(int_kind      ), intent(in)  :: num_primitive_variables
+                real   (real_kind     )              :: matrix(num_primitive_variables, num_primitive_variables)
+            end function compute_unrotate_matrix_primitive_function
+
+            pure function boundary_condition_function(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
+                use typedef_module
+                real   (real_kind), intent(in) :: inner_primitive_variables(:)
+                integer(int_kind ), intent(in) :: num_primitive_variables
+                real   (real_kind)             :: ghost_primitive_variables(num_primitive_variables)
+            end function boundary_condition_function
+        end interface
+
+        integer :: i, face_index
+
+        do i = 1, self%num_outflow_faces, 1
+            face_index = self%outflow_face_indexes(i)
+            call apply_boundary_condition_common_impl(       &
+                primitive_variables_set                    , &
+                self%face_normal_vectors     (:,face_index), &
+                self%face_tangential1_vectors(:,face_index), &
+                self%face_tangential2_vectors(:,face_index), &
+                self%face_to_cell_indexes    (:,face_index), &
+                self%num_local_cells                       , &
+                num_primitive_variables                    , &
+                compute_rotate_matrix_primitive_function   , &
+                compute_unrotate_matrix_primitive_function , &
+                empty_copy_procedure_function                &
+            )
+        end do
+    end subroutine apply_outflow_condition
+
+    subroutine apply_slipwall_condition(self, primitive_variables_set, num_primitive_variables, &
+        compute_rotate_matrix_primitive_function, compute_unrotate_matrix_primitive_function, boundary_condition_function)
+        class  (cellsystem), intent(inout) :: self
+        real   (real_kind ), intent(inout) :: primitive_variables_set(:,:)
+        integer(int_kind  ), intent(in   ) :: num_primitive_variables
+
+        interface
+            pure function compute_rotate_matrix_primitive_function( &
+                face_normal_vector                                , &
+                face_tangential1_vector                           , &
+                face_tangential2_vector                           , &
+                num_primitive_variables                               ) result(matrix)
+
+                use typedef_module
+                real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
+                real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
+                real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
+                integer(int_kind      ), intent(in)  :: num_primitive_variables
+                real   (real_kind     )              :: matrix(num_primitive_variables, num_primitive_variables)
+            end function compute_rotate_matrix_primitive_function
+
+            pure function compute_unrotate_matrix_primitive_function( &
+                face_normal_vector                                  , &
+                face_tangential1_vector                             , &
+                face_tangential2_vector                             , &
+                num_primitive_variables                                 ) result(matrix)
+
+                use typedef_module
+                real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
+                real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
+                real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
+                integer(int_kind      ), intent(in)  :: num_primitive_variables
+                real   (real_kind     )              :: matrix(num_primitive_variables, num_primitive_variables)
+            end function compute_unrotate_matrix_primitive_function
+
+            pure function boundary_condition_function(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
+                use typedef_module
+                real   (real_kind), intent(in) :: inner_primitive_variables(:)
+                integer(int_kind ), intent(in) :: num_primitive_variables
+                real   (real_kind)             :: ghost_primitive_variables(num_primitive_variables)
+            end function boundary_condition_function
+        end interface
+
+        integer :: i, face_index
+
+        do i = 1, self%num_outflow_faces, 1
+            face_index = self%outflow_face_indexes(i)
+            call apply_boundary_condition_common_impl(       &
+                primitive_variables_set                    , &
+                self%face_normal_vectors     (:,face_index), &
+                self%face_tangential1_vectors(:,face_index), &
+                self%face_tangential2_vectors(:,face_index), &
+                self%face_to_cell_indexes    (:,face_index), &
+                self%num_local_cells                       , &
+                num_primitive_variables                    , &
+                compute_rotate_matrix_primitive_function   , &
+                compute_unrotate_matrix_primitive_function , &
+                empty_copy_procedure_function                &
+            )
+        end do
+    end subroutine apply_slipwall_condition
+
+    subroutine apply_symmetric_condition(self, primitive_variables_set, num_primitive_variables, &
+        compute_rotate_matrix_primitive_function, compute_unrotate_matrix_primitive_function, boundary_condition_function)
+        class  (cellsystem), intent(inout) :: self
+        real   (real_kind ), intent(inout) :: primitive_variables_set(:,:)
+        integer(int_kind  ), intent(in   ) :: num_primitive_variables
+
+        interface
+            pure function compute_rotate_matrix_primitive_function( &
+                face_normal_vector                                , &
+                face_tangential1_vector                           , &
+                face_tangential2_vector                           , &
+                num_primitive_variables                               ) result(matrix)
+
+                use typedef_module
+                real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
+                real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
+                real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
+                integer(int_kind      ), intent(in)  :: num_primitive_variables
+                real   (real_kind     )              :: matrix(num_primitive_variables, num_primitive_variables)
+            end function compute_rotate_matrix_primitive_function
+
+            pure function compute_unrotate_matrix_primitive_function( &
+                face_normal_vector                                  , &
+                face_tangential1_vector                             , &
+                face_tangential2_vector                             , &
+                num_primitive_variables                                 ) result(matrix)
+
+                use typedef_module
+                real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
+                real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
+                real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
+                integer(int_kind      ), intent(in)  :: num_primitive_variables
+                real   (real_kind     )              :: matrix(num_primitive_variables, num_primitive_variables)
+            end function compute_unrotate_matrix_primitive_function
+
+            pure function boundary_condition_function(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
+                use typedef_module
+                real   (real_kind), intent(in) :: inner_primitive_variables(:)
+                integer(int_kind ), intent(in) :: num_primitive_variables
+                real   (real_kind)             :: ghost_primitive_variables(num_primitive_variables)
+            end function boundary_condition_function
+        end interface
+
+        integer :: i, face_index
+
+        do i = 1, self%num_outflow_faces, 1
+            face_index = self%outflow_face_indexes(i)
+            call apply_boundary_condition_common_impl(       &
+                primitive_variables_set                    , &
+                self%face_normal_vectors     (:,face_index), &
+                self%face_tangential1_vectors(:,face_index), &
+                self%face_tangential2_vectors(:,face_index), &
+                self%face_to_cell_indexes    (:,face_index), &
+                self%num_local_cells                       , &
+                num_primitive_variables                    , &
+                compute_rotate_matrix_primitive_function   , &
+                compute_unrotate_matrix_primitive_function , &
+                empty_copy_procedure_function                &
+            )
+        end do
+    end subroutine apply_symmetric_condition
+
+    subroutine apply_empty_condition(self, primitive_variables_set, num_primitive_variables, &
+        compute_rotate_matrix_primitive_function, compute_unrotate_matrix_primitive_function, boundary_condition_function)
+        class  (cellsystem), intent(inout) :: self
+        real   (real_kind ), intent(inout) :: primitive_variables_set(:,:)
+        integer(int_kind  ), intent(in   ) :: num_primitive_variables
+
+        interface
+            pure function compute_rotate_matrix_primitive_function( &
+                face_normal_vector                                , &
+                face_tangential1_vector                           , &
+                face_tangential2_vector                           , &
+                num_primitive_variables                               ) result(matrix)
+
+                use typedef_module
+                real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
+                real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
+                real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
+                integer(int_kind      ), intent(in)  :: num_primitive_variables
+                real   (real_kind     )              :: matrix(num_primitive_variables, num_primitive_variables)
+            end function compute_rotate_matrix_primitive_function
+
+            pure function compute_unrotate_matrix_primitive_function( &
+                face_normal_vector                                  , &
+                face_tangential1_vector                             , &
+                face_tangential2_vector                             , &
+                num_primitive_variables                                 ) result(matrix)
+
+                use typedef_module
+                real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
+                real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
+                real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
+                integer(int_kind      ), intent(in)  :: num_primitive_variables
+                real   (real_kind     )              :: matrix(num_primitive_variables, num_primitive_variables)
+            end function compute_unrotate_matrix_primitive_function
+
+            pure function boundary_condition_function(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
+                use typedef_module
+                real   (real_kind), intent(in) :: inner_primitive_variables(:)
+                integer(int_kind ), intent(in) :: num_primitive_variables
+                real   (real_kind)             :: ghost_primitive_variables(num_primitive_variables)
+            end function boundary_condition_function
+        end interface
+
+        integer :: i, face_index
+
+        do i = 1, self%num_outflow_faces, 1
+            face_index = self%empty_face_indexes(i)
+            call apply_boundary_condition_empty_impl(        &
+                primitive_variables_set                    , &
+                self%face_normal_vectors     (:,face_index), &
+                self%face_tangential1_vectors(:,face_index), &
+                self%face_tangential2_vectors(:,face_index), &
+                self%face_to_cell_indexes    (:,face_index), &
+                self%num_local_cells                       , &
+                num_primitive_variables                    , &
+                compute_rotate_matrix_primitive_function   , &
+                compute_unrotate_matrix_primitive_function , &
+                empty_copy_procedure_function                &
+            )
+        end do
+    end subroutine apply_empty_condition
+
     ! ### Variables ###
-    subroutine variables_initialize(self, conservative_variables_set, primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables)
+    subroutine variables_initialize(self, variables_set, num_variables)
         class  (cellsystem), intent(inout)              :: self
-        real   (real_kind ), intent(inout), allocatable :: conservative_variables_set(:,:)
-        real   (real_kind ), intent(inout), allocatable :: primitive_variables_set   (:,:)
-        real   (real_kind ), intent(inout), allocatable :: residual_set              (:,:)
-        integer(int_kind  ), intent(in   )              :: num_conservative_variables
-        integer(int_kind  ), intent(in   )              :: num_primitive_variables
+        real   (real_kind ), intent(inout), allocatable :: variables_set(:,:)
+        integer(int_kind  ), intent(in   )              :: num_variables
 
         if(.not. read_cellsystem) call call_error("'read' subroutine is not called. You should call with following steps: first you call 'read' subroutine, next you initialze variables with 'initialze' subroutine. Please check your cord.")
 
-        if(allocated(conservative_variables_set))then
-            call call_error("Array conservative_variables_set is allocated. But you call 'initialize' subroutine.")
+        if(allocated(variables_set))then
+            call call_error("Array variables_set is allocated. But you call 'initialize' subroutine.")
         end if
-        allocate(conservative_variables_set(1:num_conservative_variables, 1:self%num_cells))
-
-        if(allocated(primitive_variables_set))then
-            call call_error("Array primitive_variables_set is allocated. But you call 'initialize' subroutine.")
-        end if
-        allocate(primitive_variables_set(1:num_primitive_variables, 1:self%num_cells))
-
-        if(allocated(residual_set))then
-            call call_error("Array residual_set is allocated. But you call 'initialize' subroutine.")
-        end if
-        allocate(residual_set(1:num_conservative_variables, 1:self%num_cells))
-
-        self%initialized_variables = .true.
+        allocate(variables_set(1:num_variables, 1:self%num_cells))
     end subroutine variables_initialize
 
-    ! ### Gradient Schemes ###
-    subroutine gradient_scheme_initialize(self, a_gradient_scheme, config)
-        class  (cellsystem     ), intent(inout) :: self
-        class  (gradient_scheme), intent(inout) :: a_gradient_scheme
-        class  (configuration  ), intent(inout) :: config
+    ! ### Gradient Calculator ###
+    subroutine gradient_calculator_initialize(self, a_gradient_calculator, config)
+        class  (cellsystem         ), intent(inout) :: self
+        class  (gradient_calculator), intent(inout) :: a_gradient_calculator
+        class  (configuration      ), intent(inout) :: config
 
-        call a_gradient_scheme%initialize(config)
-    end subroutine gradient_scheme_initialize
+        call a_gradient_calculator%initialize(config)
+    end subroutine gradient_calculator_initialize
 
-    subroutine compute_gradient_2darray(self, a_gradient_scheme, variables_set, gradient_variables_set)
-        class(cellsystem     ), intent(inout) :: self
-        class(gradient_scheme), intent(inout) :: a_gradient_scheme
-        real (real_kind      ), intent(in   ) :: variables_set            (:,:)
-        real (real_kind      ), intent(in   ) :: gradient_variables_set   (:,:)
+    subroutine compute_gradient_array(self, a_gradient_calculator, variables_set, gradient_variables_set, num_variables)
+        class  (cellsystem         ), intent(inout) :: self
+        class  (gradient_calculator), intent(inout) :: a_gradient_calculator
+        real   (real_kind          ), intent(in   ) :: variables_set            (:,:)
+        real   (real_kind          ), intent(inout) :: gradient_variables_set   (:,:)
+        integer(int_kind           ), intent(in   ) :: num_variables
 
-        call a_gradient_scheme%compute_gradient( &
-            variables_set                      , &
-            gradient_variables_set             , &
-            self%cell_centor_positions         , &
-            self%cell_volumes                  , &
-            self%face_to_cell_indexes          , &
-            self%face_normal_vectors           , &
-            self%face_positions                , &
-            self%face_areas                    , &
-            self%num_faces                       &
-        )
-    end subroutine compute_gradient_2darray
+        integer(int_kind) :: face_index, cell_index
 
-    subroutine compute_gradient_1darray(self, a_gradient_scheme, variable_set, gradient_variable_set)
-        class(cellsystem     ), intent(inout) :: self
-        class(gradient_scheme), intent(inout) :: a_gradient_scheme
-        real (real_kind      ), intent(in   ) :: variable_set            (:)
-        real (real_kind      ), intent(in   ) :: gradient_variable_set   (:)
+!$omp parallel do private(cell_index)
+        do cell_index = 1, self%num_cells, 1
+            gradient_variable_set(:,cell_index) = 0.d0
+        end do
 
-        call a_gradient_scheme%compute_gradient_1darray( &
-            variable_set                               , &
-            gradient_variable_set                      , &
-            self%cell_centor_positions                 , &
-            self%cell_volumes                          , &
-            self%face_to_cell_indexes                  , &
-            self%face_normal_vectors                   , &
-            self%face_positions                        , &
-            self%face_areas                            , &
-            self%num_faces                               &
-        )
-    end subroutine compute_gradient_1darray
+!$omp parallel do private(face_index, rhc_index, lhc_index)
+        do face_index = 1, self%num_faces, 1
+            rhc_index = self%face_to_cell_indexes(0, face_index)
+            lhc_index = self%face_to_cell_indexes(1, face_index)
+            gradient_variable_set(:,rhc_index) = gradient_variable_set(:,rhc_index)                       &
+                                                 + a_gradient_calculator%compure_gradient_residual_array( &
+                                                        variables_set                      (:,rhc_index), &
+                                                        cell_centor_position               (:,rhc_index), &
+                                                        cell_volume                          (rhc_index), &
+                                                        face_normal_vector                 (:,rhc_index), &
+                                                        face_area                            (rhc_index)  &
+                                                    )
+            gradient_variable_set(:,lhc_index) = gradient_variable_set(:,lhc_index)                       &
+                                                 + a_gradient_calculator%compure_gradient_residual_array( &
+                                                        variables_set                      (:,lhc_index), &
+                                                        cell_centor_position               (:,lhc_index), &
+                                                        cell_volume                          (lhc_index), &
+                                                        face_normal_vector                 (:,lhc_index), &
+                                                        face_area                            (lhc_index)  &
+                                                    )
+        end do
+    end subroutine compute_gradient_array
+
+    subroutine compute_gradient_scolar(self, a_gradient_calculator, variable_set, gradient_variable_set)
+        class(cellsystem         ), intent(inout) :: self
+        class(gradient_calculator), intent(inout) :: a_gradient_calculator
+        real (real_kind          ), intent(in   ) :: variable_set            (:)
+        real (real_kind          ), intent(in   ) :: gradient_variable_set   (:)
+
+        integer(int_kind) :: face_index, cell_index, rhc_index, lhc_index
+
+!$omp parallel do private(cell_index)
+        do cell_index = 1, self%num_cells, 1
+            gradient_variable_set(:,cell_index) = 0.d0
+        end do
+
+!$omp parallel do private(face_index, rhc_index, lhc_index)
+        do face_index = 1, self%num_faces, 1
+            rhc_index = self%face_to_cell_indexes(0, face_index)
+            lhc_index = self%face_to_cell_indexes(1, face_index)
+            gradient_variable_set(1:3,rhc_index) = gradient_variable_set(1:3,rhc_index)             &
+                                                 + a_gradient_calculator%compure_gradient_residual( &
+                                                        variable_set                   (rhc_index), &
+                                                        cell_centor_position         (:,rhc_index), &
+                                                        cell_volume                    (rhc_index), &
+                                                        face_normal_vector           (:,rhc_index), &
+                                                        face_area                      (rhc_index)  &
+                                                    )
+            gradient_variable_set(1:3,lhc_index) = gradient_variable_set(1:3,lhc_index)             &
+                                                 + a_gradient_calculator%compure_gradient_residual( &
+                                                        variable_set                   (lhc_index), &
+                                                        cell_centor_position         (:,lhc_index), &
+                                                        cell_volume                    (lhc_index), &
+                                                        face_normal_vector           (:,lhc_index), &
+                                                        face_area                      (lhc_index)  &
+                                                    )
+        end do
+    end subroutine compute_gradient_scolar
 
     ! ### EoS ###
     subroutine eos_initialize(self, an_eos, config)
@@ -291,34 +566,41 @@ module class_cellsystem
         integer(int_kind      ), intent(in   ) :: num_primitive_variables
 
         interface
-            pure function primitive_to_conservative_function(primitive, an_eos) result(conservative)
+            pure function primitive_to_conservative_function(an_eos, primitive_variables, num_conservative_values) result(conservative_values)
                 use typedef_module
                 use abstract_eos
-                real (real_kind), intent(in)  :: primitive   (:)
-                class(eos      ), intent(in)  :: an_eos
-                real (real_kind), allocatable :: conservative(:)
+                class  (eos      ), intent(in) :: an_eos
+                real   (real_kind), intent(in) :: primitive_variables(:)
+                integer(int_kind ), intent(in) :: num_conservative_values
+                real   (real_kind)             :: conservative_values(num_conservative_values)
             end function primitive_to_conservative_function
 
             pure function compute_rotate_matrix_primitive_function( &
                 face_normal_vector       , &
                 face_tangential1_vector  , &
-                face_tangential2_vector  ,   ) result(matrix)
+                face_tangential2_vector  , &
+                num_primitive_variables      ) result(matrix)
 
                 use typedef_module
-                real   (real_kind     ), intent(in) :: face_normal_vector      (3)
-                real   (real_kind     ), intent(in) :: face_tangential1_vector (3)
-                real   (real_kind     ), intent(in) :: face_tangential2_vector (3)
+                real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
+                real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
+                real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
+                integer(int_kind      ), intent(in)  :: num_primitive_variables
+                real   (real_kind     )              :: matrix(num_primitive_variables, num_primitive_variables)
             end function compute_rotate_matrix_primitive_function
 
             pure function compute_unrotate_matrix_conservative_function( &
                 face_normal_vector       , &
                 face_tangential1_vector  , &
-                face_tangential2_vector  ,   ) result(matrix)
+                face_tangential2_vector  , &
+                num_conservative_values      ) result(matrix)
 
                 use typedef_module
                 real   (real_kind     ), intent(in) :: face_normal_vector      (3)
                 real   (real_kind     ), intent(in) :: face_tangential1_vector (3)
                 real   (real_kind     ), intent(in) :: face_tangential2_vector (3)
+                integer(int_kind      ), intent(in) :: num_conservative_values
+                real   (real_kind     )             :: matrix(num_conservative_values, num_conservative_values)
             end function compute_unrotate_matrix_conservative_function
 
             pure function model_function(                 &

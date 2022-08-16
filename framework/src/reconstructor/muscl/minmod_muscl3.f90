@@ -40,7 +40,7 @@ module minmod_muscl3_module
         logical :: found
 
         call config%get_int("Reconstructor.MUSCL3.Kappa", self%kappa_, found, 1.d0 / 3.d0)
-        if(.not. found) call write_warring("'Reconstructor.MUSCL3.Kappa' is not found in configration you set. To be set dafault value.")
+        if(.not. found) call write_warring("'Reconstructor.MUSCL3.Kappa' is not found in configuration you set. To be set dafault value.")
     end subroutine initialize
 
     pure function reconstruct_lhc( &
