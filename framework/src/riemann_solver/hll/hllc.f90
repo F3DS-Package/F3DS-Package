@@ -29,12 +29,10 @@ module class_hllc
 
     pure function compute_features(            &
         self                                 , &
-        left_conservative_mass               , &
         left_main_velocity                   , &
         left_density                         , &
         left_pressure                        , &
         left_soundspeed                      , &
-        right_conservative_mass              , &
         right_main_velocity                  , &
         right_density                        , &
         right_pressure                       , &
