@@ -551,10 +551,10 @@ module class_cellsystem
     end subroutine eos_initialize
 
     ! ### Flux ###
-    subroutine integrate_flux(self, a_reconstructor, a_riemann_solver, an_eos,                                           &
+    subroutine integrate_flux(self, a_reconstructor, a_riemann_solver, an_eos,                                            &
                               primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
                               primitive_to_conservative_function, compute_rotate_matrix_primitive_function,               &
-                              compute_unrotate_matrix_conservative_function, model_function                                 )
+                              compute_unrotate_matrix_conservative_function, flux_function                                  )
 
         class  (cellsystem    ), intent(in   ) :: self
         class  (reconstructor ), intent(in   ) :: a_reconstructor
@@ -603,7 +603,7 @@ module class_cellsystem
                 real   (real_kind     )             :: matrix(num_conservative_values, num_conservative_values)
             end function compute_unrotate_matrix_conservative_function
 
-            pure function model_function(                 &
+            pure function flux_function(                 &
                 primitive_variables_lhc                 , &
                 primitive_variables_rhc                 , &
                 reconstructed_primitive_variables_lhc   , &
@@ -629,7 +629,7 @@ module class_cellsystem
                 class  (riemann_solver), intent(in) :: an_riemann_solver
 
                 real   (real_kind)                  :: flux(num_conservative_values)
-            end function model_function
+            end function flux_function
         end interface
 
         integer(int_kind ) :: i
@@ -675,7 +675,7 @@ module class_cellsystem
             rotated_conservative_variables_lhc(:) = primitive_to_conservative_function(rotated_primitive_variables_lhc, an_eos)
             rotated_conservative_variables_rhc(:) = primitive_to_conservative_function(rotated_primitive_variables_rhc, an_eos)
 
-            local_coordinate_flux(:) = model_function(            &
+            local_coordinate_flux(:) = flux_function(             &
                 primitive_variables_set           (:, lhc_index), &
                 primitive_variables_set           (:, rhc_index), &
                 rotated_primitive_variables_lhc   (:)           , &
@@ -737,11 +737,11 @@ module class_cellsystem
         real   (real_kind          ), intent(inout) :: residual_set              (:,:)
 
         interface
-            pure function conservative_to_primitive_function(conservative, an_eos) result(primitive)
+            pure function conservative_to_primitive_function(an_eos, conservative) result(primitive)
                 use typedef_module
                 use abstract_eos
-                real (real_kind), intent(in)  :: conservative(:)
                 class(eos      ), intent(in)  :: an_eos
+                real (real_kind), intent(in)  :: conservative(:)
                 real (real_kind), allocatable :: primitive   (:)
             end function conservative_to_primitive_function
         end interface
