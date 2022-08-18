@@ -14,10 +14,10 @@ module abstract_configuration
         procedure(get_bool_interface), pass(self), deferred :: get_bool
         procedure(get_char_interface), pass(self), deferred :: get_char
 
-        procedure(add_real_interface), pass(self), deferred :: add_real
-        procedure(add_int_interface ), pass(self), deferred :: add_int
-        procedure(add_bool_interface), pass(self), deferred :: add_bool
-        procedure(add_char_interface), pass(self), deferred :: add_char
+        !procedure(add_real_interface), pass(self), deferred :: add_real
+        !procedure(add_int_interface ), pass(self), deferred :: add_int
+        !procedure(add_bool_interface), pass(self), deferred :: add_bool
+        !procedure(add_char_interface), pass(self), deferred :: add_char
     end type
 
     abstract interface
