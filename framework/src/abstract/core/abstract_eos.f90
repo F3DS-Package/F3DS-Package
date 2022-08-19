@@ -21,7 +21,7 @@ module abstract_eos
             use abstract_configuration
             import eos
             class(eos          ), intent(inout) :: self
-            class(configuration), intent(in   ) :: a_configuration
+            class(configuration), intent(inout) :: a_configuration
         end subroutine initialize_interface
 
         pure function compute_pressure_interface(self, specific_internal_energy, density, volume_fraction) result(pressure)

@@ -1,4 +1,4 @@
-module minmod_muscl3_module
+module class_minmod_muscl3
     !**
     !* 3rd order TVD-MUSCL with minmod limmiter
     !*
@@ -35,11 +35,11 @@ module minmod_muscl3_module
     end function
 
     subroutine initialize(self, config)
-        class(minmod_muscl3), intent(in   ) :: self
+        class(minmod_muscl3), intent(inout) :: self
         class(configuration), intent(inout) :: config
         logical :: found
 
-        call config%get_int("Reconstructor.MUSCL3.Kappa", self%kappa_, found, 1.d0 / 3.d0)
+        call config%get_real("Reconstructor.MUSCL3.Kappa", self%kappa_, found, 1.d0 / 3.d0)
         if(.not. found) call write_warring("'Reconstructor.MUSCL3.Kappa' is not found in configuration you set. To be set dafault value.")
     end subroutine initialize
 
@@ -69,9 +69,9 @@ module minmod_muscl3_module
 
         do i = 1, num_primitive_variables, 1
             associate(                                                                                       &
-                v_m1 => primitive_variables_set(i, face_to_cell_index(self%num_local_cells, face_index)), &
-                v    => primitive_variables_set(i, face_to_cell_index(self%num_local_cells, face_index)), &
-                v_p1 => primitive_variables_set(i, face_to_cell_index(self%num_local_cells, face_index))  &
+                v_m1 => primitive_variables_set(i, face_to_cell_index(num_local_cells-1, face_index)), &
+                v    => primitive_variables_set(i, face_to_cell_index(num_local_cells+0, face_index)), &
+                v_p1 => primitive_variables_set(i, face_to_cell_index(num_local_cells+1, face_index))  &
             )
                 if((v - v_m1) == 0.d0 .or. (v_p1 - v) == 0.d0)then
                     reconstructed_primitive_variables(i) = v
@@ -120,10 +120,10 @@ module minmod_muscl3_module
                 else
                     s = (v - v_m1) / (v_p1 - v)
                     reconstructed_primitive_variables(i) = v &
-                                               - 0.25d0 * (1.d0 - self%kappa_) * minmod(1.d0 / s) * (v    - v_m1) &
-                                               - 0.25d0 * (1.d0 - self%kappa_) * minmod(       s) * (v_p1 - v   )
+                                               - 0.25d0 * (1.d0 - self%kappa_) * self%minmod(1.d0 / s) * (v    - v_m1) &
+                                               - 0.25d0 * (1.d0 - self%kappa_) * self%minmod(       s) * (v_p1 - v   )
                 end if
             end associate
         end do
     end function reconstruct_rhc
-end module minmod_muscl3_module
+end module class_minmod_muscl3

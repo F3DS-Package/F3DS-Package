@@ -5,6 +5,7 @@ module string_utils_module
 
     private
 
+    public :: to_str
     interface to_str
         module procedure int_to_str ! add string conversion functions such as dble_to_str, ... in a future.
     end interface to_str

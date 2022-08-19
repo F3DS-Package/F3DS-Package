@@ -1,5 +1,6 @@
 module class_second_order_tvd_rk
     use typedef_module
+    use abstract_time_stepping
     use abstract_configuration
     use abstract_eos
 
@@ -10,9 +11,9 @@ module class_second_order_tvd_rk
     type, public, extends(time_stepping) :: second_order_tvd_rk
         private
 
-        integer(int_kind ), parameter :: nmu_stage_ = 2
-        real   (real_kind), parameter :: alpha_(1:3) = [real(real_kind) :: 1, 1/2]
-        real   (real_kind), parameter :: beta_ (1:3) = [real(real_kind) :: 1, 1/2]
+        integer(int_kind ) :: nmu_stage_ = 2
+        real   (real_kind) :: alpha_(1:3) = [real(real_kind) :: 1, 1/2]
+        real   (real_kind) :: beta_ (1:3) = [real(real_kind) :: 1, 1/2]
 
         ! Stored init conservative-variables of each in cells
         ! Elm. 1) 1:number of conservative variables
@@ -35,11 +36,12 @@ module class_second_order_tvd_rk
         integer(int_kind          ), intent(in   ) :: num_cells
         integer(int_kind          ), intent(in   ) :: num_conservative_variables
 
-        allocate(init_conservative_variables_set(1:num_conservative_variables, 1:num_cells))
+        allocate(self%init_conservative_variables_set(1:num_conservative_variables, 1:num_cells))
     end subroutine initialize
 
     subroutine compute_next_state(   &
         self                       , &
+        cell_index                 , &
         state_num                  , &
         time_increment             , &
         conservative_variables     , &
@@ -53,9 +55,9 @@ module class_second_order_tvd_rk
         real   (real_kind          ), intent(inout) :: residuals             (:)
 
 
-        conservative_variables_set(:) = self%alpha_(state_num) * self%init_conservative_variables_set(:, cell_index) &
-                                      + self%beta_ (state_num) * (conservative_variables_set(:) + time_increment * residual_set(:))
-        residual_set              (:) = 0.d0
+        conservative_variables(:) = self%alpha_(state_num) * self%init_conservative_variables_set(:, cell_index) &
+                                  + self%beta_ (state_num) * (conservative_variables(:) + time_increment * residuals(:))
+        residuals             (:) = 0.d0
     end subroutine compute_next_state
 
     subroutine prepare_stepping(   &
@@ -71,12 +73,12 @@ module class_second_order_tvd_rk
         real   (real_kind          ), intent(inout) :: primitive_variables   (:)
         real   (real_kind          ), intent(inout) :: residuals             (:)
 
-        self%init_conservative_variables_set(:, cell_index) = conservative_variables_set(:)
+        self%init_conservative_variables_set(:, cell_index) = conservative_variables(:)
     end subroutine prepare_stepping
 
     pure function get_number_of_states(self) result(n)
-        class  (second_order_tvd_rk), intent(inout) :: self
-        integer(int_kind          )                :: n
+        class  (second_order_tvd_rk), intent(in) :: self
+        integer(int_kind          )              :: n
         n = self%nmu_stage_
     end function get_number_of_states
 end module class_second_order_tvd_rk

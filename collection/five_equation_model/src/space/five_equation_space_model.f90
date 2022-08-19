@@ -105,7 +105,7 @@ module five_equation_space_model_module
         ! # compute primitive-variables of face local coordinate
         ! ## left-side
         local_coordinate_lhc_primitive(1:2) = reconstructed_lhc_primitive(1:2)
-        local_coordinate_lhc_primitive(3:5) = rotate_vector( &
+        local_coordinate_lhc_primitive(3:5) = vector_rotate( &
             reconstructed_lhc_primitive(3:5),        &
             face_normal_vector,             &
             face_tangential1_vector,        &
@@ -114,7 +114,7 @@ module five_equation_space_model_module
         local_coordinate_lhc_primitive(6:7) = reconstructed_lhc_primitive(6:7)
         ! ## right-side
         local_coordinate_rhc_primitive(1:2) = reconstructed_rhc_primitive(1:2)
-        local_coordinate_rhc_primitive(3:5) = rotate_vector( &
+        local_coordinate_rhc_primitive(3:5) = vector_rotate( &
             reconstructed_rhc_primitive(3:5),       &
             face_normal_vector,             &
             face_tangential1_vector,        &
@@ -177,7 +177,7 @@ module five_equation_space_model_module
             rhc_soundspeed                 &
         )
         ! ## convert to global coordinate flux
-        nonviscosity_flux(3:5) = reverse_vector(  &
+        nonviscosity_flux(3:5) = vector_unrotate(  &
             nonviscosity_flux(3:5)              , &
             face_normal_vector                  , &
             face_tangential1_vector             , &

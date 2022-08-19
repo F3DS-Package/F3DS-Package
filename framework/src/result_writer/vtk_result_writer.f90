@@ -40,7 +40,7 @@ module class_vtk_result_writer
         integer(int_kind) :: vtk_error
 
         integer(int_kind) :: filename_extra_digits = 4
-        character(len=:), allocatable :: base_dir_path = "result/field"
+        character(len=:), allocatable :: base_dir_path
 
         contains
 
@@ -60,7 +60,7 @@ module class_vtk_result_writer
     contains
 
     subroutine finalize(self)
-        class  (vtk_result_writer), intent(inout) :: self
+        type  (vtk_result_writer), intent(inout) :: self
 
         type   (json_core ) :: json
         type   (json_value), pointer :: root_obj, vtk_files_obj, vtk_file_info_obj
@@ -74,7 +74,7 @@ module class_vtk_result_writer
 
         call json%create_array(vtk_files_obj, 'files')
 
-        do i = 0, i = self%n_output_file, 1
+        do i = 0, self%n_output_file, 1
             call json%create_array(vtk_file_info_obj, '')
             call json%add(vtk_file_info_obj, 'name', self%make_vtk_filename(i))
             call json%add(vtk_file_info_obj, 'time', self%output_timespan * dble(i))
@@ -90,9 +90,9 @@ module class_vtk_result_writer
     end subroutine finalize
 
     pure function make_vtk_filename(self, file_number) result(filename)
-        class    (vtk_result_writer), intent(inout) :: self
-        integer  (int_kind         ), intent(in   ) :: file_number
-        character(:                ), allocatable   :: filename
+        class    (vtk_result_writer), intent(in)  :: self
+        integer  (int_kind         ), intent(in)  :: file_number
+        character(:                ), allocatable :: filename
         filename = to_str(file_number, extra_digits=self%filename_extra_digits)//".vtu"
     end function make_vtk_filename
 
@@ -146,6 +146,9 @@ module class_vtk_result_writer
         if(.not. found) call write_warring("'Result writer.Number of output files' is not found in configration you set. To be set dafault value.")
         self%output_timespan = end_time / dble(n_output)
         self%next_output_time = 0.d0
+
+        ! set base path
+        self%base_dir_path = "result/field"
 
         ! make directory
         call make_dir(self%base_dir_path)

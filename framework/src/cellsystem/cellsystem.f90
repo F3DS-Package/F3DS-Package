@@ -59,7 +59,7 @@ module class_cellsystem
         integer(int_kind) :: num_outflow_faces
         integer(int_kind) :: num_slipwall_faces
         integer(int_kind) :: num_symmetric_faces
-        integer(int_kind) :: num_empty_face_indexes
+        integer(int_kind) :: num_empty_faces
 
         ! ### Faces ###
 
@@ -158,7 +158,7 @@ module class_cellsystem
         ! ### Time Stepping ###
         procedure, public, pass(self) :: compute_next_state
         procedure, public, pass(self) :: prepare_stepping
-        procedure, public, pass(self) :: get_number_of_stage
+        procedure, public, pass(self) :: get_number_of_states
 
         ! ### Result Writer ###
         procedure, public, pass(self) :: write_scolar
@@ -254,7 +254,7 @@ module class_cellsystem
                 num_primitive_variables                    , &
                 compute_rotate_matrix_primitive_function   , &
                 compute_unrotate_matrix_primitive_function , &
-                empty_copy_procedure_function                &
+                boundary_condition_function                &
             )
         end do
     end subroutine apply_outflow_condition
@@ -316,7 +316,7 @@ module class_cellsystem
                 num_primitive_variables                    , &
                 compute_rotate_matrix_primitive_function   , &
                 compute_unrotate_matrix_primitive_function , &
-                empty_copy_procedure_function                &
+                boundary_condition_function                  &
             )
         end do
     end subroutine apply_slipwall_condition
@@ -378,7 +378,7 @@ module class_cellsystem
                 num_primitive_variables                    , &
                 compute_rotate_matrix_primitive_function   , &
                 compute_unrotate_matrix_primitive_function , &
-                empty_copy_procedure_function                &
+                boundary_condition_function                  &
             )
         end do
     end subroutine apply_symmetric_condition
@@ -440,7 +440,7 @@ module class_cellsystem
                 num_primitive_variables                    , &
                 compute_rotate_matrix_primitive_function   , &
                 compute_unrotate_matrix_primitive_function , &
-                empty_copy_procedure_function                &
+                boundary_condition_function                  &
             )
         end do
     end subroutine apply_empty_condition
@@ -451,7 +451,7 @@ module class_cellsystem
         real   (real_kind ), intent(inout), allocatable :: variables_set(:,:)
         integer(int_kind  ), intent(in   )              :: num_variables
 
-        if(.not. read_cellsystem) call call_error("'read' subroutine is not called. You should call with following steps: first you call 'read' subroutine, next you initialze variables with 'initialze' subroutine. Please check your cord.")
+        if(.not. self%read_cellsystem) call call_error("'read' subroutine is not called. You should call with following steps: first you call 'read' subroutine, next you initialze variables with 'initialze' subroutine. Please check your cord.")
 
         if(allocated(variables_set))then
             call call_error("Array variables_set is allocated. But you call 'initialize' subroutine.")
@@ -475,32 +475,40 @@ module class_cellsystem
         real   (real_kind          ), intent(inout) :: gradient_variables_set   (:,:)
         integer(int_kind           ), intent(in   ) :: num_variables
 
-        integer(int_kind) :: face_index, cell_index
+        integer(int_kind) :: face_index, cell_index, rhc_index, lhc_index
 
 !$omp parallel do private(cell_index)
         do cell_index = 1, self%num_cells, 1
-            gradient_variable_set(:,cell_index) = 0.d0
+            gradient_variables_set(:,cell_index) = 0.d0
         end do
 
 !$omp parallel do private(face_index, rhc_index, lhc_index)
         do face_index = 1, self%num_faces, 1
             rhc_index = self%face_to_cell_indexes(0, face_index)
             lhc_index = self%face_to_cell_indexes(1, face_index)
-            gradient_variable_set(:,rhc_index) = gradient_variable_set(:,rhc_index)                       &
-                                                 + a_gradient_calculator%compure_gradient_residual_array( &
+            gradient_variables_set(:,rhc_index) = gradient_variables_set(:,rhc_index)                     &
+                                                 + (1.d0 / self%cell_volumes(rhc_index))                  &
+                                                 * a_gradient_calculator%compute_gradient_residual_array( &
                                                         variables_set                      (:,rhc_index), &
-                                                        cell_centor_position               (:,rhc_index), &
-                                                        cell_volume                          (rhc_index), &
-                                                        face_normal_vector                 (:,rhc_index), &
-                                                        face_area                            (rhc_index)  &
-                                                    )
-            gradient_variable_set(:,lhc_index) = gradient_variable_set(:,lhc_index)                       &
-                                                 + a_gradient_calculator%compure_gradient_residual_array( &
                                                         variables_set                      (:,lhc_index), &
-                                                        cell_centor_position               (:,lhc_index), &
-                                                        cell_volume                          (lhc_index), &
-                                                        face_normal_vector                 (:,lhc_index), &
-                                                        face_area                            (lhc_index)  &
+                                                        self%cell_centor_positions         (:,rhc_index), &
+                                                        self%cell_centor_positions         (:,lhc_index), &
+                                                        self%face_normal_vectors           (:,rhc_index), &
+                                                        self%face_positions                (:,rhc_index), &
+                                                        self%face_areas                      (rhc_index), &
+                                                        num_variables                                     &
+                                                    )
+            gradient_variables_set(:,lhc_index) = gradient_variables_set(:,lhc_index)                     &
+                                                 + (1.d0 / self%cell_volumes(rhc_index))                  &
+                                                 * a_gradient_calculator%compute_gradient_residual_array( &
+                                                        variables_set                      (:,rhc_index), &
+                                                        variables_set                      (:,lhc_index), &
+                                                        self%cell_centor_positions         (:,rhc_index), &
+                                                        self%cell_centor_positions         (:,lhc_index), &
+                                                        self%face_normal_vectors           (:,lhc_index), &
+                                                        self%face_positions                (:,lhc_index), &
+                                                        self%face_areas                      (lhc_index), &
+                                                        num_variables                                     &
                                                     )
         end do
     end subroutine compute_gradient_array
@@ -509,7 +517,7 @@ module class_cellsystem
         class(cellsystem         ), intent(inout) :: self
         class(gradient_calculator), intent(inout) :: a_gradient_calculator
         real (real_kind          ), intent(in   ) :: variable_set            (:)
-        real (real_kind          ), intent(in   ) :: gradient_variable_set   (:)
+        real (real_kind          ), intent(inout) :: gradient_variable_set   (:,:)
 
         integer(int_kind) :: face_index, cell_index, rhc_index, lhc_index
 
@@ -522,21 +530,27 @@ module class_cellsystem
         do face_index = 1, self%num_faces, 1
             rhc_index = self%face_to_cell_indexes(0, face_index)
             lhc_index = self%face_to_cell_indexes(1, face_index)
-            gradient_variable_set(1:3,rhc_index) = gradient_variable_set(1:3,rhc_index)             &
-                                                 + a_gradient_calculator%compure_gradient_residual( &
-                                                        variable_set                   (rhc_index), &
-                                                        cell_centor_position         (:,rhc_index), &
-                                                        cell_volume                    (rhc_index), &
-                                                        face_normal_vector           (:,rhc_index), &
-                                                        face_area                      (rhc_index)  &
+            gradient_variable_set(1:3,rhc_index) = gradient_variable_set(1:3,rhc_index)                   &
+                                                 + (1.d0 / self%cell_volumes(rhc_index))                  &
+                                                 * a_gradient_calculator%compute_gradient_residual(       &
+                                                        variable_set                       (  rhc_index), &
+                                                        variable_set                       (  lhc_index), &
+                                                        self%cell_centor_positions         (:,rhc_index), &
+                                                        self%cell_centor_positions         (:,lhc_index), &
+                                                        self%face_normal_vectors           (:,rhc_index), &
+                                                        self%face_positions                (:,rhc_index), &
+                                                        self%face_areas                      (rhc_index)  &
                                                     )
-            gradient_variable_set(1:3,lhc_index) = gradient_variable_set(1:3,lhc_index)             &
-                                                 + a_gradient_calculator%compure_gradient_residual( &
-                                                        variable_set                   (lhc_index), &
-                                                        cell_centor_position         (:,lhc_index), &
-                                                        cell_volume                    (lhc_index), &
-                                                        face_normal_vector           (:,lhc_index), &
-                                                        face_area                      (lhc_index)  &
+            gradient_variable_set(1:3,lhc_index) = gradient_variable_set(1:3,lhc_index)                   &
+                                                 + (1.d0 / self%cell_volumes(lhc_index))                  &
+                                                 * a_gradient_calculator%compute_gradient_residual(       &
+                                                        variable_set                       (  rhc_index), &
+                                                        variable_set                       (  lhc_index), &
+                                                        self%cell_centor_positions         (:,rhc_index), &
+                                                        self%cell_centor_positions         (:,lhc_index), &
+                                                        self%face_normal_vectors           (:,lhc_index), &
+                                                        self%face_positions                (:,lhc_index), &
+                                                        self%face_areas                      (lhc_index)  &
                                                     )
         end do
     end subroutine compute_gradient_scolar
@@ -647,20 +661,20 @@ module class_cellsystem
 
 !$omp parallel do private(i,lhc_index,rhc_index,rotate_matrix,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,rotated_primitive_variables_lhc,rotated_conservative_variables_rhc,local_coordinate_flux,global_coordinate_flux)
         do i = 1, self%num_faces, 1
-            lhc_index = face_to_cell_index(self%num_local_cells+0, i)
-            rhc_index = face_to_cell_index(self%num_local_cells+1, i)
+            lhc_index = self%face_to_cell_indexes(self%num_local_cells+0, i)
+            rhc_index = self%face_to_cell_indexes(self%num_local_cells+1, i)
 
-            reconstructed_primitive_variables_lhc(:) = a_reconstructor%reconstruct_lhc(                                       &
-                i, primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_centor_positions, &
-                self%num_local_cells, num_primitive_variables                                                                  &
+            reconstructed_primitive_variables_lhc(:) = a_reconstructor%reconstruct_lhc(                              &
+                primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
+                i, self%num_local_cells, num_primitive_variables                                                     &
             )
-            reconstructed_primitive_variables_rhc(:) = a_reconstructor%reconstruct_rhc(                                      &
-                i, primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_centor_positions &
-                self%num_local_cells, num_primitive_variables                                                                 &
+            reconstructed_primitive_variables_rhc(:) = a_reconstructor%reconstruct_rhc(                              &
+                primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
+                i, self%num_local_cells, num_primitive_variables                                                     &
             )
 
-            rotate_matrix(:,:) = compute_rotate_matrix_primitive_function(                                            &
-                self%face_normal_vectors(:,i), self%face_tangential1_vectors(:,i), self%face_tangential2_vectors(:,i) &
+            rotate_matrix(:,:) = compute_rotate_matrix_primitive_function(                                                                     &
+                self%face_normal_vectors(:,i), self%face_tangential1_vectors(:,i), self%face_tangential2_vectors(:,i), num_primitive_variables &
             )
 
             rotated_primitive_variables_lhc(:) = matrix_multiply( &
@@ -669,11 +683,11 @@ module class_cellsystem
             )
             rotated_primitive_variables_rhc(:) = matrix_multiply( &
                 rotate_matrix,                                    &
-                reconstructed_primitive_variables_rhc,            &
+                reconstructed_primitive_variables_rhc             &
             )
 
-            rotated_conservative_variables_lhc(:) = primitive_to_conservative_function(rotated_primitive_variables_lhc, an_eos)
-            rotated_conservative_variables_rhc(:) = primitive_to_conservative_function(rotated_primitive_variables_rhc, an_eos)
+            rotated_conservative_variables_lhc(:) = primitive_to_conservative_function(an_eos, rotated_primitive_variables_lhc, num_primitive_variables)
+            rotated_conservative_variables_rhc(:) = primitive_to_conservative_function(an_eos, rotated_primitive_variables_rhc, num_primitive_variables)
 
             local_coordinate_flux(:) = flux_function(             &
                 primitive_variables_set           (:, lhc_index), &
@@ -687,11 +701,11 @@ module class_cellsystem
                 a_riemann_solver                                  &
             )
 
-            global_coordinate_flux(:) = matrix_multiply(                                                                  &
-                compute_unrotate_matrix_conservative_function(                                                            &
-                    self%face_normal_vectors(:,i), self%face_tangential1_vectors(:,i), self%face_tangential2_vectors(:,i) &
-                )                                                                                                         &
-                local_coordinate_flux                                                                                     &
+            global_coordinate_flux(:) = matrix_multiply(                                                                                              &
+                compute_unrotate_matrix_conservative_function(                                                                                        &
+                    self%face_normal_vectors(:,i), self%face_tangential1_vectors(:,i), self%face_tangential2_vectors(:,i), num_conservative_variables &
+                ),                                                                                                                                    &
+                local_coordinate_flux                                                                                                                 &
             )
 
             residual_set(:,lhc_index) = residual_set(:,lhc_index) - (1.d0 / self%cell_volumes(lhc_index)) * global_coordinate_flux(:) * self%face_areas(i)
@@ -705,15 +719,15 @@ module class_cellsystem
         class  (configuration ), intent(inout) :: config
 
         call a_riemann_solver%initialize(config)
-    end subroutine time_stepping_initialize
+    end subroutine riemann_solver_initialize
 
     subroutine reconstructor_initialize(self, a_reconstructor, config)
         class  (cellsystem    ), intent(inout) :: self
-        class  (reconstructor), intent(inout) :: a_reconstructor
+        class  (reconstructor ), intent(inout) :: a_reconstructor
         class  (configuration ), intent(inout) :: config
 
-        call reconstructor%initialize(config)
-    end subroutine time_stepping_initialize
+        call a_reconstructor%initialize(config)
+    end subroutine reconstructor_initialize
 
     ! ### Time stepping ###
     subroutine time_stepping_initialize(self, a_time_stepping, config, num_conservative_variables)
@@ -751,7 +765,7 @@ module class_cellsystem
 !$omp parallel do private(i)
         do i = 1, self%num_cells, 1
             call a_time_stepping%compute_next_state(i, state_num, self%time_increment, conservative_variables_set(:,i), residual_set(:,i))
-            primitive_variables_set(:,i) = conservative_to_primitive_function(conservative_variables_set(:,i), an_eos)
+            primitive_variables_set(:,i) = conservative_to_primitive_function(an_eos, conservative_variables_set(:,i))
         end do
     end subroutine compute_next_state
 
@@ -775,13 +789,13 @@ module class_cellsystem
         end do
     end subroutine
 
-    pure function get_number_of_stage(self, a_time_stepping) result(n)
-        class  (cellsystem   ), intent(inout) :: self
-        class  (time_stepping), intent(inout) :: a_time_stepping
+    pure function get_number_of_states(self, a_time_stepping) result(n)
+        class  (cellsystem   ), intent(in) :: self
+        class  (time_stepping), intent(in) :: a_time_stepping
         integer(int_kind     )                :: n
 
-        n = a_time_stepping%get_number_of_stage()
-    end function get_number_of_stage
+        n = a_time_stepping%get_number_of_states()
+    end function get_number_of_states
 
     ! ###  Result writer ###
     subroutine result_writer_initialize(self, writer, config)
@@ -858,7 +872,7 @@ module class_cellsystem
         call self%initialise_faces              (parser%get_number_of_faces (), parser%get_number_of_ghost_cells())
         call self%initialise_cells              (parser%get_number_of_points(), parser%get_number_of_cells      ())
         call self%initialise_boundary_references(parser%get_number_of_boundary_faces(outflow_face_type  ), &
-                                                 parser%get_number_of_boundary_faces(slipwall_face_type ), &
+                                                 parser%get_number_of_boundary_faces(slip_wall_face_type), &
                                                  parser%get_number_of_boundary_faces(symmetric_face_type), &
                                                  parser%get_number_of_boundary_faces(empty_face_type    )    )
 
@@ -1074,12 +1088,12 @@ module class_cellsystem
         allocate(self%cell_types(self%num_cells))
     end subroutine initialise_cells
 
-    subroutine initialise_boundary_references(self, num_outflow_faces, num_slipwall_faces, num_symetric_faces, num_empty_face_indexes)
+    subroutine initialise_boundary_references(self, num_outflow_faces, num_slipwall_faces, num_symetric_faces, num_empty_faces)
         class(cellsystem), intent(inout) :: self
         integer(int_kind), intent(in) :: num_outflow_faces
         integer(int_kind), intent(in) :: num_slipwall_faces
         integer(int_kind), intent(in) :: num_symetric_faces
-        integer(int_kind), intent(in) :: num_empty_face_indexes
+        integer(int_kind), intent(in) :: num_empty_faces
 
         if(num_outflow_faces < 0)then
             call call_error("Number of outflow BC faces must be set over zero.")
@@ -1096,10 +1110,10 @@ module class_cellsystem
         end if
         self%num_symmetric_faces = num_symetric_faces
 
-        if(num_empty_face_indexes < 0)then
+        if(num_empty_faces < 0)then
             call call_error("Number of empty BC faces must be set over zero.")
         end if
-        self%num_empty_face_indexes = num_empty_face_indexes
+        self%num_empty_faces = num_empty_faces
 
         if(allocated(self%outflow_face_indexes))then
             call call_error("Array outflow_face_indexes is already allocated. But you call the initialiser for boundary_reference.")
@@ -1119,7 +1133,7 @@ module class_cellsystem
         if(allocated(self%empty_face_indexes))then
             call call_error("Array empty_face_indexes is already allocated. But you call the initialiser for boundary_reference.")
         end if
-        allocate(self%empty_face_indexes(self%num_empty_face_indexes))
+        allocate(self%empty_face_indexes(self%num_empty_faces))
     end subroutine initialise_boundary_references
 
     subroutine finalize_faces(self)

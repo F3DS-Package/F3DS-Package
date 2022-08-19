@@ -63,7 +63,7 @@ module abstract_time_stepping
             use typedef_module
             import time_stepping
 
-            class  (time_stepping), intent(inout) :: self
+            class  (time_stepping), intent(in   ) :: self
             integer(int_kind     )                :: n
         end function get_number_of_states_interface
     end interface

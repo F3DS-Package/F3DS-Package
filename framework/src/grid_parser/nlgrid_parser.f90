@@ -582,7 +582,7 @@ module class_nlgrid_parser
         tangential1_vectors(1:3, face_index) = self%tan1_vecs_k_drct_face  (i, j, k, 1:3)
         tangential2_vectors(1:3, face_index) = self%tan2_vecs_k_drct_face  (i, j, k, 1:3)
         areas              (     face_index) = self%areas_k_drct_face      (i, j, k     )
-        positions          (1    face_index) = 0.25d0 *( &
+        positions          (1,   face_index) = 0.25d0 *( &
             + self%x_poss_cell_edge(i    , j    , k) &
             + self%x_poss_cell_edge(i - 1, j    , k) &
             + self%x_poss_cell_edge(i    , j - 1, k) &
@@ -634,7 +634,7 @@ module class_nlgrid_parser
         normal_vectors     (1:3, face_index) = self%normal_vecs_j_drct_face(i, j, k, 1:3)
         tangential1_vectors(1:3, face_index) = self%tan1_vecs_j_drct_face  (i, j, k, 1:3)
         tangential2_vectors(1:3, face_index) = self%tan2_vecs_j_drct_face  (i, j, k, 1:3)
-        areas              (   , face_index) = self%areas_j_drct_face      (i, j, k     )
+        areas              (     face_index) = self%areas_j_drct_face      (i, j, k     )
         positions          (1  , face_index) = 0.25d0 *( &
             + self%x_poss_cell_edge(i    , j, k    ) &
             + self%x_poss_cell_edge(i - 1, j, k    ) &
