@@ -1,7 +1,12 @@
 module class_vtk_result_writer
+    ! external
     use vtk_fortran
+    use json_module
+    use json_string_utilities
+    ! f3ds
     use typedef_module
     use stdio_module
+    use string_utils_module
     use system_call_module
     use class_point_id_list
     use abstract_result_writer
@@ -34,6 +39,9 @@ module class_vtk_result_writer
 
         integer(int_kind) :: vtk_error
 
+        integer(int_kind) :: filename_extra_digits = 4
+        character(len=:), allocatable :: base_dir_path = "result/field"
+
         contains
 
         procedure, public, pass(self) :: initialize
@@ -43,9 +51,50 @@ module class_vtk_result_writer
         procedure, public, pass(self) :: write_vector
         procedure, public, pass(self) :: is_writable
         procedure, public, pass(self) :: get_filename
+
+        final :: finalize
+
+        procedure, pass(self) :: make_vtk_filename
     end type vtk_result_writer
 
     contains
+
+    subroutine finalize(self)
+        class  (vtk_result_writer), intent(inout) :: self
+
+        type   (json_core ) :: json
+        type   (json_value), pointer :: root_obj, vtk_files_obj, vtk_file_info_obj
+        integer(int_kind  ) :: i
+
+        call json%initialize()
+
+        call json%create_object(root_obj,'')
+
+        call json%add(root_obj, "file-series-version", "1.0")
+
+        call json%create_array(vtk_files_obj, 'files')
+
+        do i = 0, i = self%n_output_file, 1
+            call json%create_array(vtk_file_info_obj, '')
+            call json%add(vtk_file_info_obj, 'name', self%make_vtk_filename(i))
+            call json%add(vtk_file_info_obj, 'time', self%output_timespan * dble(i))
+            call json%add(vtk_files_obj, vtk_file_info_obj)
+            nullify(vtk_file_info_obj)
+        end do
+
+        call json%add(root_obj, vtk_files_obj)
+
+        call json%print(root_obj, self%base_dir_path//'files.vtu.series')
+
+        call json%destroy(root_obj)
+    end subroutine finalize
+
+    pure function make_vtk_filename(self, file_number) result(filename)
+        class    (vtk_result_writer), intent(inout) :: self
+        integer  (int_kind         ), intent(in   ) :: file_number
+        character(:                ), allocatable   :: filename
+        filename = to_str(file_number, extra_digits=self%filename_extra_digits)//".vtu"
+    end function make_vtk_filename
 
     subroutine initialize(self, num_cells, num_points, is_real_cell, cell_geometries, cell_types, end_time, config)
         class  (vtk_result_writer), intent(inout) :: self
@@ -99,7 +148,7 @@ module class_vtk_result_writer
         self%next_output_time = 0.d0
 
         ! make directory
-        call make_dir("result/field")
+        call make_dir(self%base_dir_path)
 
         ! initialize
         self%file_is_opened = .false.
@@ -113,7 +162,8 @@ module class_vtk_result_writer
         if(self%file_is_opened) call call_error("VTK result file '"//self%vtk_filename//"' is already opened. But you call open_file method.")
 
         if(time > self%next_output_time)then
-            write(self%vtk_filename, "(a, i5.5, a)") "result/field/", self%n_output_file, ".vtu"
+            !write(self%vtk_filename, "(a, i5.5, a)") "result/field/", self%n_output_file, ".vtu"
+            write(self%vtk_filename, "(a, a)") self%base_dir_path, self%make_vtk_filename(self%n_output_file)
 
             self%vtk_error = self%a_vtk_file%initialize                   (format="binary", filename=self%vtk_filename, mesh_topology="UnstructuredGrid")
             self%vtk_error = self%a_vtk_file%xml_writer%write_piece       (np=self%n_output_points, nc=self%n_output_cells)

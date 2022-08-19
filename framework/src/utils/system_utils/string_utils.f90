@@ -5,11 +5,11 @@ module string_utils_module
 
     private
 
-    public :: to_str
+    public :: to_str => int_to_str
 
     contains
 
-    pure function to_str(num, extra_digits) result(str)
+    pure function int_to_str(num, extra_digits) result(str)
         integer  (int_kind), intent(in)           :: num
         integer  (int_kind), intent(in), optional :: extra_digits
         character(:       ), allocatable          :: str
@@ -21,8 +21,9 @@ module string_utils_module
 
         if(.not. present(extra_digits)) extra_digits = 0
 
-        num_digits = get_digits_of(num) + extra_digits
-        dgt_digits = get_digits_of(num_digits)
+        num_digits = get_int_digits_of(num)
+        if (num_digits < extra_digits) num_digits = extra_digits
+        dgt_digits = get_int_digits_of(num_digits)
 
         allocate(character(dgt_digits)::str_digits)
         write(str_digits,'(I0)') num_digits
@@ -33,11 +34,11 @@ module string_utils_module
         write(str,fmt) num
     end function
 
-    pure function get_digits_of(num) result(num_digit)
+    pure function get_int_digits_of(num) result(num_digit)
         integer(int_kind), intent(in) :: num
         integer(int_kind)             :: num_digit
 
         num_digit = int(log10(dble(num)))+1
-    end function get_digits_of
+    end function get_int_digits_of
 
 end module string_utils_module
