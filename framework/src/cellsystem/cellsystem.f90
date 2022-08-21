@@ -304,8 +304,8 @@ module class_cellsystem
 
         integer :: i, face_index
 
-        do i = 1, self%num_outflow_faces, 1
-            face_index = self%outflow_face_indexes(i)
+        do i = 1, self%num_slipwall_faces, 1
+            face_index = self%slipwall_face_indexes(i)
             call apply_boundary_condition_common_impl(       &
                 primitive_variables_set                    , &
                 self%face_normal_vectors     (:,face_index), &
@@ -366,8 +366,8 @@ module class_cellsystem
 
         integer :: i, face_index
 
-        do i = 1, self%num_outflow_faces, 1
-            face_index = self%outflow_face_indexes(i)
+        do i = 1, self%num_symmetric_faces, 1
+            face_index = self%symmetric_face_indexes(i)
             call apply_boundary_condition_common_impl(       &
                 primitive_variables_set                    , &
                 self%face_normal_vectors     (:,face_index), &
@@ -428,7 +428,7 @@ module class_cellsystem
 
         integer :: i, face_index
 
-        do i = 1, self%num_outflow_faces, 1
+        do i = 1, self%num_empty_faces, 1
             face_index = self%empty_face_indexes(i)
             call apply_boundary_condition_empty_impl(        &
                 primitive_variables_set                    , &
