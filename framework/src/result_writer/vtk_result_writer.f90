@@ -96,14 +96,13 @@ module class_vtk_result_writer
         filename = to_str(file_number, extra_digits=self%filename_extra_digits)//".vtu"
     end function make_vtk_filename
 
-    subroutine initialize(self, num_cells, num_points, is_real_cell, cell_geometries, cell_types, end_time, config)
+    subroutine initialize(self, num_cells, num_points, is_real_cell, cell_geometries, cell_types, config)
         class  (vtk_result_writer), intent(inout) :: self
         integer(int_kind         ), intent(in   ) :: num_cells
         integer(int_kind         ), intent(in   ) :: num_points
         logical                   , intent(in   ) :: is_real_cell   (:)
         class  (point_id_list    ), intent(in   ) :: cell_geometries(:)
         integer(type_kind        ), intent(in   ) :: cell_types     (:)
-        real   (real_kind        ), intent(in   ) :: end_time
         class  (configuration    ), intent(inout) :: config
 
         integer(int_kind ) :: index, vtk_index, cell_point_index
@@ -142,9 +141,8 @@ module class_vtk_result_writer
         end do
         self%n_output_points = num_points
         self%n_output_file   = 0
-        call config%get_int("Result writer.Number of output files", n_output, found, 100)
-        if(.not. found) call write_warring("'Result writer.Number of output files' is not found in configration you set. To be set dafault value.")
-        self%output_timespan = end_time / dble(n_output)
+        call config%get_int("Result writer.Output timespan", self%output_timespan, found, 100)
+        if(.not. found) call write_warring("'Result writer.Output timespan' is not found in configration you set. To be set dafault value.")
         self%next_output_time = 0.d0
 
         ! set base path

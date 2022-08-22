@@ -35,7 +35,7 @@ module class_cellsystem
     type, public :: cellsystem
         private
 
-        ! Termination condition
+        ! Termination criterion
         real(real_kind) :: end_time
 
         ! Time
@@ -803,7 +803,7 @@ module class_cellsystem
         class  (result_writer), intent(inout) :: writer
         class  (configuration), intent(inout) :: config
 
-        call writer%initialize(self%num_cells, self%num_points, self%is_real_cell, self%cell_geometries, self%cell_types, self%end_time, config)
+        call writer%initialize(self%num_cells, self%num_points, self%is_real_cell, self%cell_geometries, self%cell_types, config)
     end subroutine result_writer_initialize
 
     subroutine result_writer_open_file(self, writer)
