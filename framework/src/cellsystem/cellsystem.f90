@@ -14,6 +14,7 @@ module class_cellsystem
     use abstract_reconstructor
     use abstract_riemann_solver
     use abstract_gradient_calculator
+    use abstract_termination_criterion
 
     implicit none
 
@@ -34,9 +35,6 @@ module class_cellsystem
     !                                      (boundary/inner face)
     type, public :: cellsystem
         private
-
-        ! Termination criterion
-        real(real_kind) :: end_time
 
         ! Time
         real(real_kind) :: num_steps
@@ -131,16 +129,20 @@ module class_cellsystem
 
         contains
         ! ### Common ###
-        procedure, public, pass(self) :: initialize  => result_writer_initialize  , &
-                                                        time_stepping_initialize  , &
-                                                        reconstructor_initialize  , &
-                                                        riemann_solver_initialize , &
-                                                        eos_initialize            , &
-                                                        gradient_calculator_initialize, &
-                                                        variables_initialize
+        procedure, public, pass(self) :: initialize  => result_writer_initialize         , &
+                                                        time_stepping_initialize         , &
+                                                        reconstructor_initialize         , &
+                                                        riemann_solver_initialize        , &
+                                                        eos_initialize                   , &
+                                                        gradient_calculator_initialize   , &
+                                                        variables_initialize             , &
+                                                        termination_criterion_initialize
         procedure, public, pass(self) :: open_file   => result_writer_open_file
         procedure, public, pass(self) :: close_file  => result_writer_close_file
         procedure, public, pass(self) :: is_writable => result_writer_is_writable
+
+        ! ### Termination criterion ###
+        procedure, public, pass(self) :: satisfies_termination_criterion
 
         ! ### Boundary Condition ###
         procedure, public, pass(self) :: apply_outflow_condition
@@ -195,6 +197,20 @@ module class_cellsystem
     end type
 
     contains
+
+    ! ### Termination criterion ###
+    subroutine termination_criterion_initialize(self, criterion, config)
+        class(sellsystem           ) :: self
+        class(termination_criterion) :: criterion
+        class(configuration        ) :: config
+        call criterion%initialize(config)
+    end subroutine termination_criterion_initialize
+
+    pure function satisfies_termination_criterion(self, criterion) result(judge)
+        class(sellsystem           ) :: self
+        class(termination_criterion) :: criterion
+        judge = criterion%is_satisfied(self%time, self%num_steps)
+    end function satisfies_termination_criterion
 
     ! ### Boundary Condition ###
     subroutine apply_outflow_condition(self, primitive_variables_set, num_primitive_variables, &
@@ -567,8 +583,7 @@ module class_cellsystem
     ! ### Flux ###
     subroutine integrate_flux(self, a_reconstructor, a_riemann_solver, an_eos,                                            &
                               primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
-                              primitive_to_conservative_function, compute_rotate_matrix_primitive_function,               &
-                              compute_unrotate_matrix_conservative_function, flux_function                                  )
+                              primitive_to_conservative_function, flux_function                                             )
 
         class  (cellsystem    ), intent(in   ) :: self
         class  (reconstructor ), intent(in   ) :: a_reconstructor
@@ -589,41 +604,14 @@ module class_cellsystem
                 real   (real_kind)             :: conservative_values(num_conservative_values)
             end function primitive_to_conservative_function
 
-            pure function compute_rotate_matrix_primitive_function( &
-                face_normal_vector       , &
-                face_tangential1_vector  , &
-                face_tangential2_vector  , &
-                num_primitive_variables      ) result(matrix)
-
-                use typedef_module
-                real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
-                real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
-                real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
-                integer(int_kind      ), intent(in)  :: num_primitive_variables
-                real   (real_kind     )              :: matrix(num_primitive_variables, num_primitive_variables)
-            end function compute_rotate_matrix_primitive_function
-
-            pure function compute_unrotate_matrix_conservative_function( &
-                face_normal_vector       , &
-                face_tangential1_vector  , &
-                face_tangential2_vector  , &
-                num_conservative_values      ) result(matrix)
-
-                use typedef_module
-                real   (real_kind     ), intent(in) :: face_normal_vector      (3)
-                real   (real_kind     ), intent(in) :: face_tangential1_vector (3)
-                real   (real_kind     ), intent(in) :: face_tangential2_vector (3)
-                integer(int_kind      ), intent(in) :: num_conservative_values
-                real   (real_kind     )             :: matrix(num_conservative_values, num_conservative_values)
-            end function compute_unrotate_matrix_conservative_function
-
-            pure function flux_function(                 &
-                primitive_variables_lhc                 , &
-                primitive_variables_rhc                 , &
+            pure function flux_function(                  &
                 reconstructed_primitive_variables_lhc   , &
                 reconstructed_primitive_variables_rhc   , &
                 reconstructed_conservative_variables_lhc, &
                 reconstructed_conservative_variables_rhc, &
+                face_normal_vector                      , &
+                face_tangential1_vector                 , &
+                face_tangential2_vector                 , &
                 num_conservative_values                 , &
                 an_eos                                  , &
                 an_riemann_solver                        ) result(flux)
@@ -632,12 +620,13 @@ module class_cellsystem
                 use abstract_eos
                 use abstract_riemann_solver
 
-                real   (real_kind     ), intent(in) :: primitive_variables_lhc                  (:)
-                real   (real_kind     ), intent(in) :: primitive_variables_rhc                  (:)
                 real   (real_kind     ), intent(in) :: reconstructed_primitive_variables_lhc    (:)
                 real   (real_kind     ), intent(in) :: reconstructed_primitive_variables_rhc    (:)
                 real   (real_kind     ), intent(in) :: reconstructed_conservative_variables_lhc (:)
                 real   (real_kind     ), intent(in) :: reconstructed_conservative_variables_rhc (:)
+                real   (real_kind     ), intent(in) :: face_normal_vector     (3)
+                real   (real_kind     ), intent(in) :: face_tangential1_vector(3)
+                real   (real_kind     ), intent(in) :: face_tangential2_vector(3)
                 integer(int_kind      ), intent(in) :: num_conservative_values
                 class  (eos           ), intent(in) :: an_eos
                 class  (riemann_solver), intent(in) :: an_riemann_solver
@@ -649,17 +638,13 @@ module class_cellsystem
         integer(int_kind ) :: i
         integer(int_kind ) :: lhc_index
         integer(int_kind ) :: rhc_index
-        real   (real_kind) :: rotate_matrix                        (num_primitive_variables, num_primitive_variables)
-        real   (real_kind) :: reconstructed_primitive_variables_lhc(num_primitive_variables)
-        real   (real_kind) :: reconstructed_primitive_variables_rhc(num_primitive_variables)
-        real   (real_kind) :: rotated_primitive_variables_lhc      (num_primitive_variables)
-        real   (real_kind) :: rotated_primitive_variables_rhc      (num_primitive_variables)
-        real   (real_kind) :: rotated_conservative_variables_lhc   (num_conservative_variables)
-        real   (real_kind) :: rotated_conservative_variables_rhc   (num_conservative_variables)
-        real   (real_kind) :: local_coordinate_flux                (num_conservative_variables)
-        real   (real_kind) :: global_coordinate_flux               (num_conservative_variables)
+        real   (real_kind) :: reconstructed_primitive_variables_lhc   (num_primitive_variables)
+        real   (real_kind) :: reconstructed_primitive_variables_rhc   (num_primitive_variables)
+        real   (real_kind) :: reconstructed_conservative_variables_lhc(num_conservative_variables)
+        real   (real_kind) :: reconstructed_conservative_variables_rhc(num_conservative_variables)
+        real   (real_kind) :: flux                                    (num_conservative_variables)
 
-!$omp parallel do private(i,lhc_index,rhc_index,rotate_matrix,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,rotated_primitive_variables_lhc,rotated_conservative_variables_rhc,local_coordinate_flux,global_coordinate_flux)
+!$omp parallel do private(i,lhc_index,rhc_index,rotate_matrix,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,reconstructed_conservative_variables_lhc,reconstructed_conservative_variables_rhc,flux)
         do i = 1, self%num_faces, 1
             lhc_index = self%face_to_cell_indexes(self%num_local_cells+0, i)
             rhc_index = self%face_to_cell_indexes(self%num_local_cells+1, i)
@@ -673,45 +658,26 @@ module class_cellsystem
                 i, self%num_local_cells, num_primitive_variables                                                     &
             )
 
-            rotate_matrix(:,:) = compute_rotate_matrix_primitive_function(                                                                     &
-                self%face_normal_vectors(:,i), self%face_tangential1_vectors(:,i), self%face_tangential2_vectors(:,i), num_primitive_variables &
+            reconstructed_conservative_variables_lhc(:) = primitive_to_conservative_function(an_eos, reconstructed_primitive_variables_lhc, num_primitive_variables)
+            reconstructed_conservative_variables_rhc(:) = primitive_to_conservative_function(an_eos, reconstructed_primitive_variables_rhc, num_primitive_variables)
+
+            flux(:) = flux_function(                          &
+                reconstructed_primitive_variables_lhc   (:) , &
+                reconstructed_primitive_variables_rhc   (:) , &
+                reconstructed_conservative_variables_lhc(:) , &
+                reconstructed_conservative_variables_rhc(:) , &
+                self%face_normal_vectors     (1:3,i)        , &
+                self%face_tangential1_vectors(1:3,i)        , &
+                self%face_tangential2_vectors(1:3,i)        , &
+                num_conservative_variables                  , &
+                an_eos                                      , &
+                a_riemann_solver                              &
             )
 
-            rotated_primitive_variables_lhc(:) = matrix_multiply( &
-                rotate_matrix,                                    &
-                reconstructed_primitive_variables_lhc             &
-            )
-            rotated_primitive_variables_rhc(:) = matrix_multiply( &
-                rotate_matrix,                                    &
-                reconstructed_primitive_variables_rhc             &
-            )
-
-            rotated_conservative_variables_lhc(:) = primitive_to_conservative_function(an_eos, rotated_primitive_variables_lhc, num_primitive_variables)
-            rotated_conservative_variables_rhc(:) = primitive_to_conservative_function(an_eos, rotated_primitive_variables_rhc, num_primitive_variables)
-
-            local_coordinate_flux(:) = flux_function(             &
-                primitive_variables_set           (:, lhc_index), &
-                primitive_variables_set           (:, rhc_index), &
-                rotated_primitive_variables_lhc   (:)           , &
-                rotated_primitive_variables_rhc   (:)           , &
-                rotated_conservative_variables_lhc(:)           , &
-                rotated_conservative_variables_rhc(:)           , &
-                num_conservative_variables                      , &
-                an_eos                                          , &
-                a_riemann_solver                                  &
-            )
-
-            global_coordinate_flux(:) = matrix_multiply(                                                                                              &
-                compute_unrotate_matrix_conservative_function(                                                                                        &
-                    self%face_normal_vectors(:,i), self%face_tangential1_vectors(:,i), self%face_tangential2_vectors(:,i), num_conservative_variables &
-                ),                                                                                                                                    &
-                local_coordinate_flux                                                                                                                 &
-            )
-
-            residual_set(:,lhc_index) = residual_set(:,lhc_index) - (1.d0 / self%cell_volumes(lhc_index)) * global_coordinate_flux(:) * self%face_areas(i)
-            residual_set(:,rhc_index) = residual_set(:,rhc_index) + (1.d0 / self%cell_volumes(rhc_index)) * global_coordinate_flux(:) * self%face_areas(i)
+            residual_set(:,lhc_index) = residual_set(:,lhc_index) - (1.d0 / self%cell_volumes(lhc_index)) * flux(:) * self%face_areas(i)
+            residual_set(:,rhc_index) = residual_set(:,rhc_index) + (1.d0 / self%cell_volumes(rhc_index)) * flux(:) * self%face_areas(i)
         end do
-    end subroutine
+    end subroutine integrate_flux
 
     subroutine riemann_solver_initialize(self, a_riemann_solver, config)
         class  (cellsystem    ), intent(inout) :: self
