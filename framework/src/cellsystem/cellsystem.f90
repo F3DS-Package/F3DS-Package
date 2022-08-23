@@ -151,8 +151,8 @@ module class_cellsystem
         procedure, public, pass(self) :: apply_empty_condition
 
         ! ### Gradient Calculator ###
-        procedure, public, pass(self) :: compute_gradient => compute_gradient_array, &
-                                                             compute_gradient_scolar
+        procedure, public, pass(self) :: compute_gradient => compute_gradient_1darray, &
+                                                             compute_gradient_2darray
 
         ! ### Flux ###
         procedure, public, pass(self) :: integrate_flux
@@ -484,52 +484,59 @@ module class_cellsystem
         call a_gradient_calculator%initialize(config)
     end subroutine gradient_calculator_initialize
 
-    subroutine compute_gradient_array(self, a_gradient_calculator, variables_set, gradient_variables_set, num_variables)
+    subroutine compute_gradient_2darray(self, a_gradient_calculator, variables_set, gradient_variables_set, num_variables)
         class  (cellsystem         ), intent(inout) :: self
         class  (gradient_calculator), intent(inout) :: a_gradient_calculator
         real   (real_kind          ), intent(in   ) :: variables_set            (:,:)
         real   (real_kind          ), intent(inout) :: gradient_variables_set   (:,:)
         integer(int_kind           ), intent(in   ) :: num_variables
 
-        integer(int_kind) :: face_index, cell_index, rhc_index, lhc_index
+        integer(int_kind) :: face_index, cell_index, rhc_index, lhc_index, var_index
 
 !$omp parallel do private(cell_index)
         do cell_index = 1, self%num_cells, 1
             gradient_variables_set(:,cell_index) = 0.d0
         end do
 
-!$omp parallel do private(face_index, rhc_index, lhc_index)
+!$omp parallel do private(face_index, rhc_index, lhc_index, var_index)
         do face_index = 1, self%num_faces, 1
             rhc_index = self%face_to_cell_indexes(0, face_index)
             lhc_index = self%face_to_cell_indexes(1, face_index)
-            gradient_variables_set(:,rhc_index) = gradient_variables_set(:,rhc_index)                     &
-                                                 + (1.d0 / self%cell_volumes(rhc_index))                  &
-                                                 * a_gradient_calculator%compute_gradient_residual_array( &
-                                                        variables_set                      (:,rhc_index), &
-                                                        variables_set                      (:,lhc_index), &
-                                                        self%cell_centor_positions         (:,rhc_index), &
-                                                        self%cell_centor_positions         (:,lhc_index), &
-                                                        self%face_normal_vectors           (:,rhc_index), &
-                                                        self%face_positions                (:,rhc_index), &
-                                                        self%face_areas                      (rhc_index), &
-                                                        num_variables                                     &
-                                                    )
-            gradient_variables_set(:,lhc_index) = gradient_variables_set(:,lhc_index)                     &
-                                                 + (1.d0 / self%cell_volumes(rhc_index))                  &
-                                                 * a_gradient_calculator%compute_gradient_residual_array( &
-                                                        variables_set                      (:,rhc_index), &
-                                                        variables_set                      (:,lhc_index), &
-                                                        self%cell_centor_positions         (:,rhc_index), &
-                                                        self%cell_centor_positions         (:,lhc_index), &
-                                                        self%face_normal_vectors           (:,lhc_index), &
-                                                        self%face_positions                (:,lhc_index), &
-                                                        self%face_areas                      (lhc_index), &
-                                                        num_variables                                     &
-                                                    )
+            do var_index = 1, num_variables, 1
+                associate(                                &
+                    vec_start_index => 3*(var_index-1)+1, &
+                    vec_end_index   => 3*(var_index-1)+3  &
+                )
+                    gradient_variables_set(vec_start_index:vec_end_index, rhc_index) = gradient_variables_set(vec_start_index:vec_end_index, rhc_index)  &
+                                                        + (1.d0 / self%cell_volumes(rhc_index))                           &
+                                                        * a_gradient_calculator%compute_residual_array(                   &
+                                                               variables_set                      (var_index, rhc_index), &
+                                                               variables_set                      (var_index, lhc_index), &
+                                                               self%cell_centor_positions         (1:3      , rhc_index), &
+                                                               self%cell_centor_positions         (1:3      , lhc_index), &
+                                                               self%face_normal_vectors           (1:3      , rhc_index), &
+                                                               self%face_positions                (1:3      , rhc_index), &
+                                                               self%face_areas                               (rhc_index), &
+                                                               num_variables                                              &
+                                                            )
+                    gradient_variables_set(vec_start_index:vec_end_index, lhc_index) = gradient_variables_set(vec_start_index:vec_end_index, lhc_index)  &
+                                                        - (1.d0 / self%cell_volumes(rhc_index))                           &
+                                                        * a_gradient_calculator%compute_residual(                         &
+                                                               variables_set                      (var_index, rhc_index), &
+                                                               variables_set                      (var_index, lhc_index), &
+                                                               self%cell_centor_positions         (1:3      , rhc_index), &
+                                                               self%cell_centor_positions         (1:3      , lhc_index), &
+                                                               self%face_normal_vectors           (1:3      , lhc_index), &
+                                                               self%face_positions                (1:3      , lhc_index), &
+                                                               self%face_areas                               (lhc_index), &
+                                                               num_variables                                              &
+                                                            )
+                end associate
+            end do
         end do
-    end subroutine compute_gradient_array
+    end subroutine compute_gradient_2darray
 
-    subroutine compute_gradient_scolar(self, a_gradient_calculator, variable_set, gradient_variable_set)
+    subroutine compute_gradient_1darray(self, a_gradient_calculator, variable_set, gradient_variable_set)
         class(cellsystem         ), intent(inout) :: self
         class(gradient_calculator), intent(inout) :: a_gradient_calculator
         real (real_kind          ), intent(in   ) :: variable_set            (:)
@@ -548,7 +555,7 @@ module class_cellsystem
             lhc_index = self%face_to_cell_indexes(1, face_index)
             gradient_variable_set(1:3,rhc_index) = gradient_variable_set(1:3,rhc_index)                   &
                                                  + (1.d0 / self%cell_volumes(rhc_index))                  &
-                                                 * a_gradient_calculator%compute_gradient_residual(       &
+                                                 * a_gradient_calculator%compute_residual(                &
                                                         variable_set                       (  rhc_index), &
                                                         variable_set                       (  lhc_index), &
                                                         self%cell_centor_positions         (:,rhc_index), &
@@ -558,8 +565,8 @@ module class_cellsystem
                                                         self%face_areas                      (rhc_index)  &
                                                     )
             gradient_variable_set(1:3,lhc_index) = gradient_variable_set(1:3,lhc_index)                   &
-                                                 + (1.d0 / self%cell_volumes(lhc_index))                  &
-                                                 * a_gradient_calculator%compute_gradient_residual(       &
+                                                 - (1.d0 / self%cell_volumes(lhc_index))                  &
+                                                 * a_gradient_calculator%compute_residual(                &
                                                         variable_set                       (  rhc_index), &
                                                         variable_set                       (  lhc_index), &
                                                         self%cell_centor_positions         (:,rhc_index), &
@@ -569,7 +576,7 @@ module class_cellsystem
                                                         self%face_areas                      (lhc_index)  &
                                                     )
         end do
-    end subroutine compute_gradient_scolar
+    end subroutine compute_gradient_1darray
 
     ! ### EoS ###
     subroutine eos_initialize(self, an_eos, config)
