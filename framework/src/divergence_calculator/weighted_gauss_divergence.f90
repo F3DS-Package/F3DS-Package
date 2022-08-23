@@ -1,4 +1,4 @@
-module class_gauss_divergence
+module class_weighted_gauss_divergence
     use typedef_module
     use abstract_divergence_calculator
     use abstract_configuration
@@ -8,14 +8,14 @@ module class_gauss_divergence
 
     private
 
-    type, public, extends(divergence_calculator) :: gauss_divergence
+    type, public, extends(divergence_calculator) :: weighted_gauss_divergence
         private
 
         contains
 
         procedure, public, pass(self) :: initilaize
         procedure, public, pass(self) :: compute_residual
-    end type gauss_divergence
+    end type weighted_gauss_divergence
 
     contains
 
@@ -46,4 +46,4 @@ module class_gauss_divergence
                     face_normal_vector * face_area             &
                 )
     end function compute_residual
-end module class_gauss_divergence
+end module class_weighted_gauss_divergence
