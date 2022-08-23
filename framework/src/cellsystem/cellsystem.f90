@@ -14,6 +14,7 @@ module class_cellsystem
     use abstract_reconstructor
     use abstract_riemann_solver
     use abstract_gradient_calculator
+    use abstract_divergence_calculator
     use abstract_termination_criterion
 
     implicit none
@@ -153,6 +154,11 @@ module class_cellsystem
         ! ### Gradient Calculator ###
         procedure, public, pass(self) :: compute_gradient => compute_gradient_1darray, &
                                                              compute_gradient_2darray
+
+
+        ! ### Divergence Calculator ###
+        procedure, public, pass(self) :: compute_divergence => compute_divergence_1darray, &
+                                                               compute_divergence_2darray
 
         ! ### Flux ###
         procedure, public, pass(self) :: integrate_flux
@@ -516,8 +522,7 @@ module class_cellsystem
                                                                self%cell_centor_positions         (1:3      , lhc_index), &
                                                                self%face_normal_vectors           (1:3      , rhc_index), &
                                                                self%face_positions                (1:3      , rhc_index), &
-                                                               self%face_areas                               (rhc_index), &
-                                                               num_variables                                              &
+                                                               self%face_areas                               (rhc_index)  &
                                                             )
                     gradient_variables_set(vec_start_index:vec_end_index, lhc_index) = gradient_variables_set(vec_start_index:vec_end_index, lhc_index)  &
                                                         - (1.d0 / self%cell_volumes(rhc_index))                           &
@@ -528,8 +533,7 @@ module class_cellsystem
                                                                self%cell_centor_positions         (1:3      , lhc_index), &
                                                                self%face_normal_vectors           (1:3      , lhc_index), &
                                                                self%face_positions                (1:3      , lhc_index), &
-                                                               self%face_areas                               (lhc_index), &
-                                                               num_variables                                              &
+                                                               self%face_areas                               (lhc_index)  &
                                                             )
                 end associate
             end do
@@ -577,6 +581,109 @@ module class_cellsystem
                                                     )
         end do
     end subroutine compute_gradient_1darray
+
+    ! ### Divergence Calculator ###
+    subroutine divergence_calculator_initialize(self, a_divergence_calculator, config)
+        class  (cellsystem           ), intent(inout) :: self
+        class  (divergence_calculator), intent(inout) :: a_divergence_calculator
+        class  (configuration        ), intent(inout) :: config
+
+        call a_divergence_calculator%initialize(config)
+    end subroutine divergence_calculator_initialize
+
+    subroutine compute_divergence_2darray(self, a_divergence_calculator, variables_set, divergence_variables_set, num_variables)
+        class  (cellsystem           ), intent(inout) :: self
+        class  (divergence_calculator), intent(inout) :: a_divergence_calculator
+        real   (real_kind            ), intent(in   ) :: variables_set           (:,:)
+        real   (real_kind            ), intent(inout) :: divergence_variables_set(:,:)
+        integer(int_kind             ), intent(in   ) :: num_variables
+
+        integer(int_kind) :: face_index, cell_index, rhc_index, lhc_index, var_index, num_divergence_variables
+
+!$omp parallel do private(cell_index)
+        do cell_index = 1, self%num_cells, 1
+            divergence_variables_set(:,cell_index) = 0.d0
+        end do
+
+        num_divergence_variables = num_variables/3
+
+!$omp parallel do private(face_index, rhc_index, lhc_index, var_index)
+        do face_index = 1, self%num_faces, 1
+            rhc_index = self%face_to_cell_indexes(0, face_index)
+            lhc_index = self%face_to_cell_indexes(1, face_index)
+            do var_index = 1, num_divergence_variables, 1
+                associate(                                &
+                    vec_start_index => 3*(var_index-1)+1, &
+                    vec_end_index   => 3*(var_index-1)+3  &
+                )
+                    divergence_variables_set(var_index, rhc_index) = divergence_variables_set(var_index, rhc_index)                           &
+                                                        + (1.d0 / self%cell_volumes(rhc_index))                                               &
+                                                        * a_divergence_calculator%compute_residual_array(                                     &
+                                                               variables_set                      (vec_start_index:vec_end_index, rhc_index), &
+                                                               variables_set                      (vec_start_index:vec_end_index, lhc_index), &
+                                                               self%cell_centor_positions         (1:3                          , rhc_index), &
+                                                               self%cell_centor_positions         (1:3                          , lhc_index), &
+                                                               self%face_normal_vectors           (1:3                          , rhc_index), &
+                                                               self%face_positions                (1:3                          , rhc_index), &
+                                                               self%face_areas                                                   (rhc_index)  &
+                                                            )
+                    divergence_variables_set(var_index, lhc_index) = divergence_variables_set(var_index, lhc_index)                           &
+                                                        - (1.d0 / self%cell_volumes(rhc_index))                                               &
+                                                        * a_divergence_calculator%compute_residual(                                           &
+                                                               variables_set                      (vec_start_index:vec_end_index, rhc_index), &
+                                                               variables_set                      (vec_start_index:vec_end_index, lhc_index), &
+                                                               self%cell_centor_positions         (1:3                          , rhc_index), &
+                                                               self%cell_centor_positions         (1:3                          , lhc_index), &
+                                                               self%face_normal_vectors           (1:3                          , lhc_index), &
+                                                               self%face_positions                (1:3                          , lhc_index), &
+                                                               self%face_areas                                                   (lhc_index)  &
+                                                            )
+                end associate
+            end do
+        end do
+    end subroutine compute_divergence_2darray
+
+    subroutine compute_divergence_1darray(self, a_divergence_calculator, variable_set, divergence_variable_set)
+        class(cellsystem           ), intent(inout) :: self
+        class(divergence_calculator), intent(inout) :: a_divergence_calculator
+        real (real_kind            ), intent(in   ) :: variable_set              (:)
+        real (real_kind            ), intent(inout) :: divergence_variable_set   (:)
+
+        integer(int_kind) :: face_index, cell_index, rhc_index, lhc_index
+
+!$omp parallel do private(cell_index)
+        do cell_index = 1, self%num_cells, 1
+            divergence_variable_set(:,cell_index) = 0.d0
+        end do
+
+!$omp parallel do private(face_index, rhc_index, lhc_index)
+        do face_index = 1, self%num_faces, 1
+            rhc_index = self%face_to_cell_indexes(0, face_index)
+            lhc_index = self%face_to_cell_indexes(1, face_index)
+            divergence_variable_set(rhc_index)   = divergence_variable_set(rhc_index)                       &
+                                                 + (1.d0 / self%cell_volumes(rhc_index))                    &
+                                                 * a_divergence_calculator%compute_residual(                &
+                                                        variable_set                       (1:3,rhc_index), &
+                                                        variable_set                       (1:3,lhc_index), &
+                                                        self%cell_centor_positions         (1:3,rhc_index), &
+                                                        self%cell_centor_positions         (1:3,lhc_index), &
+                                                        self%face_normal_vectors           (1:3,rhc_index), &
+                                                        self%face_positions                (1:3,rhc_index), &
+                                                        self%face_areas                        (rhc_index)  &
+                                                    )
+            divergence_variable_set(lhc_index)   = divergence_variable_set(lhc_index)                       &
+                                                 - (1.d0 / self%cell_volumes(lhc_index))                    &
+                                                 * a_divergence_calculator%compute_residual(                &
+                                                        variable_set                       (1:3,rhc_index), &
+                                                        variable_set                       (1:3,lhc_index), &
+                                                        self%cell_centor_positions         (1:3,rhc_index), &
+                                                        self%cell_centor_positions         (1:3,lhc_index), &
+                                                        self%face_normal_vectors           (1:3,lhc_index), &
+                                                        self%face_positions                (1:3,lhc_index), &
+                                                        self%face_areas                        (lhc_index)  &
+                                                    )
+        end do
+    end subroutine compute_divergence_1darray
 
     ! ### EoS ###
     subroutine eos_initialize(self, an_eos, config)
