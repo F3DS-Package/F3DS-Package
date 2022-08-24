@@ -16,6 +16,7 @@ module class_cellsystem
     use abstract_gradient_calculator
     use abstract_divergence_calculator
     use abstract_termination_criterion
+    use abstract_time_incriment_controller
 
     implicit none
 
@@ -130,17 +131,21 @@ module class_cellsystem
 
         contains
         ! ### Common ###
-        procedure, public, pass(self) :: initialize  => result_writer_initialize         , &
-                                                        time_stepping_initialize         , &
-                                                        reconstructor_initialize         , &
-                                                        riemann_solver_initialize        , &
-                                                        eos_initialize                   , &
-                                                        gradient_calculator_initialize   , &
-                                                        variables_initialize             , &
-                                                        termination_criterion_initialize
+        procedure, public, pass(self) :: initialize  => result_writer_initialize            , &
+                                                        time_stepping_initialize            , &
+                                                        reconstructor_initialize            , &
+                                                        riemann_solver_initialize           , &
+                                                        eos_initialize                      , &
+                                                        gradient_calculator_initialize      , &
+                                                        variables_initialize                , &
+                                                        termination_criterion_initialize    , &
+                                                        time_incriment_controller_initialize
         procedure, public, pass(self) :: open_file   => result_writer_open_file
         procedure, public, pass(self) :: close_file  => result_writer_close_file
         procedure, public, pass(self) :: is_writable => result_writer_is_writable
+
+        ! ### Time incriment control ###
+        procedure, public, pass(self) :: update_time_incriment
 
         ! ### Termination criterion ###
         procedure, public, pass(self) :: satisfies_termination_criterion
@@ -204,9 +209,35 @@ module class_cellsystem
 
     contains
 
+    ! ### Time incriment control ###
+    subroutine time_incriment_controller_initialize(self, controller, config)
+        class(cellsystem               ) :: self
+        class(time_incriment_controller) :: controller
+        class(configuration            ) :: config
+        call controller%initialize(config)
+    end subroutine time_incriment_controller_initialize
+
+    subroutine update_time_incriment(self, controller, an_eos, variables_set, spectral_radius_function)
+        class  (cellsystem               ), intent(inout) :: self
+        class  (time_incriment_controller), intent(in   ) :: controller
+        class  (eos                      ), intent(in   ) :: an_eos
+        real   (real_kind                ), intent(in   ) :: variables_set(:,:)
+
+        interface
+            pure function spectral_radius_function(an_eos, variables)
+                use abstract_eos
+                use typedef_module
+                class  (eos      ) :: an_eos
+                real   (real_kind) :: variables(:)
+            end function spectral_radius_function
+        end interface
+
+        self%time_increment = controller%update_global(an_eos, variables_set, self%cell_volumes, self%num_cells, spectral_radius_function)
+    end subroutine update_time_incriment
+
     ! ### Termination criterion ###
     subroutine termination_criterion_initialize(self, criterion, config)
-        class(sellsystem           ) :: self
+        class(cellsystem           ) :: self
         class(termination_criterion) :: criterion
         class(configuration        ) :: config
         call criterion%initialize(config)
