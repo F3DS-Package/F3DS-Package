@@ -13,27 +13,27 @@ module class_weighted_gauss_divergence
 
         contains
 
-        procedure, public, pass(self) :: initilaize
+        procedure, public, pass(self) :: initialize
         procedure, public, pass(self) :: compute_residual
     end type weighted_gauss_divergence
 
     contains
 
     subroutine initialize(self, config)
-        class(divergence_calculator), intent(inout) :: self
-        class(configuration        ), intent(in   ) :: config
+        class(weighted_gauss_divergence), intent(inout) :: self
+        class(configuration            ), intent(in   ) :: config
     end subroutine initialize
 
-    pure function compute_residual(self, rhc_vector, lhc_vector, rhc_position, lhc_position, face_normal_vector, face_position, face_area) result(residual)
-        class(divergence_calculator), intent(in) :: self
-        real (real_kind            ), intent(in) :: rhc_vector         (3)
-        real (real_kind            ), intent(in) :: lhc_vector         (3)
-        real (real_kind            ), intent(in) :: rhc_position       (3)
-        real (real_kind            ), intent(in) :: lhc_position       (3)
-        real (real_kind            ), intent(in) :: face_normal_vector (3)
-        real (real_kind            ), intent(in) :: face_position      (3)
-        real (real_kind            ), intent(in) :: face_area
-        real (real_kind            )             :: residual
+    pure function compute_residual(self, lhc_vector, rhc_vector, lhc_position, rhc_position, face_normal_vector, face_position, face_area) result(residual)
+        class(weighted_gauss_divergence), intent(in) :: self
+        real (real_kind                ), intent(in) :: lhc_vector         (3)
+        real (real_kind                ), intent(in) :: rhc_vector         (3)
+        real (real_kind                ), intent(in) :: lhc_position       (3)
+        real (real_kind                ), intent(in) :: rhc_position       (3)
+        real (real_kind                ), intent(in) :: face_normal_vector (3)
+        real (real_kind                ), intent(in) :: face_position      (3)
+        real (real_kind                ), intent(in) :: face_area
+        real (real_kind                )             :: residual
 
         real   (real_kind) :: rhc_w, lhc_w, total_w
 

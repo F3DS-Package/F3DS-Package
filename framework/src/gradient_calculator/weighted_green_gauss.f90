@@ -24,14 +24,14 @@ module class_weighted_green_gasuu
         class(configuration       ), intent(inout) :: a_configuration
     end subroutine initialize
 
-    pure function compute_residual(self, rhc_variable, lhc_variable, rhc_position, lhc_position, face_normal_vector, face_position, face_area) result(residual)
+    pure function compute_residual(self, lhc_variable, rhc_variable, lhc_position, rhc_position, face_normal_vector, face_position, face_area) result(residual)
         class  (weighted_green_gauss), intent(in) :: self
-        real   (real_kind           ), intent(in) :: rhc_variable
         real   (real_kind           ), intent(in) :: lhc_variable
-        real   (real_kind           ), intent(in) :: lhc_position            (:)
-        real   (real_kind           ), intent(in) :: rhc_position            (:)
-        real   (real_kind           ), intent(in) :: face_normal_vector      (:)
-        real   (real_kind           ), intent(in) :: face_position           (:)
+        real   (real_kind           ), intent(in) :: rhc_variable
+        real   (real_kind           ), intent(in) :: lhc_position            (3)
+        real   (real_kind           ), intent(in) :: rhc_position            (3)
+        real   (real_kind           ), intent(in) :: face_normal_vector      (3)
+        real   (real_kind           ), intent(in) :: face_position           (3)
         real   (real_kind           ), intent(in) :: face_area
         real   (real_kind           )             :: residual                (3)
 

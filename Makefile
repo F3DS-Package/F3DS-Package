@@ -1,8 +1,8 @@
 # Fortran Fine-volume Fluid Dynamics Solver (F3DS) Flamework & Collection
 
 FC=gfortran
-#FCFLAGS=-O0 -g -pg -ffree-line-length-none -cpp -Wall -Wextra -Warray-temporaries -Wconversion -fimplicit-none -fbacktrace -fcheck=all -ffpe-trap=invalid,zero -finit-real=nan -D_DEBUG # for debug build (gfortran),underflow,overflow
-FCFLAGS=-O3 -march=native -ffree-line-length-none -fopenmp -cpp # for release build (gfortran)
+FCFLAGS=-O0 -g -pg -ffree-line-length-none -cpp -Wall -Wextra -Warray-temporaries -Wconversion -fimplicit-none -fbacktrace -fcheck=all -ffpe-trap=invalid,zero -finit-real=nan -D_DEBUG # for debug build (gfortran),underflow,overflow
+#FCFLAGS=-O3 -march=native -ffree-line-length-none -fopenmp -cpp # for release build (gfortran)
 #FCFLAGS=-g -check all -fpe0 -warn -traceback -debug extended # for debug build (ifort)
 #FCFLAGS=-fast -openmp # for release build (ifort) NOTE: Cannot use release build-mode by ifort
 
@@ -65,26 +65,31 @@ FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/utils/reconstructor_utils/*.f90)
 FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/abstract/auxiliary/*.f90)
 FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/abstract/core/*.f90)
 # Tier 2 layer ()
+FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/configuration/*.f90)
 FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/grid_parser/*.f90)
 FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/initial_condition_parser/*.f90)
 FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/result_writer/*.f90)
 FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/eos/*.f90)
 FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/riemann_solver/hll/*.f90)
 FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/gradient_calculator/*.f90)
+FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/divergence_calculator/*.f90)
 FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/reconstructor/muscl/*.f90)
 FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/reconstructor/weno/*.f90)
 FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/time_stepping/rk/*.f90)
+FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/termination_criterion/*.f90)
+FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/time_incriment_controller/*.f90)
+FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/parallelizer/*.f90)
 #FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/measurement_tools/*.f90)
-#FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/boundary_conditions/*.f90)
 # Tier 1 layer
+FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/generator/*.f90)
 FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/cellsystem/*.f90)
 
 # F3DS Collection
 # Five-equation model
 FIVE_EQ_MODEL_SRCDIR=collection/five_equation_model/src
-FIVE_EQ_MODEL_SRCS=$(wildcard $(FIVE_EQ_MODEL_SRCDIR)/nonviscosity_flux/*.f90)
-FIVE_EQ_MODEL_SRCS+=$(wildcard $(FIVE_EQ_MODEL_SRCDIR)/reconstructor/*.f90)
-FIVE_EQ_MODEL_SRCS+=$(wildcard $(FIVE_EQ_MODEL_SRCDIR)/space/*.f90)
+FIVE_EQ_MODEL_SRCS=$(wildcard $(FIVE_EQ_MODEL_SRCDIR)/variables/*.f90)
+FIVE_EQ_MODEL_SRCS+=$(wildcard $(FIVE_EQ_MODEL_SRCDIR)/model/*.f90)
+FIVE_EQ_MODEL_SRCS+=$(wildcard $(FIVE_EQ_MODEL_SRCDIR)/special_reconstructor/*.f90)
 FIVE_EQ_MODEL_SRCS+=$(wildcard $(FIVE_EQ_MODEL_SRCDIR)/*.f90)
 
 TARGET=mfs.exe

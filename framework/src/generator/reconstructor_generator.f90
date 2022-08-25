@@ -22,7 +22,7 @@ module reconstructor_generator_module
         class(reconstructor), pointer, intent(inout) :: method
 
         logical          :: found
-        character(len=:) :: name
+        character(len=:), allocatable :: name
 
         call config%get_char("Reconstructor.Name", name, found)
         if(.not. found) call call_error("'Reconstructor.Name' is not found in configuration file you set.")
@@ -31,7 +31,7 @@ module reconstructor_generator_module
     end subroutine with_config
 
     subroutine with_name(name, method)
-        character(len=:), intent(in) :: name
+        character(len=:), allocatable, intent(in) :: name
         class(reconstructor), pointer, intent(inout) :: method
 
         if(name == "Minmod MUSCL3") then

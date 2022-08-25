@@ -6,6 +6,7 @@ module class_minmod_muscl3
     use typedef_module
     use abstract_reconstructor
     use abstract_configuration
+    use stdio_module
 
     implicit none
 

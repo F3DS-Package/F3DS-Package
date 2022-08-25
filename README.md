@@ -44,9 +44,8 @@ We are currently working on improving to modify methods/parameters from external
         - [x] with smoothing indicator proposed by Jiang & Shu (WENO5-JS) [Jiang 1996]
         - [x] with monotonicity-preserving schemes (MP-WENO5-JS) [Balsara 2000]
 - For unstructure grid
-    - [ ] Unstructured-MUSCL (3rd order)
-    - [ ] Unstructured-MUSCL + Unstructure-THINC (3rd order)
-    - [ ] k-expect WENO5 (5th order)
+    - [ ] UMUSCL3 (3rd order)
+    - [ ] UMUSCL3 + THINC (3rd order)
 
 #### Time Stepping
 

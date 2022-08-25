@@ -22,12 +22,12 @@ module class_openmp_parallelizer
     contains
 
     subroutine initialize(self, config)
-        class(parallelizer ) :: self
-        class(configuration) :: config
+        class(openmp_parallelizer), intent(inout) :: self
+        class(configuration      ), intent(inout) :: config
 
         logical :: found
 
-        call config%get_real("Parallel computing.Number of threads", self%num_threads, found, 1)
+        call config%get_int("Parallel computing.Number of threads", self%num_threads, found, 1)
         if(.not. found) call write_warring("'Parallel computing.Number of threads' is not found in configuration file you set. Solver is executed in a single thread.")
 
 #ifdef _OPENMP

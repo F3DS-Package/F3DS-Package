@@ -18,6 +18,7 @@ module class_hllc
         procedure, public, pass(self) :: compute_momentum_flux
         procedure, public, pass(self) :: compute_energy_flux
         procedure, public, pass(self) :: compute_volume_fraction_flux
+        procedure, public, pass(self) :: compute_numerical_velocity
     end type
 
     contains
@@ -323,4 +324,51 @@ module class_hllc
                       * (f_right + s_puls * (q_star_right - right_conservative_volume_fraction))
         end associate
     end function compute_volume_fraction_flux
+
+    pure function compute_numerical_velocity(  &
+        self                                 , &
+        left_main_velocity                   , &
+        left_density                         , &
+        left_pressure                        , &
+        left_soundspeed                      , &
+        right_main_velocity                  , &
+        right_density                        , &
+        right_pressure                       , &
+        right_soundspeed                     , &
+        features                                  ) result(numerical_velocity)
+
+        class(hllc     ), intent(in)  :: self
+        real (real_kind), intent(in)  :: left_main_velocity
+        real (real_kind), intent(in)  :: left_density
+        real (real_kind), intent(in)  :: left_pressure
+        real (real_kind), intent(in)  :: left_soundspeed
+        real (real_kind), intent(in)  :: right_main_velocity
+        real (real_kind), intent(in)  :: right_density
+        real (real_kind), intent(in)  :: right_pressure
+        real (real_kind), intent(in)  :: right_soundspeed
+        real (real_kind), intent(in)  :: features(:)
+        real (real_kind)              :: numerical_velocity
+
+        associate(                                 &
+            lhc_u        => left_main_velocity   , &
+            lhc_rho      => left_density         , &
+            lhc_p        => left_pressure        , &
+            lhc_c        => left_soundspeed      , &
+            rhc_u        => right_main_velocity  , &
+            rhc_rho      => right_density        , &
+            rhc_p        => right_pressure       , &
+            rhc_c        => right_soundspeed     , &
+            s_left       => features(1)          , &
+            s_right      => features(2)          , &
+            s_muinus     => features(3)          , &
+            s_puls       => features(4)          , &
+            s_mid        => features(5)          , &
+            c_star_left  => features(6)          , &
+            c_star_right => features(7)            &
+        )
+            numerical_velocity &
+                = 0.5d0 * (1.d0 + sign(1.d0, s_mid)) * (lhc_u + s_muinus * ((s_left  - lhc_u) / (s_left  - s_mid) - 1.d0)) &
+                + 0.5d0 * (1.d0 - sign(1.d0, s_mid)) * (rhc_u + s_puls   * ((s_right - rhc_u) / (s_right - s_mid) - 1.d0))
+        end associate
+    end function compute_numerical_velocity
 end module class_hllc

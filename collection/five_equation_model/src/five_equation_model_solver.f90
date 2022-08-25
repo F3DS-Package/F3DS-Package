@@ -1,260 +1,137 @@
 program five_eq_model_solver
-    !$ use omp_lib
     ! Utils
     use typedef_module
     ! Cell system
-    use faces_module
-    use boundary_reference_module
-    use cell_geometries_module
+    use class_cellsystem
     use five_equation_model_variables_module
-    ! Scheme
-    use second_order_tvd_rk_module
-    use third_order_tvd_rk_module
-    use weno5_js_module
-    use mp_weno5_js_module
-    use minmod_muscl3_module
-    use five_equation_model_rho_thinc_module
-    use five_equation_model_rho_thinc_module
-    use five_equation_space_model_module
-    use five_equation_model_hllc_module
-    ! Model
+    use five_equation_model_boundary_condition_module
+    use five_equation_model_space_discretization
+    ! Configuration
+    use class_json_configuration
+    ! EoS
     use class_stiffened_gas_eos
+    ! Gradient
+    use class_weighted_green_gasuu
+    ! Divergence
+    use class_weighted_gauss_divergence
+    ! Time stepping
+    use abstract_time_stepping
+    use time_stepping_generator_module
+    ! Reconstructor
+    use abstract_reconstructor
+    use reconstructor_generator_module
+    ! Rieman solver
+    use class_hllc
     ! Grid & initial condition reader
     use class_nlinit_parser
     use class_nlgrid_parser
     ! Result file output
-    use penf
-    use vtk_fortran, only : vtk_file
-    use system_call_module
-    ! BC
-    use five_equation_model_boundary_condition_module
-    ! Measurement
-    use sensor_class
-    use measurement_surface_class
-    use line_plot_class
+    use class_vtk_result_writer
+    ! Termination criteria
+    use class_end_time_criterion
+    ! Time incriment control
+    use class_constant_time_incriment_controller
+    ! Parallel computing support
+    use class_openmp_parallelizer
 
     implicit none
 
-    real   (real_kind)  :: time_increment, time, curant_number
-    real   (real_kind)  :: local_time_increment, cell_length
-    integer(int_kind )  :: max_timestep, timestep
-    integer(int_kind )  :: index
-    ! Grid & initial condition I/O
-    type(nlgrid_parser) :: a_grid_parser
-    type(nlinit_parser) :: a_init_parser
-    ! Result file output
-    type(vtk_file)              :: a_vtk_file
-    integer  (I4P)              :: vtk_error
-    integer  (int_kind )        :: file_output_counter, vtk_index, cell_point_index
-    character(22)               :: vtk_filename
-    integer  (I4P)              :: n_output_cells, n_output_points, n_cell_points, offset_incriment, n_output_file
-    real     (R4P), allocatable :: vtk_density(:), vtk_cell_id(:), vtk_soundspeed(:), vtk_wood_soundspeed(:)
-    integer  (I1P), allocatable :: vtk_cell_type(:)
-    integer  (I4P), allocatable :: vtk_offset(:), vtk_connect(:)
+    type(cellsystem                        ) :: a_cellsystem
+    type(nlgrid_parser                     ) :: a_grid_parser
+    type(nlinit_parser                     ) :: an_initial_condition_parser
+    type(json_configuration                ) :: a_configuration
+    type(stiffened_gas_eos                 ) :: an_eos
+    type(hllc                              ) :: a_riemann_solver
+    type(weighted_green_gauss              ) :: a_gradient_calculator
+    type(weighted_gauss_divergence         ) :: a_divergence_calculator
+    type(vtk_result_writer                 ) :: a_result_writer
+    type(end_time_criterion                ) :: a_termination_criterion
+    type(constant_time_incriment_controller) :: a_time_incriment_controller
+    type(openmp_parallelizer               ) :: a_parallelizer
 
-    type(stiffened_gas_eos) :: an_eos
-    type(sensor             ) :: pressure_sensor
-    type(measurement_surface) :: surface
-    type(line_plot          ) :: line
-    real(real_kind)           :: normal(3)
-    integer(int_kind ), allocatable :: line_ids(:)
-    integer(int_kind )              :: n_line_ids
+    ! These schemes can be cahnge from configuration file you set.
+    class(time_stepping), pointer :: a_time_stepping
+    class(reconstructor), pointer :: a_reconstructor
 
-    max_timestep   = 1200
-    n_output_file  = 100
-    time           = 0.d0
-    curant_number  = 0.2d0
+    ! Loop index
+    integer(int_kind) :: state_num
 
-#ifdef _OPENMP
-    call omp_set_num_threads(14)
-#endif
+    ! Read config
+    call a_configuration%parse("config.json")
 
-    ! parse grid file
-    call a_grid_parser%parse("grid.nlgrid")
-    ! allocate grid & variable data
-    call initialise_faces             (a_grid_parser%get_number_of_faces()    , a_grid_parser%get_number_of_ghost_cells())
-    call initialise_cell_geometries   (a_grid_parser%get_number_of_points()   , a_grid_parser%get_number_of_cells())
-    !call initialise_boundary_reference(a_grid_parser%get_number_of_ghost_cells(), &
-    !                                   a_grid_parser%get_number_of_outflow_faces(), a_grid_parser%get_number_of_slipwall_faces(), a_grid_parser%get_number_of_symmetric_faces())
-    call initialise_variables         (a_grid_parser%get_number_of_cells())
-    ! get grid data
-    call a_grid_parser%get_cells          (cells_centor_position, cells_volume, cells_is_real_cell)
-    call a_grid_parser%get_faces          (faces_to_cell_index, faces_normal_vector, faces_tangential1_vector, faces_tangential2_vector, faces_position, faces_area)
-    !call a_grid_parser%get_boundaries     (outflow_face_indexs, slipwall_face_indexs, symmetric_face_indexs)
-    call a_grid_parser%get_cell_geometries(points, cell_geometries)
-    ! close file
-    call a_grid_parser%close()
+    ! Allocate schemes
+    call default_time_stepping_generator(a_configuration, a_time_stepping)
+    call default_reconstructor_generator(a_configuration, a_reconstructor)
 
-    ! parse init file
-    call a_init_parser%parse("init.nlinit")
-    call a_init_parser%get_conservative_variables_set(conservative_variables_set)
-    call a_init_parser%close()
+    ! Support for parallel computing
+    call a_parallelizer%initialize(a_configuration)
 
-    ! sensor
-    !call pressure_sensor%initialize("sensor.dat", 5.d3, 13633)
+    ! Read grid
+    call a_cellsystem%read(a_grid_parser, a_configuration)
 
-    ! measurement surface
-    normal(1) = 0.d0
-    normal(2) = 1.d0
-    normal(3) = 0.d0
-    !call surface%initialize("surface.dat", 5.d3, 10.d0+0.04d0, 10.d0-0.04d0, 1.d0, 0.d0, 7.d0, 0.d0, normal, faces_to_cell_index, faces_position, faces_normal_vector, cells_is_real_cell)
+    ! Initialize variables
+    call a_cellsystem%initialize(conservative_variables_set, num_conservative_variables)
+    call a_cellsystem%initialize(residual_set              , num_conservative_variables)
+    call a_cellsystem%initialize(primitive_variables_set   , num_primitive_variables)
+    ! Initialize schemes & utils
+    call a_cellsystem%initialize(an_eos                     , a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_riemann_solver           , a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_time_stepping            , a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_reconstructor            , a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_gradient_calculator      , a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_divergence_calculator    , a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_result_writer            , a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_termination_criterion    , a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_time_incriment_controller, a_configuration, num_conservative_variables, num_primitive_variables)
 
-    ! line plot
-    allocate(line_ids(get_number_of_cells()))
-    n_line_ids = 0
-    do index = 1, get_number_of_cells(), 1
-        if  ( 0.0d0 < cells_centor_position(index, 1) .and. cells_centor_position(index, 1) < 1.d0  &
-        .and. 0.d0  < cells_centor_position(index, 2) .and. cells_centor_position(index, 2) < 0.01d0 &
-        .and. 0.d0  < cells_centor_position(index, 3) .and. cells_centor_position(index, 3) < 0.01d0 ) then
-            n_line_ids = n_line_ids + 1
-            line_ids(n_line_ids) = index
+    ! Set initial condition
+    call a_cellsystem%read_initial_condition(an_initial_condition_parser, a_configuration, conservative_variables_set)
+    call a_cellsystem%conservative_to_primitive_variables_all(an_eos, conservative_variables_set, primitive_variables_set, num_primitive_variables, conservative_to_primitive)
+
+    ! Timestepping loop
+    do while ( .not. a_cellsystem%satisfies_termination_criterion(a_termination_criterion) )
+        if ( a_cellsystem%is_writable(a_result_writer) ) then
+            call a_cellsystem%open_file   (a_result_writer)
+
+            print *, "Write a result "//a_cellsystem%get_filename(a_result_writer)//"..."
+
+            call a_cellsystem%write_scolar(a_result_writer, "Density 1"      , primitive_variables_set(1  , :))
+            call a_cellsystem%write_scolar(a_result_writer, "Density 2"      , primitive_variables_set(2  , :))
+            call a_cellsystem%write_vector(a_result_writer, "Velocity"       , primitive_variables_set(3:5, :))
+            call a_cellsystem%write_scolar(a_result_writer, "Pressre"        , primitive_variables_set(6  , :))
+            call a_cellsystem%write_scolar(a_result_writer, "Volume flaction", primitive_variables_set(7  , :))
+            call a_cellsystem%close_file  (a_result_writer)
         end if
-    end do
-    call line%initialize("line", 1d6, line_ids(1:n_line_ids))
-    deallocate(line_ids)
 
-    ! VTK
-    file_output_counter = 0
-    n_output_cells = 0
-    offset_incriment=8_I4P
-    do index = 1, get_number_of_cells(), 1
-        if(cells_is_real_cell(index)) n_output_cells = n_output_cells + 1
-    end do
-    allocate(vtk_density        (n_output_cells    ))
-    allocate(vtk_soundspeed     (n_output_cells    ))
-    allocate(vtk_wood_soundspeed(n_output_cells    ))
-    allocate(vtk_cell_id        (n_output_cells    ))
-    allocate(vtk_cell_type      (n_output_cells    ))
-    allocate(vtk_offset         (n_output_cells    ))
-    allocate(vtk_connect        (n_output_cells * 8))
-    vtk_index = 1
-    do index = 1, get_number_of_cells(), 1
-        if(cells_is_real_cell(index))then
-            n_cell_points = cell_geometries(index)%get_number_of_points()
-            do cell_point_index = 1, n_cell_points, 1
-                vtk_connect((vtk_index - 1) * 8 + cell_point_index) = cell_geometries(index)%get_point_id(cell_point_index)
-            end do
-            vtk_cell_type(vtk_index) = 12_I1P
-            vtk_offset   (vtk_index) = offset_incriment
-            offset_incriment = offset_incriment + 8_I4P
-            vtk_index = vtk_index + 1
-        end if
-    end do
-    n_output_points = get_number_of_points()
-    call make_dir("result/field")
+        print *, "Step "          , a_cellsystem%get_number_of_steps(), ", ", &
+                 "Time incriment ", a_cellsystem%get_time_increment() , ", ", &
+                 "Time "          , a_cellsystem%get_time()
 
-    ! EoS and primitive-valiables
-    call an_eos%initialize(1.4d0, 1.4d0, 0.d0, 0.d0)
-    do index = 1, get_number_of_cells(), 1
-        primitive_variables_set(index, :) = conservative_to_primitive(conservative_variables_set(index, :), an_eos)
-    end do
+        call a_cellsystem%apply_empty_condition    (primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, empty_bc    )
+        call a_cellsystem%apply_outflow_condition  (primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, outflow_bc  )
+        call a_cellsystem%apply_slipwall_condition (primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, slipwall_bc )
+        call a_cellsystem%apply_symmetric_condition(primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, symmetric_bc)
 
-    ! time-stepping
-    call initialize_third_order_tvd_rk(conservative_variables_set)
+        call a_cellsystem%update_time_incriment(a_time_incriment_controller, an_eos, primitive_variables_set, spectral_radius)
 
-    ! solver timestepping loop
-    do timestep = 0, max_timestep, 1
+        call a_cellsystem%prepare_stepping(a_time_stepping, conservative_variables_set, primitive_variables_set, residual_set)
 
-        time_increment = 1.d8
-        do index = 1, get_number_of_cells(), 1
-            if(cells_is_real_cell(index))then
-                associate(                                       &
-                    v      => cells_volume           (index)   , &
-                    rho1   => primitive_variables_set(index, 1), &
-                    rho2   => primitive_variables_set(index, 2), &
-                    p      => primitive_variables_set(index, 6), &
-                    z1     => primitive_variables_set(index, 7))
-                    cell_length = v**(1.d0/3.d0)
-                    local_time_increment = curant_number * cell_length / an_eos%compute_soundspeed(p, rho1 * z1 + rho2 * (1.d0 - z1), z1)
-                end associate
-                if(time_increment > local_time_increment)then
-                    time_increment = local_time_increment
-                end if
-            end if
+        do state_num = 1, a_cellsystem%get_number_of_states(a_time_stepping), 1
+            call a_cellsystem%compute_residual(         &
+                a_reconstructor                       , &
+                a_riemann_solver                      , &
+                an_eos                                , &
+                primitive_variables_set               , &
+                residual_set                          , &
+                num_conservative_variables            , &
+                num_primitive_variables               , &
+                primitive_to_conservative             , &
+                five_equation_model_residual_element    &
+            )
+
+            call a_cellsystem%compute_next_state(a_time_stepping, an_eos, state_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, conservative_to_primitive)
         end do
 
-        print *, "step ", timestep, ", time incriment ", time_increment, ", time ", time
-
-        if (mod(timestep, max_timestep / n_output_file) == 0) then
-            write(vtk_filename, "(a, i5.5, a)") "result/field/", file_output_counter, ".vtu"
-            print *, "write vtk "//vtk_filename//"..."
-            vtk_error = a_vtk_file%initialize                   (format="binary", filename=vtk_filename, mesh_topology="UnstructuredGrid")
-            vtk_error = a_vtk_file%xml_writer%write_piece       (np=n_output_points, nc=n_output_cells)
-            vtk_error = a_vtk_file%xml_writer%write_geo         (np=n_output_points, nc=n_output_cells, x=points(:, 1), y=points(:, 2), z=points(:, 3))
-            vtk_error = a_vtk_file%xml_writer%write_connectivity(nc=n_output_cells, connectivity=vtk_connect, offset=vtk_offset, cell_type=vtk_cell_type)
-            vtk_error = a_vtk_file%xml_writer%write_dataarray   (location='cell', action='open')
-            vtk_index = 1
-            do index = 1, get_number_of_cells(), 1
-                if(cells_is_real_cell(index))then
-                    associate(                                     &
-                        rho1   => primitive_variables_set(index, 1), &
-                        rho2   => primitive_variables_set(index, 2), &
-                        p      => primitive_variables_set(index, 6), &
-                        z1     => primitive_variables_set(index, 7))
-                        vtk_density   (vtk_index) = rho1 * z1 + rho2 * (1.d0 - z1)
-                        vtk_soundspeed(vtk_index) = an_eos%compute_soundspeed(p, rho1 * z1 + rho2 * (1.d0 - z1), z1)
-                        vtk_wood_soundspeed(vtk_index) = an_eos%compute_k(p, rho1, rho2, z1)
-                        vtk_cell_id   (vtk_index) = index
-                    end associate
-                    vtk_index = vtk_index + 1
-                end if
-            end do
-            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='density', x=vtk_density)
-            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='density1', x=pack(primitive_variables_set(:, 1), mask=cells_is_real_cell))
-            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='density2', x=pack(primitive_variables_set(:, 2), mask=cells_is_real_cell))
-            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='velocity', x=pack(primitive_variables_set(:, 3), mask=cells_is_real_cell), y=pack(primitive_variables_set(:, 4), mask=cells_is_real_cell), z=pack(primitive_variables_set(:, 5), mask=cells_is_real_cell))
-            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='pressure', x=pack(primitive_variables_set(:, 6), mask=cells_is_real_cell))
-            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='volume fruction', x=pack(primitive_variables_set(:, 7), mask=cells_is_real_cell))
-            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='sound speed', x=vtk_soundspeed)
-            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='wood sound speed', x=vtk_wood_soundspeed)
-            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='cell id', x=vtk_cell_id)
-            vtk_error = a_vtk_file%xml_writer%write_dataarray(data_name='cell position', x=pack(cells_centor_position(:, 1), mask=cells_is_real_cell), y=pack(cells_centor_position(:, 2), mask=cells_is_real_cell), z=pack(cells_centor_position(:, 3), mask=cells_is_real_cell))
-            vtk_error = a_vtk_file%xml_writer%write_dataarray(location='cell', action='close')
-            vtk_error = a_vtk_file%xml_writer%write_piece()
-            vtk_error = a_vtk_file%finalize()
-            file_output_counter = file_output_counter + 1
-        end if
-
-        !call pressure_sensor%write(time, primitive_variables_set)
-        !call surface%write(time, primitive_variables_set, faces_to_cell_index, faces_area)
-        call line%write(time, primitive_variables_set, cells_centor_position)
-
-        call compute_next_state_third_order_tvd_rk(   &
-            conservative_variables_set               , &
-            primitive_variables_set                  , &
-            derivative_variables_set                 , &
-            cells_centor_position                    , & ! <-
-            cells_volume                             , & ! <-
-            faces_to_cell_index                      , & ! <-
-            faces_normal_vector                      , & ! <-
-            faces_tangential1_vector                 , & ! <-
-            faces_tangential2_vector                 , & ! <-
-            faces_position                           , & ! <-
-            faces_area                               , & ! <-
-            outflow_face_indexs                      , & ! <-
-            slipwall_face_indexs                     , & ! <-
-            symmetric_face_indexs                    , & ! <-
-            get_number_of_cells()                    , & ! <-
-            get_number_of_faces()                    , & ! <-
-            get_number_of_ghost_cells()              , & ! <-
-            get_number_of_outflow_faces()            , &
-            get_number_of_slipwall_faces()           , &
-            get_number_of_symmetric_faces()          , &
-            time_increment                           , &
-            an_eos                                      , &
-            reconstruct_weno5_js               , &
-            compute_space_element_five_equation_model, &
-            compute_flux_five_equation_model_hllc    , &
-            primitive_to_conservative                , &
-            conservative_to_primitive                , &
-            five_equation_model_set_boundary_condition &
-        )
-
-        time = time + time_increment
+        call a_cellsystem%incriment_time()
     end do
-
-    call finalize_boundary_reference()
-    call finalize_faces()
-    call finalize_cell_geometries()
-    call finalize_variables()
 end program five_eq_model_solver

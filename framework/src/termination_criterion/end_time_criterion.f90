@@ -2,6 +2,7 @@ module class_end_time_criterion
     use typedef_module
     use abstract_termination_criterion
     use abstract_configuration
+    use stdio_module
 
     implicit none
 
@@ -10,7 +11,7 @@ module class_end_time_criterion
     type, public, extends(termination_criterion) :: end_time_criterion
         private
 
-        integer(int_kind) :: end_time
+        real(real_kind) :: end_time
 
         contains
 
@@ -30,11 +31,11 @@ module class_end_time_criterion
     end subroutine initialize
 
     pure function is_satisfied(self, time, num_steps) result(judge)
-        class  (termination_criterion) :: self
-        real   (real_kind            ) :: time
-        integer(int_kind             ) :: num_steps
-        logical                        :: judge
+        class  (end_time_criterion), intent(in) :: self
+        real   (real_kind         ), intent(in) :: time
+        integer(int_kind          ), intent(in) :: num_steps
+        logical                                 :: judge
 
-        judge = (time <= self%end_time)
+        judge = (time >= self%end_time)
     end function is_satisfied
 end module class_end_time_criterion

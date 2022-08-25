@@ -10,7 +10,7 @@ module abstract_termination_criterion
 
     abstract interface
         subroutine initialize_interface(self, config)
-            use acstract_configuration
+            use abstract_configuration
             import termination_criterion
 
             class(termination_criterion) :: self
@@ -21,10 +21,10 @@ module abstract_termination_criterion
             use typedef_module
             import termination_criterion
 
-            class  (termination_criterion) :: self
-            real   (real_kind            ) :: time
-            integer(int_kind             ) :: num_steps
-            logical                        :: judge
+            class  (termination_criterion), intent(in) :: self
+            real   (real_kind            ), intent(in) :: time
+            integer(int_kind             ), intent(in) :: num_steps
+            logical                                    :: judge
         end function is_satisfied_interface
     end interface
 end module abstract_termination_criterion

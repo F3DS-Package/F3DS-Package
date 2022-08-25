@@ -44,7 +44,7 @@ module class_json_configuration
 
         call self%json%initialize()
         call self%json%load(filename=filepath)
-        if (json%failed()) then
+        if (self%json%failed()) then
             call self%json%check_for_errors(self%status_ok, self%error_msg)
             call self%json%clear_exceptions()
             call self%json%destroy()

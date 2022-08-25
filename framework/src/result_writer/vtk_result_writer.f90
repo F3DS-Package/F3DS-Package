@@ -141,7 +141,7 @@ module class_vtk_result_writer
         end do
         self%n_output_points = num_points
         self%n_output_file   = 0
-        call config%get_int("Result writer.Output timespan", self%output_timespan, found, 100)
+        call config%get_real("Result writer.Output timespan", self%output_timespan, found, 1.d-6)
         if(.not. found) call write_warring("'Result writer.Output timespan' is not found in configration you set. To be set dafault value.")
         self%next_output_time = 0.d0
 
@@ -186,6 +186,8 @@ module class_vtk_result_writer
             self%vtk_error = self%a_vtk_file%finalize()
 
             self%n_output_file = self%n_output_file + 1
+
+            self%file_is_opened = .false.
         end if
     end subroutine
 

@@ -8,6 +8,7 @@ module class_mp_weno5_js
     use abstract_reconstructor
     use abstract_configuration
     use weno_utils
+    use stdio_module
 
     implicit none
 

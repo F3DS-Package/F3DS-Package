@@ -22,7 +22,7 @@ module time_stepping_generator_module
         class(time_stepping), pointer, intent(inout) :: method
 
         logical          :: found
-        character(len=:) :: name
+        character(len=:), allocatable :: name
 
         call config%get_char("Time stepping.Name", name, found)
         if(.not. found) call call_error("'Time stepping.Name' is not found in configuration file you set.")
@@ -31,7 +31,7 @@ module time_stepping_generator_module
     end subroutine with_config
 
     subroutine with_name(name, method)
-        character(len=:), intent(in) :: name
+        character(len=:), allocatable, intent(in) :: name
         class(time_stepping), pointer, intent(inout) :: method
 
         if(name == "2nd order TVD RK") then

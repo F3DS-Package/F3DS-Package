@@ -3,6 +3,7 @@ module class_constant_time_incriment_controller
     use abstract_time_incriment_controller
     use abstract_configuration
     use abstract_eos
+    use stdio_module
 
     implicit none
 
@@ -22,8 +23,8 @@ module class_constant_time_incriment_controller
     contains
 
     subroutine initialize(self, config)
-        class(constant_time_incriment_controller) :: self
-        class(configuration                     ) :: config
+        class(constant_time_incriment_controller), intent(inout) :: self
+        class(configuration                     ), intent(inout) :: config
 
         logical :: found
 
@@ -31,7 +32,7 @@ module class_constant_time_incriment_controller
         if(.not. found) call call_error("'Time incriment control.dt' is not found in configuration file you set.")
     end subroutine initialize
 
-    pure function update_global_interface(self, an_eos, variables_set, cell_volumes, num_cells, spectral_radius_function) result(dt)
+    pure function update_global(self, an_eos, variables_set, cell_volumes, num_cells) result(dt)
         class  (constant_time_incriment_controller), intent(in) :: self
         class  (eos                               ), intent(in) :: an_eos
         real   (real_kind                         ), intent(in) :: variables_set(:,:)
@@ -39,15 +40,16 @@ module class_constant_time_incriment_controller
         integer(int_kind                          ), intent(in) :: num_cells
         real   (real_kind                         )             :: dt
 
-        interface
-            pure function spectral_radius_function(an_eos, variables)
-                use abstract_eos
-                use typedef_module
-                class  (eos      ) :: an_eos
-                real   (real_kind) :: variables(:)
-            end function spectral_radius_function
-        end interface
+        !interface
+        !    pure function spectral_radius_function(an_eos, variables) result(radius)
+        !        use abstract_eos
+        !        use typedef_module
+        !        class  (eos      ), intent(in) :: an_eos
+        !        real   (real_kind), intent(in) :: variables(:)
+        !        real   (real_kind)             :: radius
+        !    end function spectral_radius_function
+        !end interface
 
         dt = self%global_dt
-    end function update_global_interface
+    end function update_global
 end module class_constant_time_incriment_controller
