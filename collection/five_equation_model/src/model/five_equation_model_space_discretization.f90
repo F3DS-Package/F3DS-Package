@@ -47,11 +47,11 @@ module five_equation_model_space_discretization
 
         real   (real_kind)                  :: residual_element(num_conservative_values, 1:2)
 
-        real(real_kind) :: local_coordinate_primitives_lhc  (five_equation_model_num_primitive_variables)
-        real(real_kind) :: local_coordinate_primitives_rhc  (five_equation_model_num_primitive_variables)
-        real(real_kind) :: local_coordinate_conservative_lhc(five_equation_model_num_conservative_variables)
-        real(real_kind) :: local_coordinate_conservative_rhc(five_equation_model_num_conservative_variables)
-        real(real_kind) :: nonviscosity_flux                (five_equation_model_num_conservative_variables)
+        real(real_kind) :: local_coordinate_primitives_lhc  (num_primitive_values)
+        real(real_kind) :: local_coordinate_primitives_rhc  (num_primitive_values)
+        real(real_kind) :: local_coordinate_conservative_lhc(num_conservative_values)
+        real(real_kind) :: local_coordinate_conservative_rhc(num_conservative_values)
+        real(real_kind) :: nonviscosity_flux                (num_conservative_values)
         real(real_kind) :: lhc_soundspeed, lhc_pressure, lhc_density, lhc_main_velocity
         real(real_kind) :: rhc_soundspeed, rhc_pressure, rhc_density, rhc_main_velocity
         real(real_kind), allocatable :: rieman_solver_features(:)
