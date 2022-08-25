@@ -40,9 +40,9 @@ module class_cellsystem
         private
 
         ! Time
-        integer(int_kind ) :: num_steps
-        real   (real_kind) :: time
-        real   (real_kind) :: time_increment
+        integer(int_kind ) :: num_steps      = 0
+        real   (real_kind) :: time           = 0.d0
+        real   (real_kind) :: time_increment = 0.d0
 
         ! Real cells only (NOT include points of ghost/dummy cells)
         integer(int_kind) :: num_points
@@ -556,6 +556,7 @@ module class_cellsystem
             call call_error("Array variables_set is allocated. But you call 'initialize' subroutine.")
         end if
         allocate(variables_set(1:num_variables, 1:self%num_cells))
+        variables_set(:,:) = 0.d0
     end subroutine variables_initialize
 
     subroutine read_initial_condition(self, an_initial_condition_parser, config, conservative_variables_set)
@@ -568,6 +569,7 @@ module class_cellsystem
         logical          :: found
         integer          :: i
 
+        ! TODO: Following lines move to {@code initial_condition_parser} class.
         call config%get_char("Initial condition.Filepath", filepath, found)
         if(.not. found) call call_error("'Initial condition.Filepath' is not found in configuration file you set.")
 
@@ -627,8 +629,8 @@ module class_cellsystem
 
 !$omp parallel do private(face_index, rhc_index, lhc_index, var_index)
         do face_index = 1, self%num_faces, 1
-            rhc_index = self%face_to_cell_indexes(0, face_index)
-            lhc_index = self%face_to_cell_indexes(1, face_index)
+            rhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
+            lhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
             do var_index = 1, num_variables, 1
                 associate(                                &
                     vec_start_index => 3*(var_index-1)+1, &
@@ -676,8 +678,8 @@ module class_cellsystem
 
 !$omp parallel do private(face_index, rhc_index, lhc_index)
         do face_index = 1, self%num_faces, 1
-            rhc_index = self%face_to_cell_indexes(0, face_index)
-            lhc_index = self%face_to_cell_indexes(1, face_index)
+            rhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
+            lhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
             gradient_variable_set(1:3,rhc_index) = gradient_variable_set(1:3,rhc_index)                    &
                                                  + (1.d0 / self%cell_volumes(rhc_index))                   &
                                                  * a_gradient_calculator%compute_residual(                 &
@@ -732,8 +734,8 @@ module class_cellsystem
 
 !$omp parallel do private(face_index, rhc_index, lhc_index, var_index)
         do face_index = 1, self%num_faces, 1
-            rhc_index = self%face_to_cell_indexes(0, face_index)
-            lhc_index = self%face_to_cell_indexes(1, face_index)
+            rhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
+            lhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
             do var_index = 1, num_divergence_variables, 1
                 associate(                                &
                     vec_start_index => 3*(var_index-1)+1, &
@@ -781,8 +783,8 @@ module class_cellsystem
 
 !$omp parallel do private(face_index, rhc_index, lhc_index)
         do face_index = 1, self%num_faces, 1
-            rhc_index = self%face_to_cell_indexes(0, face_index)
-            lhc_index = self%face_to_cell_indexes(1, face_index)
+            rhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
+            lhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
             divergence_variable_set(rhc_index)   = divergence_variable_set(rhc_index)                       &
                                                  + (1.d0 / self%cell_volumes(rhc_index))                    &
                                                  * a_divergence_calculator%compute_residual(                &
@@ -891,10 +893,16 @@ module class_cellsystem
         real   (real_kind) :: reconstructed_conservative_variables_rhc(num_conservative_variables)
         real   (real_kind) :: residual_element                        (num_conservative_variables, 1:2)
 
-!$omp parallel do private(i,lhc_index,rhc_index,rotate_matrix,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,reconstructed_conservative_variables_lhc,reconstructed_conservative_variables_rhc,flux)
+        logical :: lhc_is_dummy, rhc_is_dummy
+
+!$omp parallel do private(i,lhc_index,rhc_index,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,reconstructed_conservative_variables_lhc,reconstructed_conservative_variables_rhc,residual_element)
         do i = 1, self%num_faces, 1
             lhc_index = self%face_to_cell_indexes(self%num_local_cells+0, i)
             rhc_index = self%face_to_cell_indexes(self%num_local_cells+1, i)
+
+            !lhc_is_dummy = (self%is_real_cell(lhc_index) .eqv. .false.)
+            !rhc_is_dummy = (self%is_real_cell(lhc_index) .eqv. .false.)
+            !if(lhc_is_dummy .and. rhc_is_dummy)cycle
 
             reconstructed_primitive_variables_lhc(:) = a_reconstructor%reconstruct_lhc(                              &
                 primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
@@ -904,7 +912,6 @@ module class_cellsystem
                 primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
                 i, self%num_local_cells, num_primitive_variables                                                     &
             )
-
 
             residual_element(:,:) = residual_element_function(&
                 an_eos                                      , &
@@ -1114,6 +1121,14 @@ module class_cellsystem
         ! close file
         call parser%close()
 
+#ifdef _DEBUG
+        print *, "DEBUG: cellsystem:"
+        print *, "Number of cells          : ", self%num_cells
+        print *, "Number of faces          : ", self%num_faces
+        print *, "Number of symmetric faces: ", self%num_symmetric_faces
+        print *, "Number of empty faces    : ", self%num_empty_faces
+#endif
+
         self%read_cellsystem = .true.
     end subroutine read
 
@@ -1223,6 +1238,8 @@ module class_cellsystem
             else if (face_types(index) == empty_face_type) then
                 empty_index = empty_index + 1
                 self%empty_face_indexes(empty_index) = index
+            else if (face_types(index) == face_type) then
+                ! It is inner face.
             else
                 call call_error("Unknown boundary type found.")
             end if
@@ -1247,7 +1264,7 @@ module class_cellsystem
         if(allocated(self%face_to_cell_indexes))then
             call call_error("Array face_to_cell_indexes is already allocated. But you call the initialiser for faces.")
         end if
-        allocate(self%face_to_cell_indexes(-self%num_local_cells + 1:self%num_local_cells, self%num_faces))
+        allocate(self%face_to_cell_indexes(2*self%num_local_cells, self%num_faces))
 
         if(allocated(self%face_normal_vectors))then
             call call_error("Array face_normal_vectors is already allocated. But you call the initialiser for faces.")

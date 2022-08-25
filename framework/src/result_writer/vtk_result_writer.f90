@@ -1,5 +1,6 @@
 module class_vtk_result_writer
     ! external
+    use penf
     use vtk_fortran
     use json_module
     use json_string_utilities
@@ -21,10 +22,10 @@ module class_vtk_result_writer
 
         type(vtk_file) :: a_vtk_file
 
-        real   (real_kind), allocatable :: cell_id  (:)
-        integer(type_kind), allocatable :: cell_type(:)
-        integer(int_kind ), allocatable :: offset   (:)
-        integer(int_kind ), allocatable :: connect  (:)
+        integer(int_kind), allocatable :: cell_id  (:)
+        integer(I1P     ), allocatable :: cell_type(:)
+        integer(I4P     ), allocatable :: offset   (:)
+        integer(I4P     ), allocatable :: connect  (:)
 
         integer(int_kind) :: n_output_cells
         integer(int_kind) :: n_output_points
@@ -45,6 +46,7 @@ module class_vtk_result_writer
         contains
 
         procedure, public, pass(self) :: initialize
+        procedure, public, pass(self) :: cleanup
         procedure, public, pass(self) :: open_file
         procedure, public, pass(self) :: close_file
         procedure, public, pass(self) :: write_scolar
@@ -59,8 +61,8 @@ module class_vtk_result_writer
 
     contains
 
-    subroutine finalize(self)
-        type  (vtk_result_writer), intent(inout) :: self
+    subroutine cleanup(self)
+        class(vtk_result_writer), intent(inout) :: self
 
         type   (json_core ) :: json
         type   (json_value), pointer :: root_obj, vtk_files_obj, vtk_file_info_obj
@@ -74,8 +76,8 @@ module class_vtk_result_writer
 
         call json%create_array(vtk_files_obj, 'files')
 
-        do i = 0, self%n_output_file, 1
-            call json%create_array(vtk_file_info_obj, '')
+        do i = 0, self%n_output_file - 1, 1
+            call json%create_object(vtk_file_info_obj, '')
             call json%add(vtk_file_info_obj, 'name', self%make_vtk_filename(i))
             call json%add(vtk_file_info_obj, 'time', self%output_timespan * dble(i))
             call json%add(vtk_files_obj, vtk_file_info_obj)
@@ -84,9 +86,16 @@ module class_vtk_result_writer
 
         call json%add(root_obj, vtk_files_obj)
 
+        call write_message('Write '//self%base_dir_path//'files.vtu.series ...')
         call json%print(root_obj, self%base_dir_path//'files.vtu.series')
 
         call json%destroy(root_obj)
+    end subroutine cleanup
+
+    subroutine finalize(self)
+        type  (vtk_result_writer), intent(inout) :: self
+
+        call self%cleanup()
     end subroutine finalize
 
     pure function make_vtk_filename(self, file_number) result(filename)
@@ -146,7 +155,7 @@ module class_vtk_result_writer
         self%next_output_time = 0.d0
 
         ! set base path
-        self%base_dir_path = "result/field"
+        self%base_dir_path = "result/field/"
 
         ! make directory
         call make_dir(self%base_dir_path)
@@ -162,13 +171,13 @@ module class_vtk_result_writer
 
         if(self%file_is_opened) call call_error("VTK result file '"//self%vtk_filename//"' is already opened. But you call open_file method.")
 
-        if(time > self%next_output_time)then
+        if(time >= self%next_output_time)then
             !write(self%vtk_filename, "(a, i5.5, a)") "result/field/", self%n_output_file, ".vtu"
-            write(self%vtk_filename, "(a, a)") self%base_dir_path, self%make_vtk_filename(self%n_output_file)
+            self%vtk_filename = self%base_dir_path//self%make_vtk_filename(self%n_output_file)
 
             self%vtk_error = self%a_vtk_file%initialize                   (format="binary", filename=self%vtk_filename, mesh_topology="UnstructuredGrid")
             self%vtk_error = self%a_vtk_file%xml_writer%write_piece       (np=self%n_output_points, nc=self%n_output_cells)
-            self%vtk_error = self%a_vtk_file%xml_writer%write_geo         (np=self%n_output_points, nc=self%n_output_cells, x=points(:, 1), y=points(:, 2), z=points(:, 3))
+            self%vtk_error = self%a_vtk_file%xml_writer%write_geo         (np=self%n_output_points, nc=self%n_output_cells, x=points(1, :), y=points(2, :), z=points(3, :))
             self%vtk_error = self%a_vtk_file%xml_writer%write_connectivity(nc=self%n_output_cells, connectivity=self%connect, offset=self%offset, cell_type=self%cell_type)
             self%vtk_error = self%a_vtk_file%xml_writer%write_dataarray   (location="cell", action="open")
             self%vtk_error = self%a_vtk_file%xml_writer%write_dataarray   (data_name="cell id", x=self%cell_id)
@@ -186,6 +195,7 @@ module class_vtk_result_writer
             self%vtk_error = self%a_vtk_file%finalize()
 
             self%n_output_file = self%n_output_file + 1
+            self%next_output_time = self%next_output_time + self%output_timespan
 
             self%file_is_opened = .false.
         end if
@@ -218,7 +228,7 @@ module class_vtk_result_writer
         real (real_kind        ), intent(in) :: time
         logical                              :: yes
 
-        if(time > self%next_output_time)then
+        if(time >= self%next_output_time)then
             yes = .true.
         else
             yes = .false.

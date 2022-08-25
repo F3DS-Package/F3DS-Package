@@ -8,12 +8,13 @@ module class_second_order_tvd_rk
 
     private
 
+    integer(int_kind ), parameter :: nmu_stage_ = 2
+    real   (real_kind), parameter :: alpha1_(2) = [real(real_kind) :: 1.d0, 0.5d0]
+    real   (real_kind), parameter :: alpha2_(2) = [real(real_kind) :: 0.d0, 0.5d0]
+    real   (real_kind), parameter :: beta_  (2) = [real(real_kind) :: 1.d0, 0.5d0]
+
     type, public, extends(time_stepping) :: second_order_tvd_rk
         private
-
-        integer(int_kind ) :: nmu_stage_ = 2
-        real   (real_kind) :: alpha_(1:3) = [real(real_kind) :: 1, 1/2]
-        real   (real_kind) :: beta_ (1:3) = [real(real_kind) :: 1, 1/2]
 
         ! Stored init conservative-variables of each in cells
         ! Elm. 1) 1:number of conservative variables
@@ -54,9 +55,9 @@ module class_second_order_tvd_rk
         real   (real_kind          ), intent(inout) :: conservative_variables(:)
         real   (real_kind          ), intent(inout) :: residuals             (:)
 
-
-        conservative_variables(:) = self%alpha_(state_num) * self%init_conservative_variables_set(:, cell_index) &
-                                  + self%beta_ (state_num) * (conservative_variables(:) + time_increment * residuals(:))
+        conservative_variables(:) = alpha1_(state_num) * self%init_conservative_variables_set(:, cell_index) &
+                                  + alpha2_(state_num) * conservative_variables              (:)             &
+                                  + beta_  (state_num) * time_increment * residuals          (:)
         residuals             (:) = 0.d0
     end subroutine compute_next_state
 
@@ -79,6 +80,6 @@ module class_second_order_tvd_rk
     pure function get_number_of_states(self) result(n)
         class  (second_order_tvd_rk), intent(in) :: self
         integer(int_kind          )              :: n
-        n = self%nmu_stage_
+        n = nmu_stage_
     end function get_number_of_states
 end module class_second_order_tvd_rk

@@ -46,7 +46,11 @@ module string_utils_module
         integer(int_kind), intent(in) :: num
         integer(int_kind)             :: num_digit
 
-        num_digit = int(log10(dble(num)))+1
+        if(num == 0)then
+            num_digit = 1
+        else
+            num_digit = int(log10(dble(num)))+1
+        end if
     end function get_int_digits_of
 
 end module string_utils_module

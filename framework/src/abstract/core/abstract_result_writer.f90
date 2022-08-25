@@ -6,6 +6,7 @@ module abstract_result_writer
     type, public, abstract :: result_writer
         contains
         procedure(initialize_interface  ), pass(self), deferred :: initialize
+        procedure(cleanup_interface     ), pass(self), deferred :: cleanup
         procedure(open_file_interface   ), pass(self), deferred :: open_file
         procedure(close_file_interface  ), pass(self), deferred :: close_file
         procedure(write_scolar_interface), pass(self), deferred :: write_scolar
@@ -28,6 +29,11 @@ module abstract_result_writer
             integer(type_kind    ), intent(in   ) :: cell_types     (:)
             class  (configuration), intent(inout) :: config
         end subroutine initialize_interface
+
+        subroutine cleanup_interface(self)
+            import result_writer
+            class  (result_writer), intent(inout) :: self
+        end subroutine cleanup_interface
 
         subroutine open_file_interface(self, time, points)
             use typedef_module

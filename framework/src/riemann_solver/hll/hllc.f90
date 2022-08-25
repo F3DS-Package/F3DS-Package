@@ -367,8 +367,8 @@ module class_hllc
             c_star_right => features(7)            &
         )
             numerical_velocity &
-                = 0.5d0 * (1.d0 + sign(1.d0, s_mid)) * (lhc_u + s_muinus * ((s_left  - lhc_u) / (s_left  - s_mid) - 1.d0)) &
-                + 0.5d0 * (1.d0 - sign(1.d0, s_mid)) * (rhc_u + s_puls   * ((s_right - rhc_u) / (s_right - s_mid) - 1.d0))
+                = 0.5d0 * (1.d0 + sign(1.d0, s_mid)) * (lhc_u + s_muinus * (c_star_left  - 1.d0)) &
+                + 0.5d0 * (1.d0 - sign(1.d0, s_mid)) * (rhc_u + s_puls   * (c_star_right - 1.d0))
         end associate
     end function compute_numerical_velocity
 end module class_hllc

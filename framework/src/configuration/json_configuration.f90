@@ -77,7 +77,7 @@ module class_json_configuration
         if(.not. self%parsed) call call_error("Configuration file is not parsed.")
 
         call self%json%get(tag, val, found)
-        if(.not. found) val = default
+        if(.not. found .and. present(default)) val = default
     end subroutine get_real
 
     subroutine get_int(self, tag, val, found, default)
@@ -90,7 +90,7 @@ module class_json_configuration
         if(.not. self%parsed) call call_error("Configuration file is not parsed.")
 
         call self%json%get(tag, val, found)
-        if(.not. found) val = default
+        if(.not. found .and. present(default)) val = default
     end subroutine get_int
 
     subroutine get_bool(self, tag, val, found, default)
@@ -103,7 +103,7 @@ module class_json_configuration
         if(.not. self%parsed) call call_error("Configuration file is not parsed.")
 
         call self%json%get(tag, val, found)
-        if(.not. found) val = default
+        if(.not. found .and. present(default)) val = default
     end subroutine get_bool
 
     subroutine get_char(self, tag, val, found, default)
@@ -116,7 +116,7 @@ module class_json_configuration
         if(.not. self%parsed) call call_error("Configuration file is not parsed.")
 
         call self%json%get(tag, val, found)
-        if(.not. found) val = default
+        if(.not. found .and. present(default)) val = default
     end subroutine get_char
 
     !subroutine add_real(self, tag, val)

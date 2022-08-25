@@ -42,8 +42,8 @@ module class_stiffened_gas_eos
         logical           :: found
         integer(int_kind) :: i
 
-        call a_configuration%get_int    ("Phase.Number of Phase", self%num_phase_, found)
-        if(.not. found) call call_error("'Phase.Number of Phase' is not found in configuration you set. Please check your configuration file.")
+        call a_configuration%get_int    ("Phase.Number of phase", self%num_phase_, found)
+        if(.not. found) call call_error("'Phase.Number of phase' is not found in configuration you set. Please check your configuration file.")
 
         if(self%num_phase_ > 2) call call_error("This solver does not support simulation of more than 2 phases flow.")
 

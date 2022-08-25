@@ -54,7 +54,7 @@ module five_equation_model_space_discretization
         real(real_kind) :: nonviscosity_flux                (num_conservative_values)
         real(real_kind) :: lhc_soundspeed, lhc_pressure, lhc_density, lhc_main_velocity
         real(real_kind) :: rhc_soundspeed, rhc_pressure, rhc_density, rhc_main_velocity
-        real(real_kind), allocatable :: rieman_solver_features(:)
+        real(real_kind) :: rieman_solver_features(7)
 
         real(real_kind) :: numerical_velocity
 
@@ -133,6 +133,7 @@ module five_equation_model_space_discretization
             rhc_pressure                 , &
             rhc_soundspeed                 &
         )
+        !print *, rieman_solver_features, lhc_pressure, rhc_pressure
         nonviscosity_flux(1) = an_riemann_solver%compute_mass_flux( &
             local_coordinate_conservative_lhc(1), &
             lhc_main_velocity                   , &

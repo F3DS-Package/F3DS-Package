@@ -96,10 +96,10 @@ module five_equation_model_variables_module
             rho = rho1_z1 + rho2_z2
             if(z1 < machine_epsilon)then
                 primitive_variables(1) = 0.d0
-                primitive_variables(2) = rho
+                primitive_variables(2) = rho2_z2
                 primitive_variables(7) = 0.d0
             else if(z1 > 1.d0 - machine_epsilon)then
-                primitive_variables(1) = rho
+                primitive_variables(1) = rho1_z1
                 primitive_variables(2) = 0.d0
                 primitive_variables(7) = 1.d0
             else

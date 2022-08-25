@@ -98,7 +98,6 @@ module boundary_condition_module
                 )
             end associate
         end do
-
     end subroutine apply_boundary_condition_common_impl
 
     subroutine apply_boundary_condition_empty_impl(     &
