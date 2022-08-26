@@ -264,9 +264,9 @@ module five_equation_model_variables_module
             kappa => -1.d0 * surface_tension_variables(4)  &
         )
             if((interface_threshold < z) .and. (z < 1.d0 - interface_threshold))then
-                dst_primitives(4) = (1.d0 / weber_number) * kappa
+                dst_primitives(8) = (1.d0 / weber_number) * kappa
             else
-                dst_primitives(4)  = 0.d0
+                dst_primitives(8)  = 0.d0
             endif
         end associate
     end function compute_pressure_jump
