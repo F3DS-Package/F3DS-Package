@@ -92,7 +92,7 @@ FIVE_EQ_MODEL_SRCS+=$(wildcard $(FIVE_EQ_MODEL_SRCDIR)/model/*.f90)
 FIVE_EQ_MODEL_SRCS+=$(wildcard $(FIVE_EQ_MODEL_SRCDIR)/special_reconstructor/*.f90)
 FIVE_EQ_MODEL_SRCS+=$(wildcard $(FIVE_EQ_MODEL_SRCDIR)/*.f90)
 
-TARGET=mfs.exe
+TARGET=f5eq
 OBJS=$(subst $(JSONFORTDIR)/,$(OBJDIR)/, $(JSONFORTSRCS))
 OBJS+=$(subst $(PENF_DIR)/, $(OBJDIR)/, $(PENF_SRC))
 OBJS+=$(subst $(FACE_DIR)/, $(OBJDIR)/, $(FACE_SRC))
