@@ -211,7 +211,7 @@ module five_equation_model_variables_module
         )
             if((machine_epsilon < mag) .and. (interface_threshold < z) .and. (z < 1.d0 - interface_threshold))then
                 ! {@code normarize_gradient_volume_fraction} must always be oriented toward the heaviest fluid.
-                dst_surface_tension_variables(1:3) = -1.d0 * surface_tension_variables(1:3) / mag
+                dst_surface_tension_variables(1:3) = surface_tension_variables(1:3) / mag
             else
                 dst_surface_tension_variables(1:3) = 0.d0
             endif
