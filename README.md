@@ -1,6 +1,6 @@
-# Fortran Fine-volume Fluid Dynamics Solver (F3DS) Flamework & Collection
+# Fortran Finite-volume Fluid Dynamics Solver (F3DS) Flamework & Collection
 
-F3DS is the modern Fortran (such as Fortran 2003, 2008, ...) library for development fluid dynamics solvers by Fine-volume method (FVM).  
+F3DS is the modern Fortran (such as Fortran 2003, 2008, ...) library for development fluid dynamics solvers by Finite-volume method (FVM).  
 This library support for Object Oriented Desing (OOD) and Structure of Arrays (SoA) layout. 
 We provide a fast, maintainable FVM library and solvers.  
 
