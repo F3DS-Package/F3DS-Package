@@ -56,7 +56,6 @@ module five_equation_model_variables_module
     public :: rotate_primitive
     public :: unrotate_primitive
     public :: normarize_gradient_volume_fraction
-    public :: treat_curvature
     public :: rotate_gradient_value
     public :: unrotate_gradient_value
     public :: compute_pressure_jump
