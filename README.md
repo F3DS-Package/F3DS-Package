@@ -20,8 +20,9 @@ We are currently working on developing a function for computing viscous flux.
         - [x] with surface tension term [Garrick 2017]
         - [ ] with viscosity term [Coralic 2014]
         - [ ] with cavitation model
+        - [ ] with gravity
 
-- [ ] Euler equation
+- [ ] Euler equation (in collection/euler. Binary name is "feuler")
 
 ### F3DS Flamework
 
@@ -125,6 +126,14 @@ We are currently working on developing a function for computing viscous flux.
     - [X] XML ([FoXy](https://github.com/Fortran-FOSS-Programmers/FoXy) backend)
 
 ## How to compile
+
+At first, we should clone the repository and download submodules.
+
+```:shell
+git clone https://165.93.124.207/gitlab/tishikawa/f3ds.git
+git submodule init
+git submodule update
+```
 
 F3DS only support for Linux system now. We can compile F3DS by Makefile like this.
 
