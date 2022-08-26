@@ -13,6 +13,7 @@ module abstract_riemann_solver
         procedure(compute_energy_flux_interface         ), pass(self), deferred :: compute_energy_flux
         procedure(compute_volume_fraction_flux_interface), pass(self), deferred :: compute_volume_fraction_flux
         procedure(compute_numerical_velocity_interface  ), pass(self), deferred :: compute_numerical_velocity
+        procedure(compute_interface_value_interface     ), pass(self), deferred :: compute_interface_value
     end type
 
     abstract interface
@@ -204,5 +205,37 @@ module abstract_riemann_solver
             real (real_kind     ), intent(in)  :: features(:)
             real (real_kind     )              :: numerical_velocity
         end function compute_numerical_velocity_interface
+
+        pure function compute_interface_value_interface(  &
+            self                                        , &
+            left_value                                  , &
+            left_main_velocity                          , &
+            left_density                                , &
+            left_pressure                               , &
+            left_soundspeed                             , &
+            right_value                                 , &
+            right_main_velocity                         , &
+            right_density                               , &
+            right_pressure                              , &
+            right_soundspeed                            , &
+            features                                         ) result(interface_value)
+
+            use typedef_module
+            import riemann_solver
+
+            class(riemann_solver), intent(in)  :: self
+            real (real_kind     ), intent(in)  :: left_value
+            real (real_kind     ), intent(in)  :: left_main_velocity
+            real (real_kind     ), intent(in)  :: left_density
+            real (real_kind     ), intent(in)  :: left_pressure
+            real (real_kind     ), intent(in)  :: left_soundspeed
+            real (real_kind     ), intent(in)  :: right_value
+            real (real_kind     ), intent(in)  :: right_main_velocity
+            real (real_kind     ), intent(in)  :: right_density
+            real (real_kind     ), intent(in)  :: right_pressure
+            real (real_kind     ), intent(in)  :: right_soundspeed
+            real (real_kind     ), intent(in)  :: features(:)
+            real (real_kind     )              :: interface_value
+        end function compute_interface_value_interface
     end interface
 end module abstract_riemann_solver

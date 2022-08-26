@@ -1,6 +1,7 @@
 module class_cellsystem
     use typedef_module
     use stdio_module
+    use math_constant_module
     use vector_module
     use matrix_module
     use face_type_module
@@ -139,6 +140,7 @@ module class_cellsystem
         procedure, public, pass(self) :: eos_initialize
         procedure, public, pass(self) :: gradient_calculator_initialize
         procedure, public, pass(self) :: variables_initialize
+        procedure, public, pass(self) :: variables_1darray_initialize
         procedure, public, pass(self) :: termination_criterion_initialize
         procedure, public, pass(self) :: time_incriment_controller_initialize
         procedure, public, pass(self) :: divergence_calculator_initialize
@@ -149,6 +151,7 @@ module class_cellsystem
                                                         eos_initialize                      , &
                                                         gradient_calculator_initialize      , &
                                                         variables_initialize                , &
+                                                        variables_1darray_initialize        , &
                                                         termination_criterion_initialize    , &
                                                         time_incriment_controller_initialize, &
                                                         divergence_calculator_initialize
@@ -162,6 +165,10 @@ module class_cellsystem
         ! ### Vatiables ###
         procedure, public, pass(self) :: read_initial_condition
         procedure, public, pass(self) :: conservative_to_primitive_variables_all
+        procedure, public, pass(self) :: processes_variables_set_single_array
+        procedure, public, pass(self) :: processes_variables_set_two_array
+        generic  , public             :: processes_variables_set => processes_variables_set_single_array, &
+                                                                    processes_variables_set_two_array
 
         ! ### Time incriment control ###
         procedure, public, pass(self) :: update_time_incriment
@@ -329,6 +336,7 @@ module class_cellsystem
 
         integer :: i, face_index
 
+        !$omp parallel do private(face_index)
         do i = 1, self%num_outflow_faces, 1
             face_index = self%outflow_face_indexes(i)
             call apply_boundary_condition_common_impl(       &
@@ -395,6 +403,7 @@ module class_cellsystem
 
         integer :: i, face_index
 
+        !$omp parallel do private(face_index)
         do i = 1, self%num_slipwall_faces, 1
             face_index = self%slipwall_face_indexes(i)
             call apply_boundary_condition_common_impl(         &
@@ -461,6 +470,7 @@ module class_cellsystem
 
         integer :: i, face_index
 
+        !$omp parallel do private(face_index)
         do i = 1, self%num_symmetric_faces, 1
             face_index = self%symmetric_face_indexes(i)
             call apply_boundary_condition_common_impl(          &
@@ -527,6 +537,7 @@ module class_cellsystem
 
         integer :: i, face_index
 
+        !$omp parallel do private(face_index)
         do i = 1, self%num_empty_faces, 1
             face_index = self%empty_face_indexes(i)
             call apply_boundary_condition_empty_impl(           &
@@ -558,6 +569,19 @@ module class_cellsystem
         allocate(variables_set(1:num_variables, 1:self%num_cells))
         variables_set(:,:) = 0.d0
     end subroutine variables_initialize
+
+    subroutine variables_1darray_initialize(self, variables_set)
+        class  (cellsystem), intent(inout)              :: self
+        real   (real_kind ), intent(inout), allocatable :: variables_set(:)
+
+        if(.not. self%read_cellsystem) call call_error("'read' subroutine is not called. You should call with following steps: first you call 'read' subroutine, next you initialze variables with 'initialze' subroutine. Please check your cord.")
+
+        if(allocated(variables_set))then
+            call call_error("Array variables_set is allocated. But you call 'initialize' subroutine.")
+        end if
+        allocate(variables_set(1:self%num_cells))
+        variables_set(:) = 0.d0
+    end subroutine variables_1darray_initialize
 
     subroutine read_initial_condition(self, an_initial_condition_parser, config, conservative_variables_set)
         class  (cellsystem              ), intent(inout) :: self
@@ -597,10 +621,53 @@ module class_cellsystem
 
         integer(int_kind) :: i
 
+        !$omp parallel do private(i)
         do i = 1, self%num_cells, 1
             primitive_variables_set(:,i) = conservative_to_primitive_function(an_eos, conservative_variables_set(:,i), num_primitive_variables)
         end do
     end subroutine conservative_to_primitive_variables_all
+
+    subroutine processes_variables_set_single_array(self, variables_set, num_variables, processing_function)
+        class  (cellsystem), intent(inout) :: self
+        real   (real_kind ), intent(inout) :: variables_set(:,:)
+        integer(int_kind  ), intent(in   ) :: num_variables
+        interface
+            pure function processing_function(variables, num_variables) result(destination_variables)
+                use typedef_module
+                real   (real_kind ), intent(in) :: variables(:)
+                integer(int_kind  ), intent(in) :: num_variables
+                real   (real_kind )             :: destination_variables(num_variables)
+            end function processing_function
+        end interface
+
+        integer(int_kind) :: i
+
+        !$omp parallel do private(i)
+        do i = 1, self%num_cells, 1
+            variables_set(:,i) = processing_function(variables_set(:,i), num_variables)
+        end do
+    end subroutine processes_variables_set_single_array
+
+    subroutine processes_variables_set_two_array(self, primary_variables_set, secondary_variables_set, num_variables, processing_function)
+        class  (cellsystem), intent(inout) :: self
+        real   (real_kind ), intent(inout) :: primary_variables_set(:,:), secondary_variables_set(:,:)
+        integer(int_kind  ), intent(in   ) :: num_variables
+        interface
+            pure function processing_function(primary_variables, secondary_variables, num_variables) result(destination_variables)
+                use typedef_module
+                real   (real_kind ), intent(in) :: primary_variables(:), secondary_variables(:)
+                integer(int_kind  ), intent(in) :: num_variables
+                real   (real_kind )             :: destination_variables(num_variables)
+            end function processing_function
+        end interface
+
+        integer(int_kind) :: i
+
+        !$omp parallel do private(i)
+        do i = 1, self%num_cells, 1
+            primary_variables_set(:,i) = processing_function(primary_variables_set(:,i), secondary_variables_set(:,i), num_variables)
+        end do
+    end subroutine processes_variables_set_two_array
 
     ! ### Gradient Calculator ###
     subroutine gradient_calculator_initialize(self, a_gradient_calculator, config, num_conservative_variables, num_primitive_variables)
@@ -620,7 +687,7 @@ module class_cellsystem
         real   (real_kind          ), intent(inout) :: gradient_variables_set   (:,:)
         integer(int_kind           ), intent(in   ) :: num_variables
 
-        integer(int_kind) :: face_index, cell_index, rhc_index, lhc_index, var_index
+        integer(int_kind ) :: face_index, cell_index, rhc_index, lhc_index, var_index
 
 !$omp parallel do private(cell_index)
         do cell_index = 1, self%num_cells, 1
@@ -634,30 +701,21 @@ module class_cellsystem
             do var_index = 1, num_variables, 1
                 associate(                                &
                     vec_start_index => 3*(var_index-1)+1, &
-                    vec_end_index   => 3*(var_index-1)+3  &
+                    vec_end_index   => 3*(var_index-1)+3, &
+                    residual        => a_gradient_calculator%compute_residual(                         &
+                                           variables_set                      (var_index, lhc_index ), &
+                                           variables_set                      (var_index, rhc_index ), &
+                                           self%cell_centor_positions         (1:3      , lhc_index ), &
+                                           self%cell_centor_positions         (1:3      , rhc_index ), &
+                                           self%face_normal_vectors           (1:3      , face_index), &
+                                           self%face_positions                (1:3      , face_index), &
+                                           self%face_areas                               (face_index)  &
+                                        )                                                              &
                 )
                     gradient_variables_set(vec_start_index:vec_end_index, rhc_index) = gradient_variables_set(vec_start_index:vec_end_index, rhc_index)  &
-                                                        + (1.d0 / self%cell_volumes(rhc_index))                           &
-                                                        * a_gradient_calculator%compute_residual(                         &
-                                                               variables_set                      (var_index, lhc_index ), &
-                                                               variables_set                      (var_index, rhc_index ), &
-                                                               self%cell_centor_positions         (1:3      , lhc_index ), &
-                                                               self%cell_centor_positions         (1:3      , rhc_index ), &
-                                                               self%face_normal_vectors           (1:3      , face_index), &
-                                                               self%face_positions                (1:3      , face_index), &
-                                                               self%face_areas                               (face_index)  &
-                                                            )
+                                                        - (1.d0 / self%cell_volumes(rhc_index)) * residual
                     gradient_variables_set(vec_start_index:vec_end_index, lhc_index) = gradient_variables_set(vec_start_index:vec_end_index, lhc_index)  &
-                                                        - (1.d0 / self%cell_volumes(rhc_index))                           &
-                                                        * a_gradient_calculator%compute_residual(                         &
-                                                               variables_set                      (var_index, lhc_index ), &
-                                                               variables_set                      (var_index, rhc_index ), &
-                                                               self%cell_centor_positions         (1:3      , lhc_index ), &
-                                                               self%cell_centor_positions         (1:3      , rhc_index ), &
-                                                               self%face_normal_vectors           (1:3      , face_index), &
-                                                               self%face_positions                (1:3      , face_index), &
-                                                               self%face_areas                               (face_index)  &
-                                                            )
+                                                        + (1.d0 / self%cell_volumes(lhc_index)) * residual
                 end associate
             end do
         end do
@@ -680,28 +738,23 @@ module class_cellsystem
         do face_index = 1, self%num_faces, 1
             rhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
             lhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
-            gradient_variable_set(1:3,rhc_index) = gradient_variable_set(1:3,rhc_index)                    &
-                                                 + (1.d0 / self%cell_volumes(rhc_index))                   &
-                                                 * a_gradient_calculator%compute_residual(                 &
-                                                        variable_set                       (  lhc_index ), &
-                                                        variable_set                       (  rhc_index ), &
-                                                        self%cell_centor_positions         (:,lhc_index ), &
-                                                        self%cell_centor_positions         (:,rhc_index ), &
-                                                        self%face_normal_vectors           (:,face_index), &
-                                                        self%face_positions                (:,face_index), &
-                                                        self%face_areas                      (face_index)  &
-                                                    )
-            gradient_variable_set(1:3,lhc_index) = gradient_variable_set(1:3,lhc_index)                    &
-                                                 - (1.d0 / self%cell_volumes(lhc_index))                   &
-                                                 * a_gradient_calculator%compute_residual(                 &
-                                                        variable_set                       (  lhc_index ), &
-                                                        variable_set                       (  rhc_index ), &
-                                                        self%cell_centor_positions         (:,lhc_index ), &
-                                                        self%cell_centor_positions         (:,rhc_index ), &
-                                                        self%face_normal_vectors           (:,face_index), &
-                                                        self%face_positions                (:,face_index), &
-                                                        self%face_areas                      (face_index)  &
-                                                    )
+
+            associate(                                                                     &
+                residual => a_gradient_calculator%compute_residual(                        &
+                               variable_set                                  (lhc_index ), &
+                               variable_set                                  (rhc_index ), &
+                               self%cell_centor_positions         (1:3      , lhc_index ), &
+                               self%cell_centor_positions         (1:3      , rhc_index ), &
+                               self%face_normal_vectors           (1:3      , face_index), &
+                               self%face_positions                (1:3      , face_index), &
+                               self%face_areas                               (face_index)  &
+                            )                                                              &
+            )
+                gradient_variable_set(1:3,rhc_index) = gradient_variable_set(1:3,rhc_index)                    &
+                                                 - (1.d0 / self%cell_volumes(rhc_index)) * residual
+                gradient_variable_set(1:3,lhc_index) = gradient_variable_set(1:3,lhc_index)                    &
+                                                 + (1.d0 / self%cell_volumes(lhc_index))  * residual
+            end associate
         end do
     end subroutine compute_gradient_1darray
 
@@ -724,6 +777,7 @@ module class_cellsystem
         integer(int_kind             ), intent(in   ) :: num_variables
 
         integer(int_kind) :: face_index, cell_index, rhc_index, lhc_index, var_index, num_divergence_variables
+        real  (real_kind) :: residual
 
 !$omp parallel do private(cell_index)
         do cell_index = 1, self%num_cells, 1
@@ -741,28 +795,19 @@ module class_cellsystem
                     vec_start_index => 3*(var_index-1)+1, &
                     vec_end_index   => 3*(var_index-1)+3  &
                 )
-                    divergence_variables_set(var_index, rhc_index) = divergence_variables_set(var_index, rhc_index)                            &
-                                                        + (1.d0 / self%cell_volumes(rhc_index))                                                &
-                                                        * a_divergence_calculator%compute_residual(                                            &
-                                                               variables_set                      (vec_start_index:vec_end_index, lhc_index ), &
-                                                               variables_set                      (vec_start_index:vec_end_index, rhc_index ), &
-                                                               self%cell_centor_positions         (1:3                          , lhc_index ), &
-                                                               self%cell_centor_positions         (1:3                          , rhc_index ), &
-                                                               self%face_normal_vectors           (1:3                          , face_index), &
-                                                               self%face_positions                (1:3                          , face_index), &
-                                                               self%face_areas                                                   (face_index)  &
-                                                            )
-                    divergence_variables_set(var_index, lhc_index) = divergence_variables_set(var_index, lhc_index)                            &
-                                                        - (1.d0 / self%cell_volumes(rhc_index))                                                &
-                                                        * a_divergence_calculator%compute_residual(                                            &
-                                                               variables_set                      (vec_start_index:vec_end_index, rhc_index ), &
-                                                               variables_set                      (vec_start_index:vec_end_index, lhc_index ), &
-                                                               self%cell_centor_positions         (1:3                          , rhc_index ), &
-                                                               self%cell_centor_positions         (1:3                          , lhc_index ), &
-                                                               self%face_normal_vectors           (1:3                          , face_index), &
-                                                               self%face_positions                (1:3                          , face_index), &
-                                                               self%face_areas                                                   (face_index)  &
-                                                            )
+                    residual = a_divergence_calculator%compute_residual(                               &
+                       variables_set                      (vec_start_index:vec_end_index, lhc_index ), &
+                       variables_set                      (vec_start_index:vec_end_index, rhc_index ), &
+                       self%cell_centor_positions         (1:3                          , lhc_index ), &
+                       self%cell_centor_positions         (1:3                          , rhc_index ), &
+                       self%face_normal_vectors           (1:3                          , face_index), &
+                       self%face_positions                (1:3                          , face_index), &
+                       self%face_areas                                                   (face_index)  &
+                    )
+                    divergence_variables_set(var_index, rhc_index) = divergence_variables_set(var_index, rhc_index) &
+                                                        - (1.d0 / self%cell_volumes(rhc_index)) * residual
+                    divergence_variables_set(var_index, lhc_index) = divergence_variables_set(var_index, lhc_index) &
+                                                        + (1.d0 / self%cell_volumes(lhc_index)) * residual
                 end associate
             end do
         end do
@@ -785,28 +830,22 @@ module class_cellsystem
         do face_index = 1, self%num_faces, 1
             rhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
             lhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
-            divergence_variable_set(rhc_index)   = divergence_variable_set(rhc_index)                       &
-                                                 + (1.d0 / self%cell_volumes(rhc_index))                    &
-                                                 * a_divergence_calculator%compute_residual(                &
-                                                        variable_set                       (1:3,lhc_index ), &
-                                                        variable_set                       (1:3,rhc_index ), &
-                                                        self%cell_centor_positions         (1:3,lhc_index ), &
-                                                        self%cell_centor_positions         (1:3,rhc_index ), &
-                                                        self%face_normal_vectors           (1:3,face_index), &
-                                                        self%face_positions                (1:3,face_index), &
-                                                        self%face_areas                        (face_index)  &
-                                                    )
-            divergence_variable_set(lhc_index)   = divergence_variable_set(lhc_index)                        &
-                                                 - (1.d0 / self%cell_volumes(lhc_index))                     &
-                                                 * a_divergence_calculator%compute_residual(                 &
-                                                        variable_set                       (1:3,lhc_index ), &
-                                                        variable_set                       (1:3,rhc_index ), &
-                                                        self%cell_centor_positions         (1:3,lhc_index ), &
-                                                        self%cell_centor_positions         (1:3,rhc_index ), &
-                                                        self%face_normal_vectors           (1:3,face_index), &
-                                                        self%face_positions                (1:3,face_index), &
-                                                        self%face_areas                        (face_index)  &
-                                                    )
+            associate(                                                   &
+                residual => a_divergence_calculator%compute_residual(    &
+                    variable_set                       (1:3,lhc_index ), &
+                    variable_set                       (1:3,rhc_index ), &
+                    self%cell_centor_positions         (1:3,lhc_index ), &
+                    self%cell_centor_positions         (1:3,rhc_index ), &
+                    self%face_normal_vectors           (1:3,face_index), &
+                    self%face_positions                (1:3,face_index), &
+                    self%face_areas                        (face_index)  &
+                )                                                        &
+            )
+                divergence_variable_set(rhc_index)   = divergence_variable_set(rhc_index)               &
+                                                     - (1.d0 / self%cell_volumes(rhc_index)) * residual
+                divergence_variable_set(lhc_index)   = divergence_variable_set(lhc_index)               &
+                                                     + (1.d0 / self%cell_volumes(lhc_index)) * residual
+            end associate
         end do
     end subroutine compute_divergence_1darray
 

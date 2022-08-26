@@ -19,6 +19,7 @@ module class_hllc
         procedure, public, pass(self) :: compute_energy_flux
         procedure, public, pass(self) :: compute_volume_fraction_flux
         procedure, public, pass(self) :: compute_numerical_velocity
+        procedure, public, pass(self) :: compute_interface_value
     end type
 
     contains
@@ -371,4 +372,54 @@ module class_hllc
                 + 0.5d0 * (1.d0 - sign(1.d0, s_mid)) * (rhc_u + s_puls   * (c_star_right - 1.d0))
         end associate
     end function compute_numerical_velocity
+
+    pure function compute_interface_value(  &
+        self                              , &
+        left_value                        , &
+        left_main_velocity                , &
+        left_density                      , &
+        left_pressure                     , &
+        left_soundspeed                   , &
+        right_value                       , &
+        right_main_velocity               , &
+        right_density                     , &
+        right_pressure                    , &
+        right_soundspeed                  , &
+        features                               ) result(interface_value)
+        class(hllc     ), intent(in)  :: self
+        real (real_kind), intent(in)  :: left_value
+        real (real_kind), intent(in)  :: left_main_velocity
+        real (real_kind), intent(in)  :: left_density
+        real (real_kind), intent(in)  :: left_pressure
+        real (real_kind), intent(in)  :: left_soundspeed
+        real (real_kind), intent(in)  :: right_value
+        real (real_kind), intent(in)  :: right_main_velocity
+        real (real_kind), intent(in)  :: right_density
+        real (real_kind), intent(in)  :: right_pressure
+        real (real_kind), intent(in)  :: right_soundspeed
+        real (real_kind), intent(in)  :: features(:)
+        real (real_kind)              :: interface_value
+
+        associate(                                 &
+            lhc_u        => left_main_velocity   , &
+            lhc_rho      => left_density         , &
+            lhc_p        => left_pressure        , &
+            lhc_c        => left_soundspeed      , &
+            rhc_u        => right_main_velocity  , &
+            rhc_rho      => right_density        , &
+            rhc_p        => right_pressure       , &
+            rhc_c        => right_soundspeed     , &
+            s_left       => features(1)          , &
+            s_right      => features(2)          , &
+            s_muinus     => features(3)          , &
+            s_puls       => features(4)          , &
+            s_mid        => features(5)          , &
+            c_star_left  => features(6)          , &
+            c_star_right => features(7)            &
+        )
+            interface_value &
+                = 0.5d0 * (1.d0 + sign(1.d0, s_mid)) * left_value &
+                + 0.5d0 * (1.d0 - sign(1.d0, s_mid)) * right_value
+        end associate
+    end function compute_interface_value
 end module class_hllc

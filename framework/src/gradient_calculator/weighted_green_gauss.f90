@@ -1,4 +1,4 @@
-module class_weighted_green_gasuu
+module class_weighted_green_gauss
     use typedef_module
     use vector_module
     use abstract_gradient_calculator
@@ -43,4 +43,4 @@ module class_weighted_green_gasuu
 
         residual(:) = (rhc_w * rhc_variable + lhc_w * lhc_variable) * face_area * face_normal_vector(:)
     end function compute_residual
-end module class_weighted_green_gasuu
+end module class_weighted_green_gauss
