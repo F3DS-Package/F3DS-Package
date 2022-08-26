@@ -61,6 +61,16 @@ We are currently working on developing a function for computing viscous flux.
     - [ ] UMUSCL3 (3rd order)
     - [ ] UMUSCL3 + THINC (3rd order)
 
+#### Gradient scheme
+
+- [x] Green-Gauss
+- [x] Weighted Green-Gauss
+
+#### Divergence scheme
+
+- [x] Gauss divergence
+- [x] Weighted Gauss divergence
+
 #### Time Stepping
 
 - Explicit Runge-Kutta
