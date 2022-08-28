@@ -252,8 +252,8 @@ module five_equation_model_space_discretization
             rhc_p       => primitive_variables_rhc(6)  , &
             rhc_z1      => primitive_variables_rhc(7)    &
         )
-            lhc_k = an_eos%compute_k(lhc_p, lhc_rhos, lhc_z1)
-            rhc_k = an_eos%compute_k(rhc_p, rhc_rhos, rhc_z1)
+            lhc_k = 0.d0!an_eos%compute_k(lhc_p, lhc_rhos, lhc_z1)
+            rhc_k = 0.d0!an_eos%compute_k(rhc_p, rhc_rhos, rhc_z1)
             residual_element(7, 1) = residual_element(7, 1) &
                                    + (-lhc_z1 - lhc_k) * (-1.d0 / lhc_cell_volume) * numerical_velocity * face_area
             residual_element(7, 2) = residual_element(7, 2) &
