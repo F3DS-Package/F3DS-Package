@@ -3,6 +3,7 @@ module class_rho_thinc
     use abstract_reconstructor
     use abstract_configuration
     use stdio_module
+    use reconstructor_generator_module
 
     implicit none
 
@@ -27,12 +28,18 @@ module class_rho_thinc
         class(rho_thinc    ), intent(inout) :: self
         class(configuration), intent(inout) :: config
         logical :: found
+        character(len=:), allocatable :: name
 
         call config%get_real("Reconstructor.rho-THINC.Specified slope parameter", self%specified_slope_parameter_, found, 0.5d0)
         if(.not. found) call write_warring("'Reconstructor.rho-THINC.Specified slope parameter' is not found in configuration you set. To be set dafault value.")
 
         call config%get_real("Reconstructor.rho-THINC.Epsilon", self%epsilon_, found, 5.d-5)
         if(.not. found) call write_warring("'Reconstructor.rho-THINC.Epsilon' is not found in configuration you set. To be set dafault value.")
+
+        call config%get_char("Reconstructor.rho-THINC.Primary reconstructor", name, found, "Minmod MUSCL")
+        if(.not. found) call write_warring("'Reconstructor.rho-THINC.Primary reconstructor' is not found in configuration you set. To be set dafault value.")
+
+        call default_reconstructor_generator(name, self%primary_reconstructor_)
     end subroutine initialize
 
     pure function reconstruct_lhc( &

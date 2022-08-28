@@ -90,6 +90,7 @@ FIVE_EQ_MODEL_SRCDIR=collection/five_equation_model/src
 FIVE_EQ_MODEL_SRCS=$(wildcard $(FIVE_EQ_MODEL_SRCDIR)/variables/*.f90)
 FIVE_EQ_MODEL_SRCS+=$(wildcard $(FIVE_EQ_MODEL_SRCDIR)/model/*.f90)
 FIVE_EQ_MODEL_SRCS+=$(wildcard $(FIVE_EQ_MODEL_SRCDIR)/special_reconstructor/*.f90)
+FIVE_EQ_MODEL_SRCS+=$(wildcard $(FIVE_EQ_MODEL_SRCDIR)/special_generator/*.f90)
 FIVE_EQ_MODEL_SRCS+=$(wildcard $(FIVE_EQ_MODEL_SRCDIR)/*.f90)
 
 TARGET=f5eq

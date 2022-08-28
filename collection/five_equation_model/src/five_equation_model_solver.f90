@@ -19,7 +19,7 @@ program five_eq_model_solver
     use time_stepping_generator_module
     ! Reconstructor
     use abstract_reconstructor
-    use reconstructor_generator_module
+    use five_equation_model_reconstructor_generator_module
     ! Rieman solver
     use class_hllc
     ! Grid & initial condition reader
@@ -60,8 +60,8 @@ program five_eq_model_solver
     call a_configuration%parse("config.json")
 
     ! Allocate schemes
-    call default_time_stepping_generator(a_configuration, a_time_stepping)
-    call default_reconstructor_generator(a_configuration, a_reconstructor)
+    call default_time_stepping_generator            (a_configuration, a_time_stepping)
+    call five_equation_model_reconstructor_generator(a_configuration, a_reconstructor)
 
     ! Support for parallel computing
     call a_parallelizer%initialize(a_configuration)
