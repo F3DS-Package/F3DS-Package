@@ -137,7 +137,7 @@ module class_rho_thinc
         rhc_index  = face_to_cell_index(num_local_cells+1, face_index)
         rrhc_index = face_to_cell_index(num_local_cells+2, face_index)
 
-        reconstructed_primitive_variables(:) = self%primary_reconstructor_%reconstruct_lhc( &
+        reconstructed_primitive_variables(:) = self%primary_reconstructor_%reconstruct_rhc( &
             primitive_variables_set  , &
             face_to_cell_index       , &
             cell_centor_positions    , &
