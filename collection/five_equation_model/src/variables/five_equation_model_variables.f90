@@ -9,8 +9,8 @@ module five_equation_model_variables_module
 
     private
 
-    ! surface tension coef. = 4e-2
-    real(real_kind), public, parameter :: weber_number = 125.d0
+    ! surface tension coef. = 72e-3
+    real(real_kind), public, parameter :: weber_number = 0.015d0
 
     integer(int_kind), public, parameter :: num_conservative_variables = 7
     integer(int_kind), public, parameter :: num_primitive_variables    = 8
