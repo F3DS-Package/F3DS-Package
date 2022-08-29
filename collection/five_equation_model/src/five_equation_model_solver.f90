@@ -57,7 +57,10 @@ program five_eq_model_solver
     class(reconstructor), pointer :: a_reconstructor
 
     ! Loop index
-    integer(int_kind) :: state_num
+    integer(int_kind) :: state_num, cell_index
+
+    ! Additional results
+    real(real_kind), allocatable :: density(:)
 
     ! Read config
     call a_configuration%parse("config.json")
@@ -93,6 +96,9 @@ program five_eq_model_solver
     call a_cellsystem%read_initial_condition(an_initial_condition_parser, a_configuration, conservative_variables_set)
     call a_cellsystem%conservative_to_primitive_variables_all(an_eos, conservative_variables_set, primitive_variables_set, num_primitive_variables, conservative_to_primitive)
 
+    ! Allocate
+    allocate(density(a_cellsystem%get_number_of_cells()))
+
     ! Timestepping loop
     do while ( .not. a_cellsystem%satisfies_termination_criterion(a_termination_criterion) )
         call a_cellsystem%update_time_incriment(a_time_incriment_controller, an_eos, primitive_variables_set, spectral_radius)
@@ -102,6 +108,17 @@ program five_eq_model_solver
 
             print *, "Write a result "//a_cellsystem%get_filename(a_result_writer)//"..."
 
+            do cell_index = 1, a_cellsystem%get_number_of_cells(), 1
+                associate(                                          &
+                    rho1 => primitive_variables_set(1, cell_index), &
+                    rho2 => primitive_variables_set(2, cell_index), &
+                    z    => primitive_variables_set(7, cell_index)  &
+                )
+                    density(cell_index) = z * rho1 + (1.d0 - z) * rho2
+                end associate
+            end do
+
+            call a_cellsystem%write_scolar(a_result_writer, "Density"        , density                        )
             call a_cellsystem%write_scolar(a_result_writer, "Density 1"      , primitive_variables_set(1  , :))
             call a_cellsystem%write_scolar(a_result_writer, "Density 2"      , primitive_variables_set(2  , :))
             call a_cellsystem%write_vector(a_result_writer, "Velocity"       , primitive_variables_set(3:5, :))
@@ -169,6 +186,17 @@ program five_eq_model_solver
 
         print *, "Write a result "//a_cellsystem%get_filename(a_result_writer)//"..."
 
+        do cell_index = 1, a_cellsystem%get_number_of_cells(), 1
+            associate(                                          &
+                rho1 => primitive_variables_set(1, cell_index), &
+                rho2 => primitive_variables_set(2, cell_index), &
+                z    => primitive_variables_set(7, cell_index)  &
+            )
+                density(cell_index) = z * rho1 + (1.d0 - z) * rho2
+            end associate
+        end do
+
+        call a_cellsystem%write_scolar(a_result_writer, "Density"        , density                        )
         call a_cellsystem%write_scolar(a_result_writer, "Density 1"      , primitive_variables_set(1  , :))
         call a_cellsystem%write_scolar(a_result_writer, "Density 2"      , primitive_variables_set(2  , :))
         call a_cellsystem%write_vector(a_result_writer, "Velocity"       , primitive_variables_set(3:5, :))
