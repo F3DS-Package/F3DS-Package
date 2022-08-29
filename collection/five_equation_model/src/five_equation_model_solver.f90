@@ -133,10 +133,10 @@ program five_eq_model_solver
             call a_cellsystem%processes_variables_set(surface_tension_variables_set, primitive_variables_set, num_surface_tension_variables, normarize_gradient_volume_fraction)
 
             ! Apply BC for normalized volume flaction
-            call a_cellsystem%apply_empty_condition    (surface_tension_variables_set(1:3, :), 3, rotate_gradient_value, unrotate_gradient_value, gradient_value_bc)
-            call a_cellsystem%apply_outflow_condition  (surface_tension_variables_set(1:3, :), 3, rotate_gradient_value, unrotate_gradient_value, gradient_value_bc)
-            call a_cellsystem%apply_slipwall_condition (surface_tension_variables_set(1:3, :), 3, rotate_gradient_value, unrotate_gradient_value, gradient_value_bc)
-            call a_cellsystem%apply_symmetric_condition(surface_tension_variables_set(1:3, :), 3, rotate_gradient_value, unrotate_gradient_value, gradient_value_bc)
+            call a_cellsystem%apply_empty_condition    (surface_tension_variables_set(1:3, :), 3, rotate_gradient_value, unrotate_gradient_value, gradient_volume_fraction_bc)
+            call a_cellsystem%apply_outflow_condition  (surface_tension_variables_set(1:3, :), 3, rotate_gradient_value, unrotate_gradient_value, gradient_volume_fraction_bc)
+            call a_cellsystem%apply_slipwall_condition (surface_tension_variables_set(1:3, :), 3, rotate_gradient_value, unrotate_gradient_value, gradient_volume_fraction_bc)
+            call a_cellsystem%apply_symmetric_condition(surface_tension_variables_set(1:3, :), 3, rotate_gradient_value, unrotate_gradient_value, gradient_volume_fraction_bc)
 
             call a_cellsystem%compute_residual(         &
                 a_reconstructor                       , &

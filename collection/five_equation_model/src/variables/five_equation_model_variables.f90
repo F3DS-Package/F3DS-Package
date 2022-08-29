@@ -10,7 +10,7 @@ module five_equation_model_variables_module
     private
 
     ! surface tension coef. = 72e-3
-    real(real_kind), public, parameter :: weber_number = 0.015d0
+    real(real_kind), public, parameter :: weber_number = 1.446d0
 
     integer(int_kind), public, parameter :: num_conservative_variables = 7
     integer(int_kind), public, parameter :: num_primitive_variables    = 8
@@ -60,7 +60,7 @@ module five_equation_model_variables_module
     public :: unrotate_gradient_value
     public :: compute_pressure_jump
 
-    integer(int_kind), parameter :: interface_threshold = 1.d-3
+    integer(int_kind), parameter :: interface_threshold = 1e-2
 
     contains
 
@@ -209,7 +209,7 @@ module five_equation_model_variables_module
             mag => vector_magnitude(surface_tension_variables(1:3)), &
             z   => primitives(7)                                     &
         )
-            if((machine_epsilon < mag) .and. (interface_threshold < z) .and. (z < 1.d0 - interface_threshold))then
+            if((machine_epsilon < mag))then
                 ! {@code normarize_gradient_volume_fraction} must always be oriented toward the heaviest fluid.
                 dst_surface_tension_variables(1:3) = surface_tension_variables(1:3) / mag
             else
@@ -263,7 +263,7 @@ module five_equation_model_variables_module
             z     => primitives(7)                       , &
             kappa => -1.d0 * surface_tension_variables(4)  &
         )
-            if((interface_threshold < z) .and. (z < 1.d0 - interface_threshold))then
+            if((interface_threshold < z) .and. (z < 1.d0 - interface_threshold) .and. (abs(kappa) <1.d0))then
                 dst_primitives(8) = (1.d0 / weber_number) * kappa
             else
                 dst_primitives(8)  = 0.d0
