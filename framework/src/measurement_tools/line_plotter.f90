@@ -87,7 +87,7 @@ module class_line_plotter
             do j = 1, num_cells, 1
                 distance = vector_distance(points(:,i), cell_positions(:,j))
                 if (distance < neighbor_distance) then
-                    distance    = neighbor_distance
+                    neighbor_distance = distance
                     neighbor_id = j
                 end if
             end do
@@ -128,7 +128,7 @@ module class_line_plotter
             open(newunit = unit_number, file="result/"//self%output_dir_//"/"//cher_n_output//".dat", status = 'replace')
             write(unit_number, *) "# time = ", time
             do i = 1, self%n_output_cells_, 1
-                write(unit_number, *) cell_positions(self%cell_ids_(i), :), values_set(self%cell_ids_(i), :)
+                write(unit_number, *) cell_positions(:,self%cell_ids_(i)), values_set(:,self%cell_ids_(i))
             end do
             close(unit_number)
             self%next_output_time_ = self%next_output_time_ + self%output_timespan_
