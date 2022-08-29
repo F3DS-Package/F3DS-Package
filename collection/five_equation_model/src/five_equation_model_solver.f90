@@ -33,6 +33,8 @@ program five_eq_model_solver
     use class_constant_time_incriment_controller
     ! Parallel computing support
     use class_openmp_parallelizer
+    ! Line plotter
+    use class_line_plotter
 
     implicit none
 
@@ -48,6 +50,7 @@ program five_eq_model_solver
     type(end_time_criterion                ) :: a_termination_criterion
     type(constant_time_incriment_controller) :: a_time_incriment_controller
     type(openmp_parallelizer               ) :: a_parallelizer
+    type(line_plotter                      ) :: a_line_plotter
 
     ! These schemes can be cahnge from configuration file you set.
     class(time_stepping), pointer :: a_time_stepping
@@ -84,6 +87,7 @@ program five_eq_model_solver
     call a_cellsystem%initialize(a_result_writer            , a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(a_termination_criterion    , a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(a_time_incriment_controller, a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_line_plotter             , a_configuration, num_conservative_variables, num_primitive_variables)
 
     ! Set initial condition
     call a_cellsystem%read_initial_condition(an_initial_condition_parser, a_configuration, conservative_variables_set)
@@ -108,6 +112,10 @@ program five_eq_model_solver
             call a_cellsystem%write_scolar(a_result_writer, "Curvature"               , surface_tension_variables_set(  4, :))
 
             call a_cellsystem%close_file  (a_result_writer)
+        end if
+
+        if ( a_cellsystem%is_writable(a_line_plotter) ) then
+            call a_cellsystem%write(a_line_plotter, primitive_variables_set)
         end if
 
         print *, "Step "          , a_cellsystem%get_number_of_steps(), ", ", &

@@ -4,6 +4,7 @@ module class_line_plotter
     use abstract_configuration
     use vector_module
     use math_constant_module
+    use stdio_module
 
     implicit none
 
