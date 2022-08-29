@@ -19,6 +19,7 @@ module class_cellsystem
     use abstract_termination_criterion
     use abstract_time_incriment_controller
     use abstract_initial_condition_parser
+    use class_line_plotter
 
     implicit none
 
@@ -144,6 +145,7 @@ module class_cellsystem
         procedure, public, pass(self) :: termination_criterion_initialize
         procedure, public, pass(self) :: time_incriment_controller_initialize
         procedure, public, pass(self) :: divergence_calculator_initialize
+        procedure, public, pass(self) :: line_plotter_initialize
         generic  , public             :: initialize  => result_writer_initialize            , &
                                                         time_stepping_initialize            , &
                                                         reconstructor_initialize            , &
@@ -154,13 +156,18 @@ module class_cellsystem
                                                         variables_1darray_initialize        , &
                                                         termination_criterion_initialize    , &
                                                         time_incriment_controller_initialize, &
-                                                        divergence_calculator_initialize
+                                                        divergence_calculator_initialize    , &
+                                                        line_plotter_initialize
         procedure, public, pass(self) :: result_writer_open_file
         generic  , public             :: open_file   => result_writer_open_file
         procedure, public, pass(self) :: result_writer_close_file
         generic  , public             :: close_file  => result_writer_close_file
         procedure, public, pass(self) :: result_writer_is_writable
-        generic  , public             :: is_writable => result_writer_is_writable
+        procedure, public, pass(self) :: line_plotter_is_writable
+        generic  , public             :: is_writable => result_writer_is_writable, &
+                                                        line_plotter_is_writable
+        procedure, public, pass(self) :: line_plotter_write
+        generic  , public             :: write => line_plotter_write
 
         ! ### Vatiables ###
         procedure, public, pass(self) :: read_initial_condition
@@ -239,6 +246,28 @@ module class_cellsystem
     end type
 
     contains
+
+    ! ### Line plotter ###
+    subroutine line_plotter_initialize(self, plotter, config)
+        class(cellsystem   ), intent(inout) :: self
+        class(line_plotter ), intent(inout) :: plotter
+        class(configuration), intent(inout) :: config
+        call plotter%initialize(config, self%cell_centor_positions, self%num_cells)
+    end subroutine line_plotter_initialize
+
+    subroutine line_plotter_write(self, plotter, values_set)
+        class(cellsystem  ), intent(inout) :: self
+        class(line_plotter), intent(inout) :: plotter
+        real (real_kind   ), intent(in   ) :: values_set(:,:)
+        call plotter%write(self%time, values_set, self%cell_centor_positions)
+    end subroutine line_plotter_write
+
+    pure function line_plotter_is_writable(self, plotter) result(juge)
+        class(cellsystem  ), intent(in) :: self
+        class(line_plotter), intent(in) :: plotter
+        logical                            :: juge
+        juge = plotter%is_writable(self%time)
+    end function line_plotter_is_writable
 
     ! ### Time incriment control ###
     subroutine time_incriment_controller_initialize(self, controller, config, num_conservative_variables, num_primitive_variables)
