@@ -118,12 +118,15 @@ program five_eq_model_solver
                 end associate
             end do
 
+            call a_cellsystem%processes_variables_set(primitive_variables_set, surface_tension_variables_set, num_primitive_variables, compute_pressure_jump)
+
             call a_cellsystem%write_scolar(a_result_writer, "Density"        , density                        )
             call a_cellsystem%write_scolar(a_result_writer, "Density 1"      , primitive_variables_set(1  , :))
             call a_cellsystem%write_scolar(a_result_writer, "Density 2"      , primitive_variables_set(2  , :))
             call a_cellsystem%write_vector(a_result_writer, "Velocity"       , primitive_variables_set(3:5, :))
             call a_cellsystem%write_scolar(a_result_writer, "Pressure"       , primitive_variables_set(6  , :))
             call a_cellsystem%write_scolar(a_result_writer, "Volume fraction", primitive_variables_set(7  , :))
+            call a_cellsystem%write_scolar(a_result_writer, "Pressure jump"  , primitive_variables_set(8  , :))
 
             call a_cellsystem%write_vector(a_result_writer, "Gradient volume fraction", surface_tension_variables_set(1:3, :))
             call a_cellsystem%write_scolar(a_result_writer, "Curvature"               , surface_tension_variables_set(  4, :))
@@ -142,12 +145,6 @@ program five_eq_model_solver
         call a_cellsystem%prepare_stepping(a_time_stepping, conservative_variables_set, primitive_variables_set, residual_set)
 
         do state_num = 1, a_cellsystem%get_number_of_states(a_time_stepping), 1
-            ! Compute (negative) curvature
-            call a_cellsystem%compute_divergence(a_divergence_calculator, surface_tension_variables_set(1:3, :), surface_tension_variables_set(4, :))
-
-            ! Compute puressure jump induced surface tension effect
-            call a_cellsystem%processes_variables_set(primitive_variables_set, surface_tension_variables_set, num_primitive_variables, compute_pressure_jump)
-
             call a_cellsystem%apply_empty_condition    (primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, empty_bc    )
             call a_cellsystem%apply_outflow_condition  (primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, outflow_bc  )
             call a_cellsystem%apply_slipwall_condition (primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, slipwall_bc )
@@ -162,6 +159,17 @@ program five_eq_model_solver
             call a_cellsystem%apply_outflow_condition  (surface_tension_variables_set(1:3, :), 3, rotate_gradient_value, unrotate_gradient_value, gradient_volume_fraction_bc)
             call a_cellsystem%apply_slipwall_condition (surface_tension_variables_set(1:3, :), 3, rotate_gradient_value, unrotate_gradient_value, gradient_volume_fraction_bc)
             call a_cellsystem%apply_symmetric_condition(surface_tension_variables_set(1:3, :), 3, rotate_gradient_value, unrotate_gradient_value, gradient_volume_fraction_bc)
+
+            ! Compute (negative) curvature
+            call a_cellsystem%compute_divergence(a_divergence_calculator, surface_tension_variables_set(1:3, :), surface_tension_variables_set(4, :))
+
+            ! Compute puressure jump induced surface tension effect
+            call a_cellsystem%processes_variables_set(primitive_variables_set, surface_tension_variables_set, num_primitive_variables, compute_pressure_jump)
+
+            call a_cellsystem%apply_empty_condition    (primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, empty_bc    )
+            call a_cellsystem%apply_outflow_condition  (primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, outflow_bc  )
+            call a_cellsystem%apply_slipwall_condition (primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, slipwall_bc )
+            call a_cellsystem%apply_symmetric_condition(primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, symmetric_bc)
 
             call a_cellsystem%compute_residual(         &
                 a_reconstructor                       , &

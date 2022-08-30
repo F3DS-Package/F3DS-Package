@@ -60,7 +60,7 @@ module five_equation_model_variables_module
     public :: unrotate_gradient_value
     public :: compute_pressure_jump
 
-    integer(int_kind), parameter :: interface_threshold = 1e-2
+    real(real_kind), parameter :: interface_threshold = 1e-2
 
     contains
 
@@ -263,10 +263,12 @@ module five_equation_model_variables_module
             z     => primitives(7)                       , &
             kappa => -1.d0 * surface_tension_variables(4)  &
         )
-            if((interface_threshold < z) .and. (z < 1.d0 - interface_threshold) .and. (abs(kappa) <1.d0))then
-                dst_primitives(8) = (1.d0 / weber_number) * kappa
+            if(z < interface_threshold)then
+                dst_primitives(8) = 0.d0
+            else if(z > 1.d0 - interface_threshold)then
+                dst_primitives(8) = 0.d0
             else
-                dst_primitives(8)  = 0.d0
+                dst_primitives(8) = (1.d0 / weber_number) * kappa
             endif
         end associate
     end function compute_pressure_jump

@@ -137,7 +137,6 @@ module five_equation_model_space_discretization
             rhc_pressure - rhc_pressure_jump, &
             rhc_soundspeed                    &
         )
-        !print *, rieman_solver_features, lhc_pressure, rhc_pressure
         nonviscosity_flux(1) = an_riemann_solver%compute_mass_flux( &
             local_coordinate_conservative_lhc(1), &
             lhc_main_velocity                   , &
