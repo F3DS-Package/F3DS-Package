@@ -1,4 +1,4 @@
-# Fortran Fine-volume Fluid Dynamics Solver (F3DS) Flamework & Collection
+# Fortran Finite-volume Fluid Dynamics Solver (F3DS) Flamework & Collection
 
 FC=gfortran
 #FCFLAGS=-O0 -g -pg -ffree-line-length-none -cpp -Wall -Wextra -Warray-temporaries -Wconversion -fimplicit-none -fbacktrace -fcheck=all -ffpe-trap=invalid,zero,overflow -finit-real=nan -D_DEBUG # for debug build (gfortran)-ffpe-trap=invalid,zero,underflow,overflow

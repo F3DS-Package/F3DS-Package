@@ -210,7 +210,7 @@ module five_equation_model_variables_module
             z   => primitives(7)                                     &
         )
             if((machine_epsilon < mag))then
-                ! {@code normarize_gradient_volume_fraction} must always be oriented toward the heaviest fluid.
+                ! {@code z} must to be set a heaviest fluid.
                 dst_surface_tension_variables(1:3) = surface_tension_variables(1:3) / mag
             else
                 dst_surface_tension_variables(1:3) = 0.d0
@@ -261,7 +261,7 @@ module five_equation_model_variables_module
         dst_primitives(1:7) = primitives(1:7)
         associate(                                         &
             z     => primitives(7)                       , &
-            kappa => -1.d0 * surface_tension_variables(4)  &
+            kappa => 1.d0 * surface_tension_variables(4)  &
         )
             if(z < interface_threshold)then
                 dst_primitives(8) = 0.d0
