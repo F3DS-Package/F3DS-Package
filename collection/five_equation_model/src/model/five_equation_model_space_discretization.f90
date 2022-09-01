@@ -262,17 +262,18 @@ module five_equation_model_space_discretization
         ! # surface tension term
         associate(                                   &
             lhc_dp    => primitive_variables_lhc(8), &
-            rhc_dp    => primitive_variables_rhc(8)  &
+            rhc_dp    => primitive_variables_rhc(8), &
+            alpha_l   => (1.d0 - interface_volume_fraction) & ! In this solver, primary volume fraction is a gas volume fraction! thus we need 1.d0 - {@code interface_volume_fraction}.
         )
             residual_element(3:5, 1) = residual_element(3:5, 1) &
-                                   + lhc_dp * (-1.d0 / lhc_cell_volume) * interface_volume_fraction * face_area * face_normal_vector(1:3)
+                                   + lhc_dp * (-1.d0 / lhc_cell_volume) * alpha_l * face_area * face_normal_vector(1:3)
             residual_element(3:5, 2) = residual_element(3:5, 2) &
-                                   + rhc_dp * (+1.d0 / rhc_cell_volume) * interface_volume_fraction * face_area * face_normal_vector(1:3)
+                                   + rhc_dp * (+1.d0 / rhc_cell_volume) * alpha_l * face_area * face_normal_vector(1:3)
 
             residual_element(6, 1) = residual_element(6, 1) &
-                                   + lhc_dp * (-1.d0 / lhc_cell_volume) * (interface_volume_fraction * numerical_velocity - numerical_velocity) * face_area
+                                   + lhc_dp * (-1.d0 / lhc_cell_volume) * (alpha_l * numerical_velocity - numerical_velocity) * face_area
             residual_element(6, 2) = residual_element(6, 2) &
-                                   + rhc_dp * (+1.d0 / rhc_cell_volume) * (interface_volume_fraction * numerical_velocity - numerical_velocity) * face_area
+                                   + rhc_dp * (+1.d0 / rhc_cell_volume) * (alpha_l * numerical_velocity - numerical_velocity) * face_area
         end associate
     end function five_equation_model_residual_element
 end module five_equation_model_space_discretization

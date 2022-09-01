@@ -209,7 +209,7 @@ module five_equation_model_variables_module
             mag => vector_magnitude(surface_tension_variables(1:3)), &
             z   => primitives(7)                                     &
         )
-            if((machine_epsilon < mag))then
+            if(mag > machine_epsilon)then
                 ! {@code z} must to be set a heaviest fluid.
                 dst_surface_tension_variables(1:3) = surface_tension_variables(1:3) / mag
             else
@@ -259,16 +259,14 @@ module five_equation_model_variables_module
         real   (real_kind )             :: dst_primitives(num_variables)
 
         dst_primitives(1:7) = primitives(1:7)
-        associate(                                         &
-            z     => primitives(7)                       , &
-            kappa => 1.d0 * surface_tension_variables(4)  &
+        associate(                                 &
+            z     => primitives(7)               , &
+            kappa => surface_tension_variables(4)  &
         )
-            if(z < interface_threshold)then
-                dst_primitives(8) = 0.d0
-            else if(z > 1.d0 - interface_threshold)then
-                dst_primitives(8) = 0.d0
-            else
+            if((interface_threshold < z) .and. (z < 1.d0 - interface_threshold) .and. abs(kappa) < 1.d0)then
                 dst_primitives(8) = (1.d0 / weber_number) * kappa
+            else
+                dst_primitives(8) = 0.d0
             endif
         end associate
     end function compute_pressure_jump
