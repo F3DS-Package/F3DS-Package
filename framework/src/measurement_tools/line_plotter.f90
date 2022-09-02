@@ -29,10 +29,11 @@ module class_line_plotter
 
     contains
 
-    subroutine initialize(self, config, cell_positions, num_cells)
+    subroutine initialize(self, config, cell_positions, is_real_cell, num_cells)
         class  (line_plotter ), intent(inout) :: self
         class  (configuration), intent(inout) :: config
         real   (real_kind    ), intent(in   ) :: cell_positions(:,:)
+        logical               , intent(in   ) :: is_real_cell(:)
         integer(int_kind     ), intent(in   ) :: num_cells
 
         real (real_kind    ) :: frequency
@@ -86,7 +87,7 @@ module class_line_plotter
             neighbor_distance = 1.d0 / machine_epsilon
             do j = 1, num_cells, 1
                 distance = vector_distance(points(:,i), cell_positions(:,j))
-                if (distance < neighbor_distance) then
+                if (distance < neighbor_distance .and. is_real_cell(j)) then
                     neighbor_distance = distance
                     neighbor_id = j
                 end if
