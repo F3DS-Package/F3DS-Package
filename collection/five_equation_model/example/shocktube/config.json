@@ -24,11 +24,11 @@
     },
     "Parallel computing" :
     {
-        "Number of threads" : 12
+        "Number of threads" : 14
     },
     "Reconstructor" :
     {
-        "Name" : "Minmod MUSCL3",
+        "Name" : "MP-WENO5-JS",
         "MUSCL3" :
         {
             "Kappa" : 0.3
@@ -42,22 +42,45 @@
         "WENO5" :
         {
             "Epsilon" : 1e-6
+        },
+        "rho-THINC" :
+        {
+            "Specified slope parameter" : 0.5,
+            "Epsilon" : 5e-5,
+            "Primary reconstructor" : "Minmod MUSCL3"
         }
     },
     "Result writer" :
     {
-        "Output timespan" : 1e-2
+        "Output timespan" : 0.02
     },
     "Termination criterion" :
     {
-        "End time" : 1e0
+        "End time" : 0.2
     },
     "Time incriment control" :
     {
-        "dt" : 2e-3
+        "dt" : 0.002
     },
     "Time stepping" :
     {
         "Name" : "2nd order TVD RK"
+    },
+    "Line plotter" :
+    {
+        "Start point" :
+        {
+            "x" : 0.0,
+            "y" : 0.0,
+            "z" : 0.0
+        },
+        "End point" :
+        {
+            "x" : 1.0,
+            "y" : 0.0,
+            "z" : 0.0
+        },
+        "Number of points" : 200,
+        "Frequency" : 500
     }
 }
