@@ -2,6 +2,7 @@ module class_control_volume
     use typedef_module
     use abstract_configuration
     use stdio_module
+    use system_call_module
 
     implicit none
 
@@ -74,6 +75,8 @@ module class_control_volume
 
         allocate(self%cell_ids_, source=tmp_ids(1:self%n_output_cells_))
         deallocate(tmp_ids)
+
+        call make_dir("result/")
 
         open(newunit = unit_number, file = "result/"//self%output_filename_, status = 'replace')
         write(unit_number, *) "# F3DS control volume data"
