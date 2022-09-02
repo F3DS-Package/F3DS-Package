@@ -257,8 +257,8 @@ module class_hllc
             c_star_left  => features(6)          , &
             c_star_right => features(7)            &
         )
-            f_left       = left_conservative_energy  * lhc_u
-            f_right      = right_conservative_energy * rhc_u
+            f_left       = (left_conservative_energy  + left_pressure ) * lhc_u
+            f_right      = (right_conservative_energy + right_pressure) * rhc_u
             q_star_left  = c_star_left  * (left_conservative_energy  + (s_mid - lhc_u) * (lhc_rho * s_mid + lhc_p / (s_left  - lhc_u)))
             q_star_right = c_star_right * (right_conservative_energy + (s_mid - rhc_u) * (rhc_rho * s_mid + rhc_p / (s_right - rhc_u)))
             energy_flux = 0.5d0 * (1.d0 + sign(1.d0, s_mid))                           &

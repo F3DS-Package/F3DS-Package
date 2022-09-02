@@ -106,7 +106,7 @@ module five_equation_model_space_discretization
             lhc_pressure   = p
             lhc_soundspeed = an_eos%compute_soundspeed(p, lhc_density, z1)
             lhc_main_velocity = u
-            lhc_pressure_jump = dp * z1
+            lhc_pressure_jump = dp * (1.d0 - z1)
         end associate
         associate(                        &
                 rho1    => local_coordinate_primitives_rhc(1), &
@@ -122,7 +122,7 @@ module five_equation_model_space_discretization
             rhc_pressure   = p
             rhc_soundspeed = an_eos%compute_soundspeed(p, rhc_density, z1)
             rhc_main_velocity = u
-            rhc_pressure_jump = dp * z1
+            rhc_pressure_jump = dp * (1.d0 - z1)
         end associate
 
         ! # compute flux
@@ -227,7 +227,6 @@ module five_equation_model_space_discretization
             rhc_soundspeed                      , &
             rieman_solver_features                &
         )
-
         interface_volume_fraction = an_riemann_solver%compute_interface_value( &
             local_coordinate_primitives_lhc(7)  , &
             lhc_main_velocity                   , &
@@ -269,7 +268,6 @@ module five_equation_model_space_discretization
                                    + lhc_dp * (-1.d0 / lhc_cell_volume) * alpha_l * face_area * face_normal_vector(1:3)
             residual_element(3:5, 2) = residual_element(3:5, 2) &
                                    + rhc_dp * (+1.d0 / rhc_cell_volume) * alpha_l * face_area * face_normal_vector(1:3)
-
             residual_element(6, 1) = residual_element(6, 1) &
                                    + lhc_dp * (-1.d0 / lhc_cell_volume) * (alpha_l * numerical_velocity - numerical_velocity) * face_area
             residual_element(6, 2) = residual_element(6, 2) &

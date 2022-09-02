@@ -254,7 +254,7 @@ module class_cellsystem
         class(configuration), intent(inout) :: config
         integer(int_kind   ), intent(in   ) :: num_conservative_variables
         integer(int_kind   ), intent(in   ) :: num_primitive_variables
-        call plotter%initialize(config, self%cell_centor_positions, self%num_cells)
+        call plotter%initialize(config, self%cell_centor_positions, self%is_real_cell, self%num_cells)
     end subroutine line_plotter_initialize
 
     subroutine line_plotter_write(self, plotter, values_set)
