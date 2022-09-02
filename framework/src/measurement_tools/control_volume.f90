@@ -67,7 +67,7 @@ module class_control_volume
             in_x_range = min_point(1) <= cell_positions(1,i) .and. cell_positions(1,i) <= max_point(1)
             in_y_range = min_point(2) <= cell_positions(2,i) .and. cell_positions(2,i) <= max_point(2)
             in_z_range = min_point(3) <= cell_positions(3,i) .and. cell_positions(3,i) <= max_point(3)
-            if (in_x_range .and. in_y_range .and. in_z_range) then
+            if (in_x_range .and. in_y_range .and. in_z_range .and. is_real_cell(i)) then
                 self%n_output_cells_ = self%n_output_cells_ + 1
                 tmp_ids(self%n_output_cells_) = i
             end if
@@ -91,16 +91,15 @@ module class_control_volume
         real   (real_kind     ), intent(in   ) :: cell_volumes  (:)
 
         integer  (int_kind ) :: unit_number, i
-        integer  (int_kind ) :: num_values
         character(7        ) :: cher_n_output
         real     (real_kind) :: integrals(size(values_set(:,1)))
 
         if(time >= self%next_output_time_)then
-            num_values = size(values_set(:,1))
             open(newunit = unit_number, file="result/"//self%output_filename_, status = 'old', position='append')
             do i = 1, self%n_output_cells_, 1
-                integrals(:) = integrals(:) + cell_positions(:,self%cell_ids_(i)) * cell_volumes(self%cell_ids_(i))
+                integrals(:) = integrals(:) + values_set(:,self%cell_ids_(i)) * cell_volumes(self%cell_ids_(i))
             end do
+            write(unit_number, *) time, integrals(:)
             close(unit_number)
             self%next_output_time_ = self%next_output_time_ + self%output_timespan_
         end if
