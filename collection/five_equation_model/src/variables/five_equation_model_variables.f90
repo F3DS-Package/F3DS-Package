@@ -60,8 +60,6 @@ module five_equation_model_variables_module
     public :: unrotate_gradient_value
     public :: compute_pressure_jump
 
-    real(real_kind), parameter :: interface_threshold = 1e-2
-
     contains
 
     pure function primitive_to_conservative(an_eos, primitive_variables, num_conservatives) result(conservative_variables)
@@ -258,13 +256,15 @@ module five_equation_model_variables_module
         integer(int_kind  ), intent(in) :: num_variables
         real   (real_kind )             :: dst_primitives(num_variables)
 
+        real(real_kind), parameter :: interface_threshold = 1e-3
+
         dst_primitives(1:7) = primitives(1:7)
         associate(                                 &
             z     => primitives(7)               , &
             kappa => surface_tension_variables(4)  &
         )
-            if((interface_threshold < z) .and. (z < 1.d0 - interface_threshold) .and. abs(kappa) < 1.d0)then
-                dst_primitives(8) = 0.d0!(1.d0 / weber_number) * kappa
+            if((interface_threshold < z) .and. (z < 1.d0 - interface_threshold))then
+                dst_primitives(8) = (1.d0 / weber_number) * kappa
             else
                 dst_primitives(8) = 0.d0
             endif

@@ -20,6 +20,7 @@ module class_cellsystem
     use abstract_time_incriment_controller
     use abstract_initial_condition_parser
     use class_line_plotter
+    use class_control_volume
 
     implicit none
 
@@ -146,6 +147,7 @@ module class_cellsystem
         procedure, public, pass(self) :: time_incriment_controller_initialize
         procedure, public, pass(self) :: divergence_calculator_initialize
         procedure, public, pass(self) :: line_plotter_initialize
+        procedure, public, pass(self) :: control_volume_initialize
         generic  , public             :: initialize  => result_writer_initialize            , &
                                                         time_stepping_initialize            , &
                                                         reconstructor_initialize            , &
@@ -157,17 +159,22 @@ module class_cellsystem
                                                         termination_criterion_initialize    , &
                                                         time_incriment_controller_initialize, &
                                                         divergence_calculator_initialize    , &
-                                                        line_plotter_initialize
+                                                        line_plotter_initialize             , &
+                                                        control_volume_initialize
         procedure, public, pass(self) :: result_writer_open_file
         generic  , public             :: open_file   => result_writer_open_file
         procedure, public, pass(self) :: result_writer_close_file
         generic  , public             :: close_file  => result_writer_close_file
         procedure, public, pass(self) :: result_writer_is_writable
         procedure, public, pass(self) :: line_plotter_is_writable
-        generic  , public             :: is_writable => result_writer_is_writable, &
-                                                        line_plotter_is_writable
+        procedure, public, pass(self) :: control_volume_is_writable
+        generic  , public             :: is_writable => result_writer_is_writable , &
+                                                        line_plotter_is_writable  , &
+                                                        control_volume_is_writable
         procedure, public, pass(self) :: line_plotter_write
-        generic  , public             :: write => line_plotter_write
+        procedure, public, pass(self) :: control_volume_write
+        generic  , public             :: write => line_plotter_write  , &
+                                                  control_volume_write
 
         ! ### Vatiables ###
         procedure, public, pass(self) :: read_initial_condition
@@ -246,6 +253,30 @@ module class_cellsystem
     end type
 
     contains
+
+    ! ### Control volume ###
+    subroutine control_volume_initialize(self, plotter, config, num_conservative_variables, num_primitive_variables)
+        class(cellsystem    ), intent(inout) :: self
+        class(control_volume), intent(inout) :: plotter
+        class(configuration ), intent(inout) :: config
+        integer(int_kind    ), intent(in   ) :: num_conservative_variables
+        integer(int_kind    ), intent(in   ) :: num_primitive_variables
+        call plotter%initialize(config, self%cell_centor_positions, self%is_real_cell, self%num_cells)
+    end subroutine control_volume_initialize
+
+    subroutine control_volume_write(self, plotter, values_set)
+        class(cellsystem    ), intent(inout) :: self
+        class(control_volume), intent(inout) :: plotter
+        real (real_kind     ), intent(in   ) :: values_set(:,:)
+        call plotter%write(self%time, values_set, self%cell_centor_positions, self%cell_volumes)
+    end subroutine control_volume_write
+
+    pure function control_volume_is_writable(self, plotter) result(juge)
+        class(cellsystem  ), intent(in) :: self
+        class(control_volume), intent(in) :: plotter
+        logical                            :: juge
+        juge = plotter%is_writable(self%time)
+    end function control_volume_is_writable
 
     ! ### Line plotter ###
     subroutine line_plotter_initialize(self, plotter, config, num_conservative_variables, num_primitive_variables)
