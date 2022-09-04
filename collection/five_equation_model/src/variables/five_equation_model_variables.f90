@@ -257,14 +257,15 @@ module five_equation_model_variables_module
         real   (real_kind )             :: dst_primitives(num_variables)
 
         real(real_kind), parameter :: interface_threshold = 1e-3
+        real(real_kind), parameter :: carvature_limit = 2.d0
 
         dst_primitives(1:7) = primitives(1:7)
         associate(                                 &
             z     => primitives(7)               , &
             kappa => surface_tension_variables(4)  &
         )
-            if((interface_threshold < z) .and. (z < 1.d0 - interface_threshold) .and. abs(kappa) < 1.d0)then
-                dst_primitives(8) = (1.d0 / weber_number) * kappa
+            if((interface_threshold < z) .and. (z < 1.d0 - interface_threshold))then
+                dst_primitives(8) = (1.d0 / weber_number) * max(-carvature_limit, min(kappa, carvature_limmit))
             else
                 dst_primitives(8) = 0.d0
             endif
