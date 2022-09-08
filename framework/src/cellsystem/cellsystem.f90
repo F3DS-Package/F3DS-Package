@@ -775,9 +775,9 @@ module class_cellsystem
                                         )                                                              &
                 )
                     gradient_variables_set(vec_start_index:vec_end_index, rhc_index) = gradient_variables_set(vec_start_index:vec_end_index, rhc_index)  &
-                                                        - (1.d0 / self%cell_volumes(rhc_index)) * residual
+                                                        + (1.d0 / self%cell_volumes(rhc_index)) * residual
                     gradient_variables_set(vec_start_index:vec_end_index, lhc_index) = gradient_variables_set(vec_start_index:vec_end_index, lhc_index)  &
-                                                        + (1.d0 / self%cell_volumes(lhc_index)) * residual
+                                                        - (1.d0 / self%cell_volumes(lhc_index)) * residual
                 end associate
             end do
         end do
@@ -813,9 +813,9 @@ module class_cellsystem
                             )                                                              &
             )
                 gradient_variable_set(1:3,rhc_index) = gradient_variable_set(1:3,rhc_index)                    &
-                                                 - (1.d0 / self%cell_volumes(rhc_index)) * residual
+                                                 + (1.d0 / self%cell_volumes(rhc_index)) * residual
                 gradient_variable_set(1:3,lhc_index) = gradient_variable_set(1:3,lhc_index)                    &
-                                                 + (1.d0 / self%cell_volumes(lhc_index))  * residual
+                                                 - (1.d0 / self%cell_volumes(lhc_index))  * residual
             end associate
         end do
     end subroutine compute_gradient_1darray
@@ -867,9 +867,9 @@ module class_cellsystem
                        self%face_areas                                                   (face_index)  &
                     )
                     divergence_variables_set(var_index, rhc_index) = divergence_variables_set(var_index, rhc_index) &
-                                                        - (1.d0 / self%cell_volumes(rhc_index)) * residual
+                                                        + (1.d0 / self%cell_volumes(rhc_index)) * residual
                     divergence_variables_set(var_index, lhc_index) = divergence_variables_set(var_index, lhc_index) &
-                                                        + (1.d0 / self%cell_volumes(lhc_index)) * residual
+                                                        - (1.d0 / self%cell_volumes(lhc_index)) * residual
                 end associate
             end do
         end do
@@ -904,9 +904,9 @@ module class_cellsystem
                 )                                                        &
             )
                 divergence_variable_set(rhc_index)   = divergence_variable_set(rhc_index)               &
-                                                     - (1.d0 / self%cell_volumes(rhc_index)) * residual
+                                                     + (1.d0 / self%cell_volumes(rhc_index)) * residual
                 divergence_variable_set(lhc_index)   = divergence_variable_set(lhc_index)               &
-                                                     + (1.d0 / self%cell_volumes(lhc_index)) * residual
+                                                     - (1.d0 / self%cell_volumes(lhc_index)) * residual
             end associate
         end do
     end subroutine compute_divergence_1darray
