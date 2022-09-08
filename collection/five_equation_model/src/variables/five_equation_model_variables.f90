@@ -265,7 +265,7 @@ module five_equation_model_variables_module
             kappa => surface_tension_variables(4)  &
         )
             if((interface_threshold < z) .and. (z < 1.d0 - interface_threshold))then
-                dst_primitives(8) = (1.d0 / weber_number) * max(-carvature_limit, min(kappa, carvature_limmit))
+                dst_primitives(8) = (1.d0 / weber_number) * max(-carvature_limit, min(kappa, carvature_limit))
             else
                 dst_primitives(8) = 0.d0
             endif
