@@ -758,8 +758,8 @@ module class_cellsystem
 
 !$omp parallel do private(face_index, rhc_index, lhc_index, var_index)
         do face_index = 1, self%num_faces, 1
-            rhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
-            lhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
+            lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
+            rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
             do var_index = 1, num_variables, 1
                 associate(                                &
                     vec_start_index => 3*(var_index-1)+1, &
@@ -775,9 +775,9 @@ module class_cellsystem
                                         )                                                              &
                 )
                     gradient_variables_set(vec_start_index:vec_end_index, rhc_index) = gradient_variables_set(vec_start_index:vec_end_index, rhc_index)  &
-                                                        + (1.d0 / self%cell_volumes(rhc_index)) * residual
+                                                        - (1.d0 / self%cell_volumes(rhc_index)) * residual
                     gradient_variables_set(vec_start_index:vec_end_index, lhc_index) = gradient_variables_set(vec_start_index:vec_end_index, lhc_index)  &
-                                                        - (1.d0 / self%cell_volumes(lhc_index)) * residual
+                                                        + (1.d0 / self%cell_volumes(lhc_index)) * residual
                 end associate
             end do
         end do
@@ -798,8 +798,8 @@ module class_cellsystem
 
 !$omp parallel do private(face_index, rhc_index, lhc_index)
         do face_index = 1, self%num_faces, 1
-            rhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
-            lhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
+            lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
+            rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
 
             associate(                                                                     &
                 residual => a_gradient_calculator%compute_residual(                        &
@@ -813,9 +813,9 @@ module class_cellsystem
                             )                                                              &
             )
                 gradient_variable_set(1:3,rhc_index) = gradient_variable_set(1:3,rhc_index)                    &
-                                                 + (1.d0 / self%cell_volumes(rhc_index)) * residual
+                                                 - (1.d0 / self%cell_volumes(rhc_index)) * residual
                 gradient_variable_set(1:3,lhc_index) = gradient_variable_set(1:3,lhc_index)                    &
-                                                 - (1.d0 / self%cell_volumes(lhc_index))  * residual
+                                                 + (1.d0 / self%cell_volumes(lhc_index))  * residual
             end associate
         end do
     end subroutine compute_gradient_1darray
@@ -850,8 +850,8 @@ module class_cellsystem
 
 !$omp parallel do private(face_index, rhc_index, lhc_index, var_index)
         do face_index = 1, self%num_faces, 1
-            rhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
-            lhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
+            lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
+            rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
             do var_index = 1, num_divergence_variables, 1
                 associate(                                &
                     vec_start_index => 3*(var_index-1)+1, &
@@ -867,9 +867,9 @@ module class_cellsystem
                        self%face_areas                                                   (face_index)  &
                     )
                     divergence_variables_set(var_index, rhc_index) = divergence_variables_set(var_index, rhc_index) &
-                                                        + (1.d0 / self%cell_volumes(rhc_index)) * residual
+                                                        - (1.d0 / self%cell_volumes(rhc_index)) * residual
                     divergence_variables_set(var_index, lhc_index) = divergence_variables_set(var_index, lhc_index) &
-                                                        - (1.d0 / self%cell_volumes(lhc_index)) * residual
+                                                        + (1.d0 / self%cell_volumes(lhc_index)) * residual
                 end associate
             end do
         end do
@@ -890,8 +890,8 @@ module class_cellsystem
 
 !$omp parallel do private(face_index, rhc_index, lhc_index)
         do face_index = 1, self%num_faces, 1
-            rhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
-            lhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
+            lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
+            rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
             associate(                                                   &
                 residual => a_divergence_calculator%compute_residual(    &
                     variable_set                       (1:3,lhc_index ), &
@@ -904,9 +904,9 @@ module class_cellsystem
                 )                                                        &
             )
                 divergence_variable_set(rhc_index)   = divergence_variable_set(rhc_index)               &
-                                                     + (1.d0 / self%cell_volumes(rhc_index)) * residual
+                                                     - (1.d0 / self%cell_volumes(rhc_index)) * residual
                 divergence_variable_set(lhc_index)   = divergence_variable_set(lhc_index)               &
-                                                     - (1.d0 / self%cell_volumes(lhc_index)) * residual
+                                                     + (1.d0 / self%cell_volumes(lhc_index)) * residual
             end associate
         end do
     end subroutine compute_divergence_1darray
