@@ -1,6 +1,7 @@
 program five_eq_model_solver
     ! Utils
     use typedef_module
+    use stdio_module
     ! Cell system
     use class_cellsystem
     use five_equation_model_variables_module
@@ -61,9 +62,6 @@ program five_eq_model_solver
     ! Loop index
     integer(int_kind) :: state_num, cell_index
 
-    ! Additional results
-    real(real_kind), allocatable :: density(:)
-
     ! Read config
     call a_configuration%parse("config.json")
 
@@ -99,39 +97,12 @@ program five_eq_model_solver
     call a_cellsystem%read_initial_condition(an_initial_condition_parser, a_configuration, conservative_variables_set)
     call a_cellsystem%conservative_to_primitive_variables_all(an_eos, conservative_variables_set, primitive_variables_set, num_primitive_variables, conservative_to_primitive)
 
-    ! Allocate
-    allocate(density(a_cellsystem%get_number_of_cells()))
-
     ! Timestepping loop
     do while ( .not. a_cellsystem%satisfies_termination_criterion(a_termination_criterion) )
         call a_cellsystem%update_time_incriment(a_time_incriment_controller, an_eos, primitive_variables_set, spectral_radius)
 
         if ( a_cellsystem%is_writable(a_result_writer) ) then
-            call a_cellsystem%open_file   (a_result_writer)
-
-            print *, "Write a result "//a_cellsystem%get_filename(a_result_writer)//"..."
-
-            do cell_index = 1, a_cellsystem%get_number_of_cells(), 1
-                associate(                                          &
-                    rho1 => primitive_variables_set(1, cell_index), &
-                    rho2 => primitive_variables_set(2, cell_index), &
-                    z    => primitive_variables_set(7, cell_index)  &
-                )
-                    density(cell_index) = z * rho1 + (1.d0 - z) * rho2
-                end associate
-            end do
-
-            call a_cellsystem%write_scolar(a_result_writer, "Density"        , density                        )
-            call a_cellsystem%write_scolar(a_result_writer, "Density 1"      , primitive_variables_set(1  , :))
-            call a_cellsystem%write_scolar(a_result_writer, "Density 2"      , primitive_variables_set(2  , :))
-            call a_cellsystem%write_vector(a_result_writer, "Velocity"       , primitive_variables_set(3:5, :))
-            call a_cellsystem%write_scolar(a_result_writer, "Pressure"       , primitive_variables_set(6  , :))
-            call a_cellsystem%write_scolar(a_result_writer, "Volume fraction", primitive_variables_set(7  , :))
-
-            call a_cellsystem%write_vector(a_result_writer, "Gradient volume fraction", surface_tension_variables_set(1:3, :))
-            call a_cellsystem%write_scolar(a_result_writer, "Curvature"               , surface_tension_variables_set(  4, :))
-
-            call a_cellsystem%close_file  (a_result_writer)
+            call write_result(a_cellsystem, a_result_writer)
         end if
 
         if ( a_cellsystem%is_writable(a_line_plotter) ) then
@@ -194,9 +165,32 @@ program five_eq_model_solver
     end do
 
     if ( a_cellsystem%is_writable(a_result_writer) ) then
+        call write_result(a_cellsystem, a_result_writer)
+    end if
+
+    if ( a_cellsystem%is_writable(a_line_plotter) ) then
+        call a_cellsystem%write(a_line_plotter, primitive_variables_set)
+    end if
+
+    if ( a_cellsystem%is_writable(a_control_volume) ) then
+        call a_cellsystem%write(a_control_volume, primitive_variables_set)
+    end if
+
+    call a_result_writer%cleanup()
+
+    call write_message("f5eq is successfully terminated. done...")
+
+    contains
+
+    subroutine write_result(a_cellsystem, a_result_writer)
+        type(cellsystem       ), intent(inout) :: a_cellsystem
+        type(vtk_result_writer), intent(inout) :: a_result_writer
+
+        real(real_kind) :: density(a_cellsystem%get_number_of_cells())
+
         call a_cellsystem%open_file   (a_result_writer)
 
-        print *, "Write a result "//a_cellsystem%get_filename(a_result_writer)//"..."
+        call write_message("Write a result "//a_cellsystem%get_filename(a_result_writer)//"...")
 
         do cell_index = 1, a_cellsystem%get_number_of_cells(), 1
             associate(                                          &
@@ -217,17 +211,5 @@ program five_eq_model_solver
         call a_cellsystem%write_vector(a_result_writer, "Gradient volume fraction", surface_tension_variables_set(1:3, :))
         call a_cellsystem%write_scolar(a_result_writer, "Curvature"               , surface_tension_variables_set(  4, :))
         call a_cellsystem%close_file  (a_result_writer)
-    end if
-
-    if ( a_cellsystem%is_writable(a_line_plotter) ) then
-        call a_cellsystem%write(a_line_plotter, primitive_variables_set)
-    end if
-
-    if ( a_cellsystem%is_writable(a_control_volume) ) then
-        call a_cellsystem%write(a_control_volume, primitive_variables_set)
-    end if
-
-    call a_result_writer%cleanup()
-
-    print *, "done..."
+    end subroutine write_result
 end program five_eq_model_solver
