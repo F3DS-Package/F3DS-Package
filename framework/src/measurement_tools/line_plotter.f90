@@ -19,6 +19,7 @@ module class_line_plotter
         real     (real_kind)              :: next_output_time_
         integer  (int_kind )              :: n_output_
         integer  (int_kind )              :: n_output_cells_
+        logical                           :: is_enabled_
 
         contains
 
@@ -47,6 +48,11 @@ module class_line_plotter
 
         self%output_dir_           = "line"
         self%next_output_time_     = 0.d0
+
+        call config%get_bool("Line plotter.Enable", self%is_enabled_, found, .false.)
+        if(.not. found) call write_warring("'Line plotter.Enable' is not found in configuration file you set. Disable the line plotter.")
+
+        if (.not. self%is_enabled_) return
 
         call config%get_real("Line plotter.Frequency", frequency, found, 1.d3)
         if(.not. found) call write_warring("'Line plotter.Frequency' is not found in configuration file you set. To be set default value.")
@@ -124,6 +130,8 @@ module class_line_plotter
         integer  (int_kind )              :: unit_number, i
         character(7)                      :: cher_n_output
 
+        if (.not. self%is_enabled_) return
+
         if(time >= self%next_output_time_)then
             write(cher_n_output, "(i7.7)") self%n_output_
             open(newunit = unit_number, file="result/"//self%output_dir_//"/"//cher_n_output//".dat", status = 'replace')
@@ -140,8 +148,13 @@ module class_line_plotter
     pure function is_writable(self, time) result(juge)
         class  (line_plotter), intent(in) :: self
         real   (real_kind   ), intent(in) :: time
-        logical                              :: juge
-        juge = (time >= self%next_output_time_)
+        logical                           :: juge
+
+        if (.not. self%is_enabled_) then
+            juge = .false.
+        else
+            juge = (time >= self%next_output_time_)
+        end if
     end function is_writable
 
 end module class_line_plotter

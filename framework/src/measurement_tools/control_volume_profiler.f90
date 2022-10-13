@@ -16,6 +16,7 @@ module class_control_volume_profiler
         real     (real_kind)              :: output_timespan_
         real     (real_kind)              :: next_output_time_
         integer  (int_kind )              :: n_output_cells_
+        logical                           :: is_enabled_
 
         contains
 
@@ -41,6 +42,11 @@ module class_control_volume_profiler
 
         self%output_filename_      = "control_volume_profiler.dat"
         self%next_output_time_     = 0.d0
+
+        call config%get_bool("Control volume profiler.Enable", self%is_enabled_, found, .false.)
+        if(.not. found) call write_warring("'Control volume profiler.Enable' is not found in configuration file you set. Disable this profiler.")
+
+        if (.not. self%is_enabled_) return
 
         call config%get_real("Control volume profiler.Frequency", frequency, found, 1.d3)
         if(.not. found) call write_warring("'Control volume profiler.Frequency' is not found in configuration file you set. The default value is set.")
@@ -94,6 +100,8 @@ module class_control_volume_profiler
         character(7        ) :: cher_n_output
         real     (real_kind) :: integrals(size(values_set(:,1)))
 
+        if (.not. self%is_enabled_) return
+
         if(time >= self%next_output_time_)then
             open(newunit = unit_number, file="result/"//self%output_filename_, status = 'old', position='append')
             do i = 1, self%n_output_cells_, 1
@@ -109,6 +117,11 @@ module class_control_volume_profiler
         class  (control_volume_profiler), intent(in) :: self
         real   (real_kind     ), intent(in) :: time
         logical                             :: juge
-        juge = (time >= self%next_output_time_)
+
+        if (.not. self%is_enabled_) then
+            juge = .false.
+        else
+            juge = (time >= self%next_output_time_)
+        end if
     end function is_writable
 end module class_control_volume_profiler
