@@ -95,6 +95,8 @@ program five_eq_model_solver
     call a_cellsystem%initialize(a_time_incriment_controller, a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(a_line_plotter             , a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(a_control_volume           , a_configuration, num_conservative_variables, num_primitive_variables)
+    ! Initialize model
+    call a_cellsystem%initialize(a_model, a_configuration, num_conservative_variables, num_primitive_variables)
 
     ! Set initial condition
     call a_cellsystem%read_initial_condition(an_initial_condition_parser, a_configuration, conservative_variables_set)
