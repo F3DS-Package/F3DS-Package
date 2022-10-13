@@ -19,6 +19,7 @@ module class_cellsystem
     use abstract_termination_criterion
     use abstract_time_incriment_controller
     use abstract_initial_condition_parser
+    use abstract_model
     use class_line_plotter
     use class_control_volume
 
@@ -210,7 +211,10 @@ module class_cellsystem
                                                                compute_divergence_2darray
 
         ! ### Flux ###
-        procedure, public, pass(self) :: compute_residual
+        procedure, public, pass(self) :: compute_residual_functional
+        procedure, public, pass(self) :: compute_residual_objective
+        generic  , public             :: compute_residual => compute_residual_functional, &
+                                                             compute_residual_objective
 
         ! ### Time Stepping ###
         procedure, public, pass(self) :: compute_next_state
@@ -923,9 +927,9 @@ module class_cellsystem
     end subroutine eos_initialize
 
     ! ### Flux ###
-    subroutine compute_residual(self, a_reconstructor, a_riemann_solver, an_eos,                                            &
-                                primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
-                                primitive_to_conservative_function, residual_element_function                                )
+    subroutine compute_residual_functional(self, a_reconstructor, a_riemann_solver, an_eos,                                            &
+                                           primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
+                                           primitive_to_conservative_function, residual_element_function                                )
 
         class  (cellsystem    ), intent(in   ) :: self
         class  (reconstructor ), intent(in   ) :: a_reconstructor
@@ -1034,7 +1038,79 @@ module class_cellsystem
             residual_set(:,lhc_index) = residual_set(:,lhc_index) + residual_element(:, 1)
             residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
         end do
-    end subroutine compute_residual
+    end subroutine compute_residual_functional
+
+    subroutine compute_residual_objective(self, a_reconstructor, a_riemann_solver, an_eos,                                            &
+                                          primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
+                                          primitive_to_conservative_function, a_model                                                   )
+
+        class  (cellsystem    ), intent(in   ) :: self
+        class  (reconstructor ), intent(in   ) :: a_reconstructor
+        class  (riemann_solver), intent(in   ) :: a_riemann_solver
+        class  (eos           ), intent(in   ) :: an_eos
+        real   (real_kind     ), intent(in   ) :: primitive_variables_set (:,:)
+        real   (real_kind     ), intent(inout) :: residual_set            (:,:)
+        integer(int_kind      ), intent(in   ) :: num_conservative_variables
+        integer(int_kind      ), intent(in   ) :: num_primitive_variables
+        class  (model         ), intent(in   ) :: a_model
+
+        interface
+            pure function primitive_to_conservative_function(an_eos, primitive_variables, num_conservative_values) result(conservative_values)
+                use typedef_module
+                use abstract_eos
+                class  (eos      ), intent(in) :: an_eos
+                real   (real_kind), intent(in) :: primitive_variables(:)
+                integer(int_kind ), intent(in) :: num_conservative_values
+                real   (real_kind)             :: conservative_values(num_conservative_values)
+            end function primitive_to_conservative_function
+        end interface
+
+        integer(int_kind ) :: i
+        integer(int_kind ) :: lhc_index
+        integer(int_kind ) :: rhc_index
+        real   (real_kind) :: reconstructed_primitive_variables_lhc   (num_primitive_variables)
+        real   (real_kind) :: reconstructed_primitive_variables_rhc   (num_primitive_variables)
+        real   (real_kind) :: reconstructed_conservative_variables_lhc(num_conservative_variables)
+        real   (real_kind) :: reconstructed_conservative_variables_rhc(num_conservative_variables)
+        real   (real_kind) :: residual_element                        (num_conservative_variables, 1:2)
+
+        logical :: lhc_is_dummy, rhc_is_dummy
+
+!$omp parallel do private(i,lhc_index,rhc_index,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,reconstructed_conservative_variables_lhc,reconstructed_conservative_variables_rhc,residual_element)
+        do i = 1, self%num_faces, 1
+            lhc_index = self%face_to_cell_indexes(self%num_local_cells+0, i)
+            rhc_index = self%face_to_cell_indexes(self%num_local_cells+1, i)
+
+            reconstructed_primitive_variables_lhc(:) = a_reconstructor%reconstruct_lhc(                              &
+                primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
+                i, self%num_local_cells, num_primitive_variables                                                     &
+            )
+            reconstructed_primitive_variables_rhc(:) = a_reconstructor%reconstruct_rhc(                              &
+                primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
+                i, self%num_local_cells, num_primitive_variables                                                     &
+            )
+
+            residual_element(:,:) = a_model%compute_residual_element( &
+                an_eos                                              , &
+                a_riemann_solver                                    , &
+                primitive_variables_set       (:,lhc_index)         , &
+                primitive_variables_set       (:,rhc_index)         , &
+                reconstructed_primitive_variables_lhc   (:)         , &
+                reconstructed_primitive_variables_rhc   (:)         , &
+                self%cell_volumes            (lhc_index)            , &
+                self%cell_volumes            (rhc_index)            , &
+                self%face_areas                  (i)                , &
+                self%face_normal_vectors     (1:3,i)                , &
+                self%face_tangential1_vectors(1:3,i)                , &
+                self%face_tangential2_vectors(1:3,i)                , &
+                num_conservative_variables                          , &
+                num_primitive_variables                               &
+            )
+
+            residual_set(:,lhc_index) = residual_set(:,lhc_index) + residual_element(:, 1)
+            residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
+        end do
+    end subroutine compute_residual_objective
 
     ! ### Riemann solver ###
     subroutine riemann_solver_initialize(self, a_riemann_solver, config, num_conservative_variables, num_primitive_variables)
