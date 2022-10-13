@@ -18,6 +18,7 @@ module stdio_module
     subroutine call_error(message)
         character(len=*) :: message
         print *, color_red//"Error: "//esc_reset, message
+        print *, "F3DS abend..."
         error stop
     end subroutine call_error
 
