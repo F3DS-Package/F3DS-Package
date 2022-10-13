@@ -17,24 +17,25 @@ module class_five_equation_model_space_discretization
         private
 
         integer(int_kind )              :: num_phase_
-        real   (real_kind), allocatable :: weber_number_(:)
+        real   (real_kind), allocatable :: surface_tension_(:)
+        logical                         :: disable_kdivu_
 
         contains
 
         procedure, public, pass(self) :: initialize
         procedure, public, pass(self) :: compute_residual_element
 
-        procedure, public :: mixture_weber_number
+        procedure, public :: mixture_surface_tension
     end type five_equation_model_space_discretization
 
 
     contains
 
-    pure function mixture_weber_number(self, z1) result(w)
+    pure function mixture_surface_tension(self, z1) result(w)
         class  (five_equation_model_space_discretization), intent(in) :: self
         real   (real_kind), intent(in) :: z1
         real   (real_kind)             :: w
-        w = z1 * self%weber_number_(1) + (1.d0 - z1) * self%weber_number_(2)
+        w = z1 * self%surface_tension_(1) + (1.d0 - z1) * self%surface_tension_(2)
     end function
 
     subroutine initialize(self, a_configuration)
@@ -47,12 +48,15 @@ module class_five_equation_model_space_discretization
         call a_configuration%get_int    ("Phase.Number of phase", self%num_phase_, found)
         if(.not. found) call call_error("'Phase.Number of phase' is not found in configuration you set. Please check your configuration file.")
 
-        allocate(self%weber_number_(self%num_phase_))
+        allocate(self%surface_tension_(self%num_phase_))
 
         do i = 1, self%num_phase_, 1
-            call a_configuration%get_real      ("Phase.Phase property "//to_str(i)//".Weber number", self%weber_number_(i), found, 0.d0)
-            if(.not. found) call write_warring("'Phase.Phase property "//to_str(i)//".Weber number' is not found in configuration you set. To be set a default value.")
+            call a_configuration%get_real      ("Phase.Phase property "//to_str(i)//".Surface tension", self%surface_tension_(i), found, 0.d0)
+            if(.not. found) call write_warring("'Phase.Phase property "//to_str(i)//".Surface tension' is not found in the configuration you set. To set the default value.")
         end do
+
+        call a_configuration%get_bool   ("Model.Disable Kdivu", self%disable_kdivu_, found, .false.)
+        if(.not. found) call write_warring("'Model.Disable Kdivu' is not found in configuration you set. To apply this term.")
     end subroutine initialize
 
     pure function compute_residual_element(       &
@@ -150,7 +154,7 @@ module class_five_equation_model_space_discretization
             lhc_pressure   = p
             lhc_soundspeed = an_eos%compute_soundspeed(p, lhc_density, z1)
             lhc_main_velocity = u
-            lhc_pressure_jump = (1.d0 / self%mixture_weber_number(z1)) * curv * (1.d0 - z1)
+            lhc_pressure_jump = self%mixture_surface_tension(z1) * curv * (1.d0 - z1)
         end associate
         associate(                                             &
                 rho1    => local_coordinate_primitives_rhc(1), &
@@ -166,7 +170,7 @@ module class_five_equation_model_space_discretization
             rhc_pressure   = p
             rhc_soundspeed = an_eos%compute_soundspeed(p, rhc_density, z1)
             rhc_main_velocity = u
-            rhc_pressure_jump = (1.d0 / self%mixture_weber_number(z1)) * curv * (1.d0 - z1)
+            rhc_pressure_jump = self%mixture_surface_tension(z1) * curv * (1.d0 - z1)
         end associate
 
         ! # compute flux
@@ -294,8 +298,13 @@ module class_five_equation_model_space_discretization
             rhc_p       => primitive_variables_rhc(6)  , &
             rhc_z1      => primitive_variables_rhc(7)    &
         )
-            lhc_k = 0.d0!an_eos%compute_k(lhc_p, lhc_rhos, lhc_z1)
-            rhc_k = 0.d0!an_eos%compute_k(rhc_p, rhc_rhos, rhc_z1)
+            if(self%disable_kdivu_)then
+                lhc_k = 0.d0
+                rhc_k = 0.d0
+            else
+                lhc_k = an_eos%compute_k(lhc_p, lhc_rhos, lhc_z1)
+                rhc_k = an_eos%compute_k(rhc_p, rhc_rhos, rhc_z1)
+            end if
             residual_element(7, 1) = residual_element(7, 1) &
                                    - (-lhc_z1 - lhc_k) * (1.d0 / lhc_cell_volume) * numerical_velocity * face_area
             residual_element(7, 2) = residual_element(7, 2) &
@@ -311,14 +320,14 @@ module class_five_equation_model_space_discretization
             alpha_l   => (1.d0 - interface_volume_fraction)      & ! In this solver, primary volume fraction z1 is a gas volume fraction! thus we need 1.d0 - {@code interface_volume_fraction}.
         )
             residual_element(3:5, 1) = residual_element(3:5, 1) &
-                                   + (1.d0 / self%mixture_weber_number(lhc_z1)) * lhc_curv * (1.d0 / lhc_cell_volume) * alpha_l * face_area * face_normal_vector(1:3)
+                                   + self%mixture_surface_tension(lhc_z1) * lhc_curv * (1.d0 / lhc_cell_volume) * alpha_l * face_area * face_normal_vector(1:3)
             residual_element(3:5, 2) = residual_element(3:5, 2) &
-                                   - (1.d0 / self%mixture_weber_number(rhc_z1)) * rhc_curv * (1.d0 / rhc_cell_volume) * alpha_l * face_area * face_normal_vector(1:3)
+                                   - self%mixture_surface_tension(rhc_z1) * rhc_curv * (1.d0 / rhc_cell_volume) * alpha_l * face_area * face_normal_vector(1:3)
             ! numerical velocity is defined in the direction toward the left cell
             residual_element(6, 1) = residual_element(6, 1) &
-                                   - (1.d0 / self%mixture_weber_number(lhc_z1)) * lhc_curv * (1.d0 / lhc_cell_volume) * (alpha_l * numerical_velocity - numerical_velocity) * face_area
+                                   - self%mixture_surface_tension(lhc_z1) * lhc_curv * (1.d0 / lhc_cell_volume) * (alpha_l * numerical_velocity - numerical_velocity) * face_area
             residual_element(6, 2) = residual_element(6, 2) &
-                                   + (1.d0 / self%mixture_weber_number(rhc_z1)) * rhc_curv * (1.d0 / rhc_cell_volume) * (alpha_l * numerical_velocity - numerical_velocity) * face_area
+                                   + self%mixture_surface_tension(rhc_z1) * rhc_curv * (1.d0 / rhc_cell_volume) * (alpha_l * numerical_velocity - numerical_velocity) * face_area
         end associate
     end function compute_residual_element
 end module class_five_equation_model_space_discretization
