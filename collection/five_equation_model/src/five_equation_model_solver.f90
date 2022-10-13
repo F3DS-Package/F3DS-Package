@@ -33,7 +33,7 @@ program five_eq_model_solver
     use class_openmp_parallelizer
     ! Measurements
     use class_line_plotter
-    use class_control_volume
+    use class_control_volume_profiler
     ! Model
     use five_equation_model_variables_module
     use five_equation_model_boundary_condition_module
@@ -54,7 +54,7 @@ program five_eq_model_solver
     type(constant_time_incriment_controller) :: a_time_incriment_controller
     type(openmp_parallelizer               ) :: a_parallelizer
     type(line_plotter                      ) :: a_line_plotter
-    type(control_volume                    ) :: a_control_volume
+    type(control_volume_profiler           ) :: a_control_volume_profiler
 
     type(five_equation_model_space_discretization) :: a_model
 
@@ -94,7 +94,7 @@ program five_eq_model_solver
     call a_cellsystem%initialize(a_termination_criterion    , a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(a_time_incriment_controller, a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(a_line_plotter             , a_configuration, num_conservative_variables, num_primitive_variables)
-    call a_cellsystem%initialize(a_control_volume           , a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_control_volume_profiler           , a_configuration, num_conservative_variables, num_primitive_variables)
     ! Initialize model
     call a_cellsystem%initialize(a_model, a_configuration, num_conservative_variables, num_primitive_variables)
 
@@ -114,8 +114,8 @@ program five_eq_model_solver
             call a_cellsystem%write(a_line_plotter, primitive_variables_set)
         end if
 
-        if ( a_cellsystem%is_writable(a_control_volume) ) then
-            call a_cellsystem%write(a_control_volume, primitive_variables_set)
+        if ( a_cellsystem%is_writable(a_control_volume_profiler) ) then
+            call a_cellsystem%write(a_control_volume_profiler, primitive_variables_set)
         end if
 
         print *, "Step "          , a_cellsystem%get_number_of_steps(), ", ", &
@@ -177,8 +177,8 @@ program five_eq_model_solver
         call a_cellsystem%write(a_line_plotter, primitive_variables_set)
     end if
 
-    if ( a_cellsystem%is_writable(a_control_volume) ) then
-        call a_cellsystem%write(a_control_volume, primitive_variables_set)
+    if ( a_cellsystem%is_writable(a_control_volume_profiler) ) then
+        call a_cellsystem%write(a_control_volume_profiler, primitive_variables_set)
     end if
 
     call a_result_writer%cleanup()
