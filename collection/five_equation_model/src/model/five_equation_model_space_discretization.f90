@@ -1,19 +1,62 @@
-module five_equation_model_space_discretization
+module class_five_equation_model_space_discretization
     use vector_module
     use typedef_module
+    use stdio_module
+    use string_utils_module
+    use abstract_configuration
     use abstract_eos
     use abstract_riemann_solver
+    use abstract_model
     use five_equation_model_variables_module
 
     implicit none
 
     private
 
-    public :: five_equation_model_residual_element
+    type, public, extends(model) :: five_equation_model_space_discretization
+        private
+
+        integer(int_kind )              :: num_phase_
+        real   (real_kind), allocatable :: weber_number_(:)
+
+        contains
+
+        procedure, public, pass(self) :: initialize
+        procedure, public, pass(self) :: compute_residual_element
+
+        procedure, public :: mixture_weber_number
+    end type five_equation_model_space_discretization
+
 
     contains
 
-    pure function five_equation_model_residual_element( &
+    pure function mixture_weber_number(self, z1) result(w)
+        class  (five_equation_model_space_discretization), intent(in) :: self
+        real   (real_kind), intent(in) :: z1
+        real   (real_kind)             :: w
+        w = z1 * self%weber_number_(1) + (1.d0 - z1) * self%weber_number_(2)
+    end function
+
+    subroutine initialize(self, a_configuration)
+        class  (five_equation_model_space_discretization), intent(inout) :: self
+        class  (configuration                           ), intent(inout) :: a_configuration
+
+        logical           :: found
+        integer(int_kind) :: i
+
+        call a_configuration%get_int    ("Phase.Number of phase", self%num_phase_, found)
+        if(.not. found) call call_error("'Phase.Number of phase' is not found in configuration you set. Please check your configuration file.")
+
+        allocate(self%weber_number_(self%num_phase_))
+
+        do i = 1, self%num_phase_, 1
+            call a_configuration%get_real      ("Phase.Phase property "//to_str(i)//".Weber number", self%weber_number_(i), found, 0.d0)
+            if(.not. found) call write_warring("'Phase.Phase property "//to_str(i)//".Weber number' is not found in configuration you set. To be set a default value.")
+        end do
+    end subroutine initialize
+
+    pure function compute_residual_element(       &
+        self                                    , &
         an_eos                                  , &
         an_riemann_solver                       , &
         primitive_variables_lhc                 , &
@@ -29,6 +72,7 @@ module five_equation_model_space_discretization
         num_conservative_values                 , &
         num_primitive_values                      ) result(residual_element)
 
+        class  (five_equation_model_space_discretization), intent(in) :: self
 
         class  (eos           ), intent(in) :: an_eos
         class  (riemann_solver), intent(in) :: an_riemann_solver
@@ -92,23 +136,23 @@ module five_equation_model_space_discretization
         )
 
         ! # compute EoS, main velosity, and fluxs
-        associate(                                         &
-                rho1    => local_coordinate_primitives_lhc(1), &
-                rho2    => local_coordinate_primitives_lhc(2), &
-                u       => local_coordinate_primitives_lhc(3), &
-                v       => local_coordinate_primitives_lhc(4), &
-                w       => local_coordinate_primitives_lhc(5), &
-                p       => local_coordinate_primitives_lhc(6), &
-                z1      => local_coordinate_primitives_lhc(7), &
-                dp      => local_coordinate_primitives_lhc(8)  &
+        associate(                                                 &
+                rho1    => local_coordinate_primitives_lhc(1),     &
+                rho2    => local_coordinate_primitives_lhc(2),     &
+                u       => local_coordinate_primitives_lhc(3),     &
+                v       => local_coordinate_primitives_lhc(4),     &
+                w       => local_coordinate_primitives_lhc(5),     &
+                p       => local_coordinate_primitives_lhc(6),     &
+                z1      => local_coordinate_primitives_lhc(7),     &
+                curv    => local_coordinate_primitives_lhc(8)      &
             )
             lhc_density    = rho1 * z1 + rho2 * (1.d0 - z1)
             lhc_pressure   = p
             lhc_soundspeed = an_eos%compute_soundspeed(p, lhc_density, z1)
             lhc_main_velocity = u
-            lhc_pressure_jump = dp * (1.d0 - z1)
+            lhc_pressure_jump = (1.d0 / self%mixture_weber_number(z1)) * curv * (1.d0 - z1)
         end associate
-        associate(                        &
+        associate(                                             &
                 rho1    => local_coordinate_primitives_rhc(1), &
                 rho2    => local_coordinate_primitives_rhc(2), &
                 u       => local_coordinate_primitives_rhc(3), &
@@ -116,13 +160,13 @@ module five_equation_model_space_discretization
                 w       => local_coordinate_primitives_rhc(5), &
                 p       => local_coordinate_primitives_rhc(6), &
                 z1      => local_coordinate_primitives_rhc(7), &
-                dp      => local_coordinate_primitives_rhc(8)  &
+                curv    => local_coordinate_primitives_rhc(8)  &
             )
             rhc_density    = rho1 * z1 + rho2 * (1.d0 - z1)
             rhc_pressure   = p
             rhc_soundspeed = an_eos%compute_soundspeed(p, rhc_density, z1)
             rhc_main_velocity = u
-            rhc_pressure_jump = dp * (1.d0 - z1)
+            rhc_pressure_jump = (1.d0 / self%mixture_weber_number(z1)) * curv * (1.d0 - z1)
         end associate
 
         ! # compute flux
@@ -259,20 +303,22 @@ module five_equation_model_space_discretization
         end associate
 
         ! # surface tension term
-        associate(                                   &
-            lhc_dp    => primitive_variables_lhc(8), &
-            rhc_dp    => primitive_variables_rhc(8), &
-            alpha_l   => (1.d0 - interface_volume_fraction) & ! In this solver, primary volume fraction is a gas volume fraction! thus we need 1.d0 - {@code interface_volume_fraction}.
+        associate(                                               &
+            lhc_z1    => primitive_variables_lhc(7),             &
+            lhc_curv  => primitive_variables_lhc(8),             &
+            rhc_z1    => primitive_variables_rhc(7),             &
+            rhc_curv  => primitive_variables_rhc(8),             &
+            alpha_l   => (1.d0 - interface_volume_fraction)      & ! In this solver, primary volume fraction z1 is a gas volume fraction! thus we need 1.d0 - {@code interface_volume_fraction}.
         )
             residual_element(3:5, 1) = residual_element(3:5, 1) &
-                                   + lhc_dp * (1.d0 / lhc_cell_volume) * alpha_l * face_area * face_normal_vector(1:3)
+                                   + (1.d0 / self%mixture_weber_number(lhc_z1)) * lhc_curv * (1.d0 / lhc_cell_volume) * alpha_l * face_area * face_normal_vector(1:3)
             residual_element(3:5, 2) = residual_element(3:5, 2) &
-                                   - rhc_dp * (1.d0 / rhc_cell_volume) * alpha_l * face_area * face_normal_vector(1:3)
+                                   - (1.d0 / self%mixture_weber_number(rhc_z1)) * rhc_curv * (1.d0 / rhc_cell_volume) * alpha_l * face_area * face_normal_vector(1:3)
             ! numerical velocity is defined in the direction toward the left cell
             residual_element(6, 1) = residual_element(6, 1) &
-                                   - lhc_dp * (1.d0 / lhc_cell_volume) * (alpha_l * numerical_velocity - numerical_velocity) * face_area
+                                   - (1.d0 / self%mixture_weber_number(lhc_z1)) * lhc_curv * (1.d0 / lhc_cell_volume) * (alpha_l * numerical_velocity - numerical_velocity) * face_area
             residual_element(6, 2) = residual_element(6, 2) &
-                                   + rhc_dp * (1.d0 / rhc_cell_volume) * (alpha_l * numerical_velocity - numerical_velocity) * face_area
+                                   + (1.d0 / self%mixture_weber_number(rhc_z1)) * rhc_curv * (1.d0 / rhc_cell_volume) * (alpha_l * numerical_velocity - numerical_velocity) * face_area
         end associate
-    end function five_equation_model_residual_element
-end module five_equation_model_space_discretization
+    end function compute_residual_element
+end module class_five_equation_model_space_discretization

@@ -11,12 +11,12 @@ module abstract_model
     end type model
 
     abstract interface
-        subroutine initialize_interface(self, config)
+        subroutine initialize_interface(self, a_configuration)
             use abstract_configuration
             import model
 
             class(model        ), intent(inout) :: self
-            class(configuration), intent(in   ) :: config
+            class(configuration), intent(inout) :: a_configuration
         end subroutine initialize_interface
 
         pure function compute_residual_element_interface(   &
@@ -57,7 +57,7 @@ module abstract_model
             integer(int_kind      ), intent(in) :: num_conservative_values
             integer(int_kind      ), intent(in) :: num_primitive_values
 
-            real   (real_kind)                     :: residual_element(num_conservative_values, 1:2)
+            real   (real_kind)                  :: residual_element(num_conservative_values, 1:2)
         end function compute_residual_element_interface
     end interface
 end module abstract_model

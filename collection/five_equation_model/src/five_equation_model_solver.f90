@@ -4,9 +4,6 @@ program five_eq_model_solver
     use stdio_module
     ! Cell system
     use class_cellsystem
-    use five_equation_model_variables_module
-    use five_equation_model_boundary_condition_module
-    use five_equation_model_space_discretization
     ! Configuration
     use class_json_configuration
     ! EoS
@@ -37,6 +34,10 @@ program five_eq_model_solver
     ! Measurements
     use class_line_plotter
     use class_control_volume
+    ! Model
+    use five_equation_model_variables_module
+    use five_equation_model_boundary_condition_module
+    use class_five_equation_model_space_discretization
 
     implicit none
 
@@ -54,6 +55,8 @@ program five_eq_model_solver
     type(openmp_parallelizer               ) :: a_parallelizer
     type(line_plotter                      ) :: a_line_plotter
     type(control_volume                    ) :: a_control_volume
+
+    type(five_equation_model_space_discretization) :: a_model
 
     ! These schemes can be cahnge from configuration file you set.
     class(time_stepping), pointer :: a_time_stepping
@@ -155,7 +158,7 @@ program five_eq_model_solver
                 num_conservative_variables            , &
                 num_primitive_variables               , &
                 primitive_to_conservative             , &
-                five_equation_model_residual_element    &
+                a_model                                 &
             )
 
             call a_cellsystem%compute_next_state(a_time_stepping, an_eos, state_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, conservative_to_primitive)
