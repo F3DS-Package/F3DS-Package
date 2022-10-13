@@ -1,16 +1,22 @@
 {
+    "Model" :
+    {
+        "Disable Kdivu": false
+    },
     "Phase" :
     {
         "Number of phase" : 2,
         "Phase property 1" :
         {
             "Specific heat ratio" : 1.4,
-            "Reference pressure"  : 0.0
+            "Reference pressure"  : 0.0,
+            "Surface tension"     : 0.0
         },
         "Phase property 2" :
         {
             "Specific heat ratio" : 1.4,
-            "Reference pressure"  : 0.0
+            "Reference pressure"  : 0.0,
+            "Surface tension"     : 0.0
         }
     },
     "Grid" :
@@ -24,7 +30,7 @@
     },
     "Parallel computing" :
     {
-        "Number of threads" : 14
+        "Number of threads" : 2
     },
     "Reconstructor" :
     {
@@ -68,6 +74,7 @@
     },
     "Line plotter" :
     {
+        "Enable" : true,
         "Start point" :
         {
             "x" : 0.0,
@@ -82,5 +89,9 @@
         },
         "Number of points" : 200,
         "Frequency" : 500
+    },
+    "Control volume profiler" :
+    {
+        "Enable": false
     }
 }

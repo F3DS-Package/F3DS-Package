@@ -94,7 +94,7 @@ program five_eq_model_solver
     call a_cellsystem%initialize(a_termination_criterion    , a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(a_time_incriment_controller, a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(a_line_plotter             , a_configuration, num_conservative_variables, num_primitive_variables)
-    call a_cellsystem%initialize(a_control_volume_profiler           , a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_control_volume_profiler  , a_configuration, num_conservative_variables, num_primitive_variables)
     ! Initialize model
     call a_cellsystem%initialize(a_model, a_configuration, num_conservative_variables, num_primitive_variables)
 
