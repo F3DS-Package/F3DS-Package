@@ -149,6 +149,7 @@ module class_cellsystem
         procedure, public, pass(self) :: divergence_calculator_initialize
         procedure, public, pass(self) :: line_plotter_initialize
         procedure, public, pass(self) :: control_volume_initialize
+        procedure, public, pass(self) :: model_initialize
         generic  , public             :: initialize  => result_writer_initialize            , &
                                                         time_stepping_initialize            , &
                                                         reconstructor_initialize            , &
@@ -161,7 +162,8 @@ module class_cellsystem
                                                         time_incriment_controller_initialize, &
                                                         divergence_calculator_initialize    , &
                                                         line_plotter_initialize             , &
-                                                        control_volume_initialize
+                                                        control_volume_initialize           , &
+                                                        model_initialize
         procedure, public, pass(self) :: result_writer_open_file
         generic  , public             :: open_file   => result_writer_open_file
         procedure, public, pass(self) :: result_writer_close_file
@@ -210,7 +212,7 @@ module class_cellsystem
         generic  , public             :: compute_divergence => compute_divergence_1darray, &
                                                                compute_divergence_2darray
 
-        ! ### Flux ###
+        ! ### Resudual ###
         procedure, public, pass(self) :: compute_residual_functional
         procedure, public, pass(self) :: compute_residual_objective
         generic  , public             :: compute_residual => compute_residual_functional, &
@@ -257,6 +259,16 @@ module class_cellsystem
     end type
 
     contains
+
+    ! ### Model ###
+    subroutine model_initialize(self, a_model, a_config, num_conservative_variables, num_primitive_variables)
+        class   (cellsystem   ), intent(inout) :: self
+        class   (model        ), intent(inout) :: a_model
+        class   (configuration), intent(inout) :: a_config
+        integer(int_kind      ), intent(in   ) :: num_conservative_variables
+        integer(int_kind      ), intent(in   ) :: num_primitive_variables
+        call a_model%initialize(a_config)
+    end subroutine model_initialize
 
     ! ### Control volume ###
     subroutine control_volume_initialize(self, plotter, config, num_conservative_variables, num_primitive_variables)
@@ -926,7 +938,7 @@ module class_cellsystem
         call an_eos%initialize(config)
     end subroutine eos_initialize
 
-    ! ### Flux ###
+    ! ### Resudual ###
     subroutine compute_residual_functional(self, a_reconstructor, a_riemann_solver, an_eos,                                            &
                                            primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
                                            primitive_to_conservative_function, residual_element_function                                )
