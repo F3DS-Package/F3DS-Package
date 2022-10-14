@@ -35,17 +35,17 @@
     "Reconstructor" :
     {
         "Name" : "MP-WENO5-JS",
-        "MUSCL3" :
+        "Minmod MUSCL3" :
         {
             "Kappa" : 0.3
         },
-        "MP-WENO5" :
+        "MP-WENO5-JS" :
         {
             "Epsilon" : 1e-6,
             "Alpha"   : 10.0,
             "Beta"    : 4.0
         },
-        "WENO5" :
+        "WENO5-JS" :
         {
             "Epsilon" : 1e-6
         },
