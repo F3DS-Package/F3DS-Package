@@ -39,7 +39,7 @@ module class_rho_thinc
         call config%get_char("Reconstructor.rho-THINC.Primary reconstructor", name, found, "Minmod MUSCL")
         if(.not. found) call write_warring("'Reconstructor.rho-THINC.Primary reconstructor' is not found in configuration you set. To be set dafault value.")
 
-        call default_reconstructor_generator(name, self%primary_reconstructor_)
+        call f3ds_reconstructor_generator(name, self%primary_reconstructor_)
     end subroutine initialize
 
     pure function reconstruct_lhc( &
