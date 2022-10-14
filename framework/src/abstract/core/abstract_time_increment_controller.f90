@@ -6,8 +6,10 @@ module abstract_time_increment_controller
     type, public, abstract :: time_increment_controller
         contains
 
-        procedure(initialize_interface   ), pass(self), deferred :: initialize
-        procedure(update_global_interface), pass(self), deferred :: update_global
+        procedure(initialize_interface      ), pass(self), deferred :: initialize
+        procedure(get_constant_dt_interface ), pass(self), deferred :: get_constant_dt
+        procedure(compute_local_dt_interface), pass(self), deferred :: compute_local_dt
+        procedure(returns_constant_interface), pass(self), deferred :: returns_constant
     end type time_increment_controller
 
     abstract interface
@@ -19,27 +21,29 @@ module abstract_time_increment_controller
             class(configuration            ), intent(inout) :: config
         end subroutine initialize_interface
 
-        pure function update_global_interface(self, an_eos, variables_set, cell_volumes, num_cells) result(dt)
+        pure function get_constant_dt_interface(self) result(dt)
             use typedef_module
-            use abstract_eos
             import time_increment_controller
 
             class  (time_increment_controller), intent(in) :: self
-            class  (eos                      ), intent(in) :: an_eos
-            real   (real_kind                ), intent(in) :: variables_set(:,:)
-            real   (real_kind                ), intent(in) :: cell_volumes (:)
-            integer(int_kind                 ), intent(in) :: num_cells
             real   (real_kind                )             :: dt
+        end function get_constant_dt_interface
 
-            !interface
-            !    pure function spectral_radius_function(an_eos, variables) result(radius)
-            !        use typedef_module
-            !        use abstract_eos
-            !        class  (eos      ), intent(in) :: an_eos
-            !        real   (real_kind), intent(in) :: variables(:)
-            !        real   (real_kind)             :: radius
-            !    end function spectral_radius_function
-            !end interface
-        end function update_global_interface
+        pure function compute_local_dt_interface(self, cell_volume, spectral_radius) result(dt)
+            use typedef_module
+            import time_increment_controller
+
+            class  (time_increment_controller), intent(in) :: self
+            real   (real_kind                ), intent(in) :: cell_volume
+            real   (real_kind                ), intent(in) :: spectral_radius
+            real   (real_kind                )             :: dt
+        end function compute_local_dt_interface
+
+        pure function returns_constant_interface(self) result(ret)
+            import time_increment_controller
+
+            class  (time_increment_controller), intent(in) :: self
+            logical                                        :: ret
+        end function returns_constant_interface
     end interface
 end module abstract_time_increment_controller

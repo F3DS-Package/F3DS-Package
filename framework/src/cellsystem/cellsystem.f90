@@ -344,7 +344,21 @@ module class_cellsystem
             end function spectral_radius_function
         end interface
 
-        self%time_increment = controller%update_global(an_eos, variables_set, self%cell_volumes, self%num_cells)
+        integer(int_kind ) :: i
+
+        if ( controller%returns_constant() ) then
+            self%time_increment = controller%get_constant_dt()
+            return
+        end if
+
+        self%time_increment = large_value
+        do i = 1, self%num_cells, 1
+            associate(                                                     &
+                r => spectral_radius_function(an_eos, variables_set(:, i)) &
+            )
+                self%time_increment = min(controller%compute_local_dt(self%cell_volumes(i), r), self%time_increment)
+            end associate
+        end do
     end subroutine update_time_increment
 
     ! ### Termination criterion ###
