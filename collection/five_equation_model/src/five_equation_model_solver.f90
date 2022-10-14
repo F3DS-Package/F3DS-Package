@@ -27,8 +27,8 @@ program five_eq_model_solver
     use class_vtk_result_writer
     ! Termination criteria
     use class_end_time_criterion
-    ! Time incriment control
-    use class_constant_time_incriment_controller
+    ! Time increment control
+    use class_constant_time_increment_controller
     ! Parallel computing support
     use class_openmp_parallelizer
     ! Measurements
@@ -51,7 +51,7 @@ program five_eq_model_solver
     type(gauss_divergence                  ) :: a_divergence_calculator
     type(vtk_result_writer                 ) :: a_result_writer
     type(end_time_criterion                ) :: a_termination_criterion
-    type(constant_time_incriment_controller) :: a_time_incriment_controller
+    type(constant_time_increment_controller) :: a_time_increment_controller
     type(openmp_parallelizer               ) :: a_parallelizer
     type(line_plotter                      ) :: a_line_plotter
     type(control_volume_profiler           ) :: a_control_volume_profiler
@@ -92,7 +92,7 @@ program five_eq_model_solver
     call a_cellsystem%initialize(a_divergence_calculator    , a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(a_result_writer            , a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(a_termination_criterion    , a_configuration, num_conservative_variables, num_primitive_variables)
-    call a_cellsystem%initialize(a_time_incriment_controller, a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_time_increment_controller, a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(a_line_plotter             , a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(a_control_volume_profiler  , a_configuration, num_conservative_variables, num_primitive_variables)
     ! Initialize model
@@ -104,7 +104,7 @@ program five_eq_model_solver
 
     ! Timestepping loop
     do while ( .not. a_cellsystem%satisfies_termination_criterion(a_termination_criterion) )
-        call a_cellsystem%update_time_incriment(a_time_incriment_controller, an_eos, primitive_variables_set, spectral_radius)
+        call a_cellsystem%update_time_increment(a_time_increment_controller, an_eos, primitive_variables_set, spectral_radius)
 
         if ( a_cellsystem%is_writable(a_result_writer) ) then
             call write_result(a_cellsystem, a_result_writer)
@@ -119,7 +119,7 @@ program five_eq_model_solver
         end if
 
         print *, "Step "          , a_cellsystem%get_number_of_steps(), ", ", &
-                 "Time incriment ", a_cellsystem%get_time_increment() , ", ", &
+                 "Time increment ", a_cellsystem%get_time_increment() , ", ", &
                  "Time "          , a_cellsystem%get_time()
 
         call a_cellsystem%prepare_stepping(a_time_stepping, conservative_variables_set, primitive_variables_set, residual_set)
@@ -166,7 +166,7 @@ program five_eq_model_solver
             call a_cellsystem%compute_next_state(a_time_stepping, an_eos, state_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, conservative_to_primitive)
         end do
 
-        call a_cellsystem%incriment_time()
+        call a_cellsystem%increment_time()
     end do
 
     if ( a_cellsystem%is_writable(a_result_writer) ) then

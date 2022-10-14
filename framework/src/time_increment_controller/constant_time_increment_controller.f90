@@ -1,6 +1,6 @@
-module class_constant_time_incriment_controller
+module class_constant_time_increment_controller
     use typedef_module
-    use abstract_time_incriment_controller
+    use abstract_time_increment_controller
     use abstract_configuration
     use abstract_eos
     use stdio_module
@@ -9,7 +9,7 @@ module class_constant_time_incriment_controller
 
     private
 
-    type, public, extends(time_incriment_controller) :: constant_time_incriment_controller
+    type, public, extends(time_increment_controller) :: constant_time_increment_controller
         private
 
         real(real_kind) :: global_dt
@@ -18,22 +18,22 @@ module class_constant_time_incriment_controller
 
         procedure, public, pass(self) :: initialize
         procedure, public, pass(self) :: update_global
-    end type constant_time_incriment_controller
+    end type constant_time_increment_controller
 
     contains
 
     subroutine initialize(self, config)
-        class(constant_time_incriment_controller), intent(inout) :: self
+        class(constant_time_increment_controller), intent(inout) :: self
         class(configuration                     ), intent(inout) :: config
 
         logical :: found
 
-        call config%get_real("Time incriment control.dt", self%global_dt, found)
-        if(.not. found) call call_error("'Time incriment control.dt' is not found in configuration file you set.")
+        call config%get_real("Time increment control.dt", self%global_dt, found)
+        if(.not. found) call call_error("'Time increment control.dt' is not found in configuration file you set.")
     end subroutine initialize
 
     pure function update_global(self, an_eos, variables_set, cell_volumes, num_cells) result(dt)
-        class  (constant_time_incriment_controller), intent(in) :: self
+        class  (constant_time_increment_controller), intent(in) :: self
         class  (eos                               ), intent(in) :: an_eos
         real   (real_kind                         ), intent(in) :: variables_set(:,:)
         real   (real_kind                         ), intent(in) :: cell_volumes (:)
@@ -52,4 +52,4 @@ module class_constant_time_incriment_controller
 
         dt = self%global_dt
     end function update_global
-end module class_constant_time_incriment_controller
+end module class_constant_time_increment_controller

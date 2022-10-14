@@ -115,7 +115,7 @@ module class_vtk_result_writer
         class  (configuration    ), intent(inout) :: config
 
         integer(int_kind ) :: index, vtk_index, cell_point_index
-        integer(int_kind ) :: num_cell_points, offset_incriment
+        integer(int_kind ) :: num_cell_points, offset_increment
         integer(int_kind ) :: n_output
         logical :: found
 
@@ -133,7 +133,7 @@ module class_vtk_result_writer
 
         ! make vtk variables
         vtk_index = 1
-        offset_incriment = 0
+        offset_increment = 0
         do index = 1, num_cells, 1
             if(is_real_cell(index))then
                 num_cell_points = cell_geometries(index)%get_number_of_points()
@@ -142,8 +142,8 @@ module class_vtk_result_writer
                     self%connect((vtk_index - 1) * 8 + cell_point_index) = cell_geometries(index)%get_point_id(cell_point_index) - 1
                 end do
                 self%cell_type(vtk_index) = cell_types(index)
-                offset_incriment = offset_incriment + num_cell_points
-                self%offset   (vtk_index) = offset_incriment
+                offset_increment = offset_increment + num_cell_points
+                self%offset   (vtk_index) = offset_increment
                 self%cell_id  (vtk_index) = index
                 vtk_index = vtk_index + 1
             end if

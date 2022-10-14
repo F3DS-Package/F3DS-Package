@@ -64,7 +64,7 @@
     {
         "End time" : 0.2
     },
-    "Time incriment control" :
+    "Time increment control" :
     {
         "dt" : 0.002
     },

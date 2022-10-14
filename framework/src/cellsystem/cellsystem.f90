@@ -17,7 +17,7 @@ module class_cellsystem
     use abstract_gradient_calculator
     use abstract_divergence_calculator
     use abstract_termination_criterion
-    use abstract_time_incriment_controller
+    use abstract_time_increment_controller
     use abstract_initial_condition_parser
     use abstract_model
     use class_line_plotter
@@ -145,7 +145,7 @@ module class_cellsystem
         procedure, public, pass(self) :: variables_initialize
         procedure, public, pass(self) :: variables_1darray_initialize
         procedure, public, pass(self) :: termination_criterion_initialize
-        procedure, public, pass(self) :: time_incriment_controller_initialize
+        procedure, public, pass(self) :: time_increment_controller_initialize
         procedure, public, pass(self) :: divergence_calculator_initialize
         procedure, public, pass(self) :: line_plotter_initialize
         procedure, public, pass(self) :: control_volume_profiler_initialize
@@ -159,7 +159,7 @@ module class_cellsystem
                                                         variables_initialize                , &
                                                         variables_1darray_initialize        , &
                                                         termination_criterion_initialize    , &
-                                                        time_incriment_controller_initialize, &
+                                                        time_increment_controller_initialize, &
                                                         divergence_calculator_initialize    , &
                                                         line_plotter_initialize             , &
                                                         control_volume_profiler_initialize  , &
@@ -187,8 +187,8 @@ module class_cellsystem
         generic  , public             :: processes_variables_set => processes_variables_set_single_array, &
                                                                     processes_variables_set_two_array
 
-        ! ### Time incriment control ###
-        procedure, public, pass(self) :: update_time_incriment
+        ! ### Time increment control ###
+        procedure, public, pass(self) :: update_time_increment
 
         ! ### Termination criterion ###
         procedure, public, pass(self) :: satisfies_termination_criterion
@@ -230,7 +230,7 @@ module class_cellsystem
 
         ! ### Cellsystem ###
         procedure, public, pass(self) :: read
-        procedure, public, pass(self) :: incriment_time
+        procedure, public, pass(self) :: increment_time
 
         ! ### Getter ###
         procedure, public, pass(self) :: get_number_of_faces
@@ -318,19 +318,19 @@ module class_cellsystem
         juge = plotter%is_writable(self%time)
     end function line_plotter_is_writable
 
-    ! ### Time incriment control ###
-    subroutine time_incriment_controller_initialize(self, controller, config, num_conservative_variables, num_primitive_variables)
+    ! ### Time increment control ###
+    subroutine time_increment_controller_initialize(self, controller, config, num_conservative_variables, num_primitive_variables)
         class(cellsystem               ), intent(inout) :: self
-        class(time_incriment_controller), intent(inout) :: controller
+        class(time_increment_controller), intent(inout) :: controller
         class(configuration            ), intent(inout) :: config
         integer(int_kind               ), intent(in   ) :: num_conservative_variables
         integer(int_kind               ), intent(in   ) :: num_primitive_variables
         call controller%initialize(config)
-    end subroutine time_incriment_controller_initialize
+    end subroutine time_increment_controller_initialize
 
-    subroutine update_time_incriment(self, controller, an_eos, variables_set, spectral_radius_function)
+    subroutine update_time_increment(self, controller, an_eos, variables_set, spectral_radius_function)
         class  (cellsystem               ), intent(inout) :: self
-        class  (time_incriment_controller), intent(in   ) :: controller
+        class  (time_increment_controller), intent(in   ) :: controller
         class  (eos                      ), intent(in   ) :: an_eos
         real   (real_kind                ), intent(in   ) :: variables_set(:,:)
 
@@ -345,7 +345,7 @@ module class_cellsystem
         end interface
 
         self%time_increment = controller%update_global(an_eos, variables_set, self%cell_volumes, self%num_cells)
-    end subroutine update_time_incriment
+    end subroutine update_time_increment
 
     ! ### Termination criterion ###
     subroutine termination_criterion_initialize(self, criterion, config, num_conservative_variables, num_primitive_variables)
@@ -1321,11 +1321,11 @@ module class_cellsystem
         self%read_cellsystem = .true.
     end subroutine read
 
-    subroutine incriment_time(self)
+    subroutine increment_time(self)
         class(cellsystem), intent(inout) :: self
         self%time = self%time + self%time_increment
         self%num_steps = self%num_steps + 1
-    end subroutine incriment_time
+    end subroutine increment_time
 
     ! ### Getter ###
     pure function get_number_of_faces(self) result(n)
