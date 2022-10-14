@@ -41,9 +41,10 @@ module class_constant_time_increment_controller
         dt = self%constant_dt
     end function get_constant_dt
 
-    pure function compute_local_dt(self, cell_volume, spectral_radius) result(dt)
+    pure function compute_local_dt(self, cell_volume, surface_area, spectral_radius) result(dt)
         class  (constant_time_increment_controller), intent(in) :: self
         real   (real_kind                         ), intent(in) :: cell_volume
+        real   (real_kind                         ), intent(in) :: surface_area
         real   (real_kind                         ), intent(in) :: spectral_radius
         real   (real_kind                         )             :: dt
 

@@ -352,11 +352,15 @@ module class_cellsystem
         end if
 
         self%time_increment = large_value
-        do i = 1, self%num_cells, 1
-            associate(                                                     &
-                r => spectral_radius_function(an_eos, variables_set(:, i)) &
+        do i = 1, self%num_faces, 1
+            associate(                                                                                                             &
+                lhc_r => spectral_radius_function(an_eos, variables_set(:, self%face_to_cell_indexes(self%num_local_cells+0, i))), &
+                rhc_r => spectral_radius_function(an_eos, variables_set(:, self%face_to_cell_indexes(self%num_local_cells+1, i))), &
+                lhc_v => self%cell_volumes                                (self%face_to_cell_indexes(self%num_local_cells+0, i)) , &
+                rhc_v => self%cell_volumes                                (self%face_to_cell_indexes(self%num_local_cells+1, i)) , &
+                s     => self%face_areas                                                                                    (i)    &
             )
-                self%time_increment = min(controller%compute_local_dt(self%cell_volumes(i), r), self%time_increment)
+                self%time_increment = min(controller%compute_local_dt(lhc_v, s, lhc_r), controller%compute_local_dt(rhc_v, s, rhc_r), self%time_increment)
             end associate
         end do
     end subroutine update_time_increment
