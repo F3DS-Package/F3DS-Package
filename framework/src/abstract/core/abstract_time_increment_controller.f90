@@ -21,7 +21,7 @@ module abstract_time_increment_controller
             class(configuration            ), intent(inout) :: config
         end subroutine initialize_interface
 
-        pure function get_constant_dt_interface(self) result(dt)
+        function get_constant_dt_interface(self) result(dt)
             use typedef_module
             import time_increment_controller
 

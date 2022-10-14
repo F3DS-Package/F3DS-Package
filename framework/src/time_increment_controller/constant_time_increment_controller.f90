@@ -34,7 +34,7 @@ module class_constant_time_increment_controller
         if(.not. found) call call_error("'Time increment control.dt' is not found in configuration file you set.")
     end subroutine initialize
 
-    pure function get_constant_dt(self) result(dt)
+    function get_constant_dt(self) result(dt)
         class  (constant_time_increment_controller), intent(in) :: self
         real   (real_kind                         )             :: dt
 
