@@ -9,11 +9,11 @@ module time_stepping_generator_module
 
     private
 
-    public :: default_time_stepping_generator
+    public :: f3ds_time_stepping_generator
 
-    interface default_time_stepping_generator
+    interface f3ds_time_stepping_generator
         module procedure with_config, with_name
-    end interface default_time_stepping_generator
+    end interface f3ds_time_stepping_generator
 
     contains
 

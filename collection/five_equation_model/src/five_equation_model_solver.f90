@@ -70,7 +70,7 @@ program five_eq_model_solver
     call a_configuration%parse("config.json")
 
     ! Allocate schemes
-    call default_time_stepping_generator            (a_configuration, a_time_stepping            )
+    call f3ds_time_stepping_generator               (a_configuration, a_time_stepping            )
     call five_equation_model_reconstructor_generator(a_configuration, a_reconstructor            )
     call f3ds_time_increment_controller_generator   (a_configuration, a_time_increment_controller)
 

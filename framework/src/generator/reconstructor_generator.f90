@@ -9,11 +9,11 @@ module reconstructor_generator_module
 
     private
 
-    public :: default_reconstructor_generator
+    public :: f3ds_reconstructor_generator
 
-    interface default_reconstructor_generator
+    interface f3ds_reconstructor_generator
         module procedure with_config, with_name
-    end interface default_reconstructor_generator
+    end interface f3ds_reconstructor_generator
 
     contains
 
