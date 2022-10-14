@@ -24,8 +24,8 @@ module time_increment_controller_generator_module
         logical          :: found
         character(len=:), allocatable :: name
 
-        call config%get_char("Time incriment control.Controller name", name, found)
-        if(.not. found) call call_error("'Time incriment control.Controller name' is not found in configuration file you set.")
+        call config%get_char("Time increment control.Controller name", name, found)
+        if(.not. found) call call_error("'Time increment control.Controller name' is not found in configuration file you set.")
 
         call with_name(name, controller)
     end subroutine with_config

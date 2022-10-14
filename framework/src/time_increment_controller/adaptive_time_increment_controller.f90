@@ -30,8 +30,8 @@ module class_adaptive_time_increment_controller
 
         logical :: found
 
-        call config%get_real("Time increment control.Courant number", self%courant_number, found)
-        if(.not. found) call call_error("'Time increment control.Courant number' is not found in configuration file you set.")
+        call config%get_real("Time increment control.Adaptive controller.Courant number", self%courant_number, found)
+        if(.not. found) call call_error("'Time increment control.Adaptive controller.Courant number' is not found in configuration file you set.")
     end subroutine initialize
 
     function get_constant_dt(self) result(dt)

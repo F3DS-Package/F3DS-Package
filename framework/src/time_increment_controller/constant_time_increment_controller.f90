@@ -30,8 +30,8 @@ module class_constant_time_increment_controller
 
         logical :: found
 
-        call config%get_real("Time increment control.dt", self%constant_dt, found)
-        if(.not. found) call call_error("'Time increment control.dt' is not found in configuration file you set.")
+        call config%get_real("Time increment control.Constant controller.dt", self%constant_dt, found)
+        if(.not. found) call call_error("'Time increment control.Constant controller.dt' is not found in configuration file you set.")
     end subroutine initialize
 
     function get_constant_dt(self) result(dt)
