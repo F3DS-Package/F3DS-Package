@@ -1,9 +1,10 @@
 module class_nlgrid_parser
     use, intrinsic :: iso_fortran_env
     use json_module
+    use abstract_configuration
     use typedef_module
     use stdio_module
-    use boundary_type_module
+    use face_type_module
     use grid_utils_module
     use abstract_grid_parser
     use class_point_id_list
@@ -45,9 +46,9 @@ module class_nlgrid_parser
         real(real_kind), private, allocatable :: y_poss_cell_edge(:,:,:)
         real(real_kind), private, allocatable :: z_poss_cell_edge(:,:,:)
 
-        integer(kind(boundary_type)), private :: x_plus_direction, x_minus_direction
-        integer(kind(boundary_type)), private :: y_plus_direction, y_minus_direction
-        integer(kind(boundary_type)), private :: z_plus_direction, z_minus_direction
+        integer(kind(face_type)), private :: x_plus_direction, x_minus_direction
+        integer(kind(face_type)), private :: y_plus_direction, y_minus_direction
+        integer(kind(face_type)), private :: z_plus_direction, z_minus_direction
 
         logical, private :: parsed = .false.
 
@@ -60,9 +61,7 @@ module class_nlgrid_parser
         procedure, pass(self) :: get_number_of_faces
         procedure, pass(self) :: get_number_of_ghost_cells
 
-        procedure, pass(self) :: get_number_of_outflow_faces
-        procedure, pass(self) :: get_number_of_slipwall_faces
-        procedure, pass(self) :: get_number_of_symmetric_faces
+        procedure, pass(self) :: get_number_of_boundary_faces
         procedure, pass(self) :: get_number_of_points
 
         procedure, pass(self) :: get_cells
@@ -76,14 +75,13 @@ module class_nlgrid_parser
         procedure, private, pass(self) :: assign_lower_x_face
         procedure, private, pass(self) :: assign_lower_y_face
         procedure, private, pass(self) :: assign_lower_z_face
-        procedure, private, pass(self) :: assign_boundary
     end type nlgrid_parser
 
     contains
 
-    subroutine parse(self, filepath)
-        class    (nlgrid_parser), intent(inout) :: self
-        character(len=*)        , intent(in   ) :: filepath
+    subroutine parse(self, config)
+        class(nlgrid_parser), intent(inout) :: self
+        class(configuration), intent(inout) :: config
 
         integer(int_kind)  :: i,j,k,n
         integer(int_kind)  :: unit_number
@@ -91,15 +89,17 @@ module class_nlgrid_parser
 
         type(json_file) :: json
         character(len=:), allocatable :: error_msg
-        logical :: status_ok, found
-        character(kind=json_CK,len=:), allocatable :: string_value
+        logical :: found, status_ok
+        character(len=:), allocatable :: string_value
 
         if(self%parsed)then
             call call_error("'parse' method of nlgrid_parser is already called. But you call 'parse' method.")
         end if
 
         ! Real a grid file
-        open(newunit=unit_number, file=filepath, access = 'stream', form = 'unformatted', status = 'old')
+        call config%get_char("Grid.Filepath", string_value, found, "grid.nlgrid")
+        if(.not. found) call write_warring("'Grid.Filepath' is not found in configuration you set. To be set default value.")
+        open(newunit=unit_number, file=string_value, access = 'stream', form = 'unformatted', status = 'old')
         read(unit_number) self%imin, self%jmin, self%kmin
         read(unit_number) self%imax, self%jmax, self%kmax
         read(unit_number) dtheta
@@ -163,7 +163,9 @@ module class_nlgrid_parser
         ! Read a boundary condition infomation
         call json%initialize()
 
-        call json%load(filename="boundary_condition.json")
+        call config%get_char("Grid.Boundary condition filepath", string_value, found, "boundary_condition.json")
+        if(.not. found) call write_warring("'Grid.Boundary condition filepath' is not found in configuration you set. To be set default value.")
+        call json%load(filename=string_value)
         if (json%failed()) then
             call json%check_for_errors(status_ok, error_msg)
             call json%clear_exceptions()
@@ -173,38 +175,38 @@ module class_nlgrid_parser
             print *, error_msg
             print *, "---------------------------------"
 #endif
-            call call_error("Can not read boundary_condition.json that is writen boundary condition infomation.")
+            call call_error("Can not read boundary condition file.")
         end if
 
         call json%get("Xi plus direction", string_value, found)
         if(.not. found) call call_error("Keyword 'Xi plus direction' is not found.")
-        self%x_plus_direction = string_to_boundary_type(string_value)
-        if(self%x_plus_direction == unknown_boundary_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
+        self%x_plus_direction = string_to_face_type(string_value)
+        if(self%x_plus_direction == unknown_face_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
 
         call json%get("Xi minus direction", string_value, found)
         if(.not. found) call call_error("Keyword 'Xi minus direction' is not found.")
-        self%x_minus_direction = string_to_boundary_type(string_value)
-        if(self%x_minus_direction == unknown_boundary_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
+        self%x_minus_direction = string_to_face_type(string_value)
+        if(self%x_minus_direction == unknown_face_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
 
         call json%get("Eta plus direction", string_value, found)
         if(.not. found) call call_error("Keyword 'Eta plus direction' is not found.")
-        self%y_plus_direction = string_to_boundary_type(string_value)
-        if(self%y_plus_direction == unknown_boundary_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
+        self%y_plus_direction = string_to_face_type(string_value)
+        if(self%y_plus_direction == unknown_face_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
 
         call json%get("Eta minus direction", string_value, found)
         if(.not. found) call call_error("Keyword 'Eta minus direction' is not found.")
-        self%y_minus_direction = string_to_boundary_type(string_value)
-        if(self%y_minus_direction == unknown_boundary_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
+        self%y_minus_direction = string_to_face_type(string_value)
+        if(self%y_minus_direction == unknown_face_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
 
         call json%get("Zeta plus direction", string_value, found)
         if(.not. found) call call_error("Keyword 'Zeta plus direction' is not found.")
-        self%z_plus_direction = string_to_boundary_type(string_value)
-        if(self%z_plus_direction == unknown_boundary_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
+        self%z_plus_direction = string_to_face_type(string_value)
+        if(self%z_plus_direction == unknown_face_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
 
         call json%get("Zeta minus direction", string_value, found)
         if(.not. found) call call_error("Keyword 'Zeta minus direction' is not found.")
-        self%z_minus_direction = string_to_boundary_type(string_value)
-        if(self%z_minus_direction == unknown_boundary_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
+        self%z_minus_direction = string_to_face_type(string_value)
+        if(self%z_minus_direction == unknown_face_type) call call_error("Unknown boundary type '"//string_value//"' is found.")
 
         call json%destroy()
 
@@ -279,9 +281,11 @@ module class_nlgrid_parser
         n = self%num_ghost_cells_ ! nlgrid format is followed only 2 ghost cell. But we extend to 3 ghost cell system.
     end function get_number_of_ghost_cells
 
-    function get_number_of_outflow_faces(self) result(n)
-        class  (nlgrid_parser), intent(in) :: self
-        integer(int_kind     )             :: n
+    function get_number_of_boundary_faces(self, type) result(n)
+        class  (nlgrid_parser)      , intent(in) :: self
+        integer(kind(face_type)), intent(in) :: type
+
+        integer(int_kind) :: n
 
         if(.not. self%parsed)then
             call call_error("'parse' method of nlgrid_parser is not called yet. But you call 'get_number_of_outflow_faces' method.")
@@ -289,49 +293,13 @@ module class_nlgrid_parser
 
         n = 0
 
-        if(self%x_plus_direction   == outflow_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
-        if(self%y_plus_direction   == outflow_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
-        if(self%z_plus_direction   == outflow_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
-        if(self%x_minus_direction == outflow_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
-        if(self%y_minus_direction == outflow_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
-        if(self%z_minus_direction == outflow_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
-    end function get_number_of_outflow_faces
-
-    function get_number_of_slipwall_faces(self) result(n)
-        class  (nlgrid_parser), intent(in) :: self
-        integer(int_kind     )             :: n
-
-        if(.not. self%parsed)then
-            call call_error("'parse' method of nlgrid_parser is not called yet. But you call 'get_number_of_slipwall_faces' method.")
-        end if
-
-        n = 0
-
-        if(self%x_plus_direction   == slipwall_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
-        if(self%y_plus_direction   == slipwall_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
-        if(self%z_plus_direction   == slipwall_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
-        if(self%x_minus_direction == slipwall_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
-        if(self%y_minus_direction == slipwall_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
-        if(self%z_minus_direction == slipwall_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
-    end function get_number_of_slipwall_faces
-
-    function get_number_of_symmetric_faces(self) result(n)
-        class  (nlgrid_parser), intent(in) :: self
-        integer(int_kind     )             :: n
-
-        if(.not. self%parsed)then
-            call call_error("'parse' method of nlgrid_parser is not called yet. But you call 'get_number_of_symmetric_faces' method.")
-        end if
-
-        n = 0
-
-        if(self%x_plus_direction   == symmetric_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
-        if(self%y_plus_direction   == symmetric_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
-        if(self%z_plus_direction   == symmetric_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
-        if(self%x_minus_direction == symmetric_boundary_type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
-        if(self%y_minus_direction == symmetric_boundary_type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
-        if(self%z_minus_direction == symmetric_boundary_type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
-    end function get_number_of_symmetric_faces
+        if(self%x_plus_direction  == type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
+        if(self%y_plus_direction  == type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
+        if(self%z_plus_direction  == type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
+        if(self%x_minus_direction == type) n = n + (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1)
+        if(self%y_minus_direction == type) n = n + (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1)
+        if(self%z_minus_direction == type) n = n + (self%imax - self%imin + 1) * (self%jmax - self%jmin + 1)
+    end function get_number_of_boundary_faces
 
     function get_number_of_points(self) result(n)
         class  (nlgrid_parser), intent(in) :: self
@@ -365,9 +333,9 @@ module class_nlgrid_parser
                     n = convert_structure_index_to_unstructure_index(i, j, k,                            &
                         self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
                         self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-                    centor_positions(n, 1) = self%x_poss_cell_cent(i, j, k)
-                    centor_positions(n, 2) = self%y_poss_cell_cent(i, j, k)
-                    centor_positions(n, 3) = self%z_poss_cell_cent(i, j, k)
+                    centor_positions(1, n) = self%x_poss_cell_cent(i, j, k)
+                    centor_positions(2, n) = self%y_poss_cell_cent(i, j, k)
+                    centor_positions(3, n) = self%z_poss_cell_cent(i, j, k)
                     volumes         (n)    = self%cell_vols       (i, j, k)
                     is_real_cell    (n)    = .true.
                 end do
@@ -397,9 +365,9 @@ module class_nlgrid_parser
                                                  + self%z_poss_cell_cent(self%imin-1, j  , k-1) &
                                                  + self%z_poss_cell_cent(self%imin-1, j-1, k-1))&
                                         - self%z_poss_cell_cent(self%imin, j, k)
-                    centor_positions(n, 1) = self%x_poss_cell_cent(self%imin, j, k) + 2.d0 * dble(i) * cell_to_face_vec(1)
-                    centor_positions(n, 2) = self%y_poss_cell_cent(self%imin, j, k) + 2.d0 * dble(i) * cell_to_face_vec(2)
-                    centor_positions(n, 3) = self%z_poss_cell_cent(self%imin, j, k) + 2.d0 * dble(i) * cell_to_face_vec(3)
+                    centor_positions(1, n) = self%x_poss_cell_cent(self%imin, j, k) + 2.d0 * dble(i) * cell_to_face_vec(1)
+                    centor_positions(2, n) = self%y_poss_cell_cent(self%imin, j, k) + 2.d0 * dble(i) * cell_to_face_vec(2)
+                    centor_positions(3, n) = self%z_poss_cell_cent(self%imin, j, k) + 2.d0 * dble(i) * cell_to_face_vec(3)
                     volumes         (n) = self%cell_vols(self%imin, j, k)
                     ! x+
                     n = convert_structure_index_to_unstructure_index(self%imax + i, j, k,                &
@@ -420,9 +388,9 @@ module class_nlgrid_parser
                                                  + self%z_poss_cell_cent(self%imax, j  , k-1) &
                                                  + self%z_poss_cell_cent(self%imax, j-1, k-1))&
                                         - self%z_poss_cell_cent(self%imax, j, k)
-                    centor_positions(n, 1) = self%x_poss_cell_cent(self%imax, j, k) + 2.d0 * dble(i) * cell_to_face_vec(1)
-                    centor_positions(n, 2) = self%y_poss_cell_cent(self%imax, j, k) + 2.d0 * dble(i) * cell_to_face_vec(2)
-                    centor_positions(n, 3) = self%z_poss_cell_cent(self%imax, j, k) + 2.d0 * dble(i) * cell_to_face_vec(3)
+                    centor_positions(1, n) = self%x_poss_cell_cent(self%imax, j, k) + 2.d0 * dble(i) * cell_to_face_vec(1)
+                    centor_positions(2, n) = self%y_poss_cell_cent(self%imax, j, k) + 2.d0 * dble(i) * cell_to_face_vec(2)
+                    centor_positions(3, n) = self%z_poss_cell_cent(self%imax, j, k) + 2.d0 * dble(i) * cell_to_face_vec(3)
                     volumes         (n) = self%cell_vols(self%imax, j, k)
                 end do
             end do
@@ -451,9 +419,9 @@ module class_nlgrid_parser
                                                  + self%z_poss_cell_cent(i  , self%jmin-1, k-1) &
                                                  + self%z_poss_cell_cent(i-1, self%jmin-1, k-1))&
                                         - self%z_poss_cell_cent(self%jmin, j, k)
-                    centor_positions(n, 1) = self%x_poss_cell_cent(i, self%jmin, k) + 2.d0 * dble(j) * cell_to_face_vec(1)
-                    centor_positions(n, 2) = self%y_poss_cell_cent(i, self%jmin, k) + 2.d0 * dble(j) * cell_to_face_vec(2)
-                    centor_positions(n, 3) = self%z_poss_cell_cent(i, self%jmin, k) + 2.d0 * dble(j) * cell_to_face_vec(3)
+                    centor_positions(1, n) = self%x_poss_cell_cent(i, self%jmin, k) + 2.d0 * dble(j) * cell_to_face_vec(1)
+                    centor_positions(2, n) = self%y_poss_cell_cent(i, self%jmin, k) + 2.d0 * dble(j) * cell_to_face_vec(2)
+                    centor_positions(3, n) = self%z_poss_cell_cent(i, self%jmin, k) + 2.d0 * dble(j) * cell_to_face_vec(3)
                     volumes         (n)    = self%cell_vols(i, self%jmin, k)
                     ! y+
                     n = convert_structure_index_to_unstructure_index(i, self%jmax + j, k,                &
@@ -474,9 +442,9 @@ module class_nlgrid_parser
                                                  + self%z_poss_cell_cent(i  , self%jmax, k-1) &
                                                  + self%z_poss_cell_cent(i-1, self%jmax, k-1))&
                                         - self%z_poss_cell_cent(self%jmax, j, k)
-                    centor_positions(n, 1) = self%x_poss_cell_cent(i, self%jmax, k) + 2.d0 * dble(j) * cell_to_face_vec(1)
-                    centor_positions(n, 2) = self%y_poss_cell_cent(i, self%jmax, k) + 2.d0 * dble(j) * cell_to_face_vec(2)
-                    centor_positions(n, 3) = self%z_poss_cell_cent(i, self%jmax, k) + 2.d0 * dble(j) * cell_to_face_vec(3)
+                    centor_positions(1, n) = self%x_poss_cell_cent(i, self%jmax, k) + 2.d0 * dble(j) * cell_to_face_vec(1)
+                    centor_positions(2, n) = self%y_poss_cell_cent(i, self%jmax, k) + 2.d0 * dble(j) * cell_to_face_vec(2)
+                    centor_positions(3, n) = self%z_poss_cell_cent(i, self%jmax, k) + 2.d0 * dble(j) * cell_to_face_vec(3)
                     volumes         (n)    = self%cell_vols(i, self%jmax, k)
                 end do
             end do
@@ -505,9 +473,9 @@ module class_nlgrid_parser
                                                  + self%z_poss_cell_cent(i  , j-1, self%kmin-1) &
                                                  + self%z_poss_cell_cent(i-1, j-1, self%kmin-1))&
                                         - self%z_poss_cell_cent(self%kmin, j, k)
-                    centor_positions(n, 1) = self%x_poss_cell_cent(i, j, self%kmin) + 2.d0 * dble(k) * cell_to_face_vec(1)
-                    centor_positions(n, 2) = self%y_poss_cell_cent(i, j, self%kmin) + 2.d0 * dble(k) * cell_to_face_vec(2)
-                    centor_positions(n, 3) = self%z_poss_cell_cent(i, j, self%kmin) + 2.d0 * dble(k) * cell_to_face_vec(3)
+                    centor_positions(1, n) = self%x_poss_cell_cent(i, j, self%kmin) + 2.d0 * dble(k) * cell_to_face_vec(1)
+                    centor_positions(2, n) = self%y_poss_cell_cent(i, j, self%kmin) + 2.d0 * dble(k) * cell_to_face_vec(2)
+                    centor_positions(3, n) = self%z_poss_cell_cent(i, j, self%kmin) + 2.d0 * dble(k) * cell_to_face_vec(3)
                     volumes         (n)    = self%cell_vols(i, j, self%kmin)
                     ! z+
                     n = convert_structure_index_to_unstructure_index(i, j, self%kmax + k,                &
@@ -528,9 +496,9 @@ module class_nlgrid_parser
                                                  + self%z_poss_cell_cent(i  , j-1, self%kmax) &
                                                  + self%z_poss_cell_cent(i-1, j-1, self%kmax))&
                                         - self%z_poss_cell_cent(self%kmax, j, k)
-                    centor_positions(n, 1) = self%x_poss_cell_cent(i, j, self%kmax) + 2.d0 * dble(j) * cell_to_face_vec(1)
-                    centor_positions(n, 2) = self%y_poss_cell_cent(i, j, self%kmax) + 2.d0 * dble(j) * cell_to_face_vec(2)
-                    centor_positions(n, 3) = self%z_poss_cell_cent(i, j, self%kmax) + 2.d0 * dble(j) * cell_to_face_vec(3)
+                    centor_positions(1, n) = self%x_poss_cell_cent(i, j, self%kmax) + 2.d0 * dble(j) * cell_to_face_vec(1)
+                    centor_positions(2, n) = self%y_poss_cell_cent(i, j, self%kmax) + 2.d0 * dble(j) * cell_to_face_vec(2)
+                    centor_positions(3, n) = self%z_poss_cell_cent(i, j, self%kmax) + 2.d0 * dble(j) * cell_to_face_vec(3)
                     volumes         (n)    = self%cell_vols(i, j, self%kmax)
                 end do
             end do
@@ -610,41 +578,41 @@ module class_nlgrid_parser
         integer(int_kind     ), intent(in   ) :: i, j, k
 
         ! ## cell i,j,k +z face
-        normal_vectors     (face_index, 1:3) = self%normal_vecs_k_drct_face(i, j, k, 1:3)
-        tangential1_vectors(face_index, 1:3) = self%tan1_vecs_k_drct_face  (i, j, k, 1:3)
-        tangential2_vectors(face_index, 1:3) = self%tan2_vecs_k_drct_face  (i, j, k, 1:3)
-        areas              (face_index     ) = self%areas_k_drct_face      (i, j, k     )
-        positions          (face_index, 1  ) = 0.25d0 *( &
+        normal_vectors     (1:3, face_index) = self%normal_vecs_k_drct_face(i, j, k, 1:3)
+        tangential1_vectors(1:3, face_index) = self%tan1_vecs_k_drct_face  (i, j, k, 1:3)
+        tangential2_vectors(1:3, face_index) = self%tan2_vecs_k_drct_face  (i, j, k, 1:3)
+        areas              (     face_index) = self%areas_k_drct_face      (i, j, k     )
+        positions          (1,   face_index) = 0.25d0 *( &
             + self%x_poss_cell_edge(i    , j    , k) &
             + self%x_poss_cell_edge(i - 1, j    , k) &
             + self%x_poss_cell_edge(i    , j - 1, k) &
             + self%x_poss_cell_edge(i - 1, j - 1, k) )
-        positions          (face_index, 2  ) = 0.25d0 *( &
+        positions          (2,   face_index) = 0.25d0 *( &
             + self%y_poss_cell_edge(i    , j    , k) &
             + self%y_poss_cell_edge(i - 1, j    , k) &
             + self%y_poss_cell_edge(i    , j - 1, k) &
             + self%y_poss_cell_edge(i - 1, j - 1, k) )
-        positions          (face_index, 3  ) = 0.25d0 *( &
+        positions          (3,   face_index) = 0.25d0 *( &
             + self%z_poss_cell_edge(i    , j    , k) &
             + self%z_poss_cell_edge(i - 1, j    , k) &
             + self%z_poss_cell_edge(i    , j - 1, k) &
             + self%z_poss_cell_edge(i - 1, j - 1, k) )
-        reference_cell_indexs(face_index, 1) = convert_structure_index_to_unstructure_index(i, j, k - 2,&
+        reference_cell_indexs(1, face_index) = convert_structure_index_to_unstructure_index(i, j, k - 2,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 2) = convert_structure_index_to_unstructure_index(i, j, k - 1,&
+        reference_cell_indexs(2, face_index) = convert_structure_index_to_unstructure_index(i, j, k - 1,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 3) = convert_structure_index_to_unstructure_index(i, j, k,&
+        reference_cell_indexs(3, face_index) = convert_structure_index_to_unstructure_index(i, j, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 4) = convert_structure_index_to_unstructure_index(i, j, k + 1,&
+        reference_cell_indexs(4, face_index) = convert_structure_index_to_unstructure_index(i, j, k + 1,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 5) = convert_structure_index_to_unstructure_index(i, j, k + 2,&
+        reference_cell_indexs(5, face_index) = convert_structure_index_to_unstructure_index(i, j, k + 2,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 6) = convert_structure_index_to_unstructure_index(i, j, k + 3,&
+        reference_cell_indexs(6, face_index) = convert_structure_index_to_unstructure_index(i, j, k + 3,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
         face_index = face_index + 1
@@ -663,41 +631,41 @@ module class_nlgrid_parser
         integer(int_kind     ), intent(in   ) :: i, j, k
 
         ! ## cell i,j,k +y face
-        normal_vectors     (face_index, 1:3) = self%normal_vecs_j_drct_face(i, j, k, 1:3)
-        tangential1_vectors(face_index, 1:3) = self%tan1_vecs_j_drct_face  (i, j, k, 1:3)
-        tangential2_vectors(face_index, 1:3) = self%tan2_vecs_j_drct_face  (i, j, k, 1:3)
-        areas              (face_index     ) = self%areas_j_drct_face      (i, j, k     )
-        positions          (face_index, 1  ) = 0.25d0 *( &
+        normal_vectors     (1:3, face_index) = self%normal_vecs_j_drct_face(i, j, k, 1:3)
+        tangential1_vectors(1:3, face_index) = self%tan1_vecs_j_drct_face  (i, j, k, 1:3)
+        tangential2_vectors(1:3, face_index) = self%tan2_vecs_j_drct_face  (i, j, k, 1:3)
+        areas              (     face_index) = self%areas_j_drct_face      (i, j, k     )
+        positions          (1  , face_index) = 0.25d0 *( &
             + self%x_poss_cell_edge(i    , j, k    ) &
             + self%x_poss_cell_edge(i - 1, j, k    ) &
             + self%x_poss_cell_edge(i    , j, k - 1) &
             + self%x_poss_cell_edge(i - 1, j, k - 1) )
-        positions          (face_index, 2  ) = 0.25d0 *( &
+        positions          (2,   face_index) = 0.25d0 *( &
             + self%y_poss_cell_edge(i    , j, k    ) &
             + self%y_poss_cell_edge(i - 1, j, k    ) &
             + self%y_poss_cell_edge(i    , j, k - 1) &
             + self%y_poss_cell_edge(i - 1, j, k - 1) )
-        positions          (face_index, 3  ) = 0.25d0 *( &
+        positions          (3,   face_index) = 0.25d0 *( &
             + self%z_poss_cell_edge(i    , j, k    ) &
             + self%z_poss_cell_edge(i - 1, j, k    ) &
             + self%z_poss_cell_edge(i    , j, k - 1) &
             + self%z_poss_cell_edge(i - 1, j, k - 1) )
-        reference_cell_indexs(face_index, 1) = convert_structure_index_to_unstructure_index(i, j - 2, k,&
+        reference_cell_indexs(1, face_index) = convert_structure_index_to_unstructure_index(i, j - 2, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 2) = convert_structure_index_to_unstructure_index(i, j - 1, k,&
+        reference_cell_indexs(2, face_index) = convert_structure_index_to_unstructure_index(i, j - 1, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 3) = convert_structure_index_to_unstructure_index(i, j, k,&
+        reference_cell_indexs(3, face_index) = convert_structure_index_to_unstructure_index(i, j, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 4) = convert_structure_index_to_unstructure_index(i, j + 1, k,&
+        reference_cell_indexs(4, face_index) = convert_structure_index_to_unstructure_index(i, j + 1, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 5) = convert_structure_index_to_unstructure_index(i, j + 2, k,&
+        reference_cell_indexs(5, face_index) = convert_structure_index_to_unstructure_index(i, j + 2, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 6) = convert_structure_index_to_unstructure_index(i, j + 3, k,&
+        reference_cell_indexs(6, face_index) = convert_structure_index_to_unstructure_index(i, j + 3, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
         face_index = face_index + 1
@@ -716,41 +684,41 @@ module class_nlgrid_parser
         integer(int_kind     ), intent(in   ) :: i, j, k
 
         ! ## cell i,j,k +x face
-        normal_vectors     (face_index, 1:3) = self%normal_vecs_i_drct_face(i, j, k, 1:3)
-        tangential1_vectors(face_index, 1:3) = self%tan1_vecs_i_drct_face  (i, j, k, 1:3)
-        tangential2_vectors(face_index, 1:3) = self%tan2_vecs_i_drct_face  (i, j, k, 1:3)
+        normal_vectors     (1:3, face_index) = self%normal_vecs_i_drct_face(i, j, k, 1:3)
+        tangential1_vectors(1:3, face_index) = self%tan1_vecs_i_drct_face  (i, j, k, 1:3)
+        tangential2_vectors(1:3, face_index) = self%tan2_vecs_i_drct_face  (i, j, k, 1:3)
         areas              (     face_index) = self%areas_i_drct_face      (i, j, k     )
-        positions          (face_index, 1  ) = 0.25d0 *( &
+        positions          (1  , face_index) = 0.25d0 *( &
             + self%x_poss_cell_edge(i, j    , k    ) &
             + self%x_poss_cell_edge(i, j - 1, k    ) &
             + self%x_poss_cell_edge(i, j    , k - 1) &
             + self%x_poss_cell_edge(i, j - 1, k - 1) )
-        positions          (face_index, 2  ) = 0.25d0 *( &
+        positions          (2,   face_index) = 0.25d0 *( &
             + self%y_poss_cell_edge(i, j    , k    ) &
             + self%y_poss_cell_edge(i, j - 1, k    ) &
             + self%y_poss_cell_edge(i, j    , k - 1) &
             + self%y_poss_cell_edge(i, j - 1, k - 1) )
-        positions          (face_index, 3  ) = 0.25d0 *( &
+        positions          (3,  face_index) = 0.25d0 *( &
             + self%z_poss_cell_edge(i, j    , k    ) &
             + self%z_poss_cell_edge(i, j - 1, k    ) &
             + self%z_poss_cell_edge(i, j    , k - 1) &
             + self%z_poss_cell_edge(i, j - 1, k - 1) )
-        reference_cell_indexs(face_index, 1) = convert_structure_index_to_unstructure_index(i - 2, j, k,&
+        reference_cell_indexs(1, face_index) = convert_structure_index_to_unstructure_index(i - 2, j, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 2) = convert_structure_index_to_unstructure_index(i - 1, j, k,&
+        reference_cell_indexs(2, face_index) = convert_structure_index_to_unstructure_index(i - 1, j, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 3) = convert_structure_index_to_unstructure_index(i, j, k,&
+        reference_cell_indexs(3, face_index) = convert_structure_index_to_unstructure_index(i, j, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 4) = convert_structure_index_to_unstructure_index(i + 1, j, k,&
+        reference_cell_indexs(4, face_index) = convert_structure_index_to_unstructure_index(i + 1, j, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 5) = convert_structure_index_to_unstructure_index(i + 2, j, k,&
+        reference_cell_indexs(5, face_index) = convert_structure_index_to_unstructure_index(i + 2, j, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 6) = convert_structure_index_to_unstructure_index(i + 3, j, k,&
+        reference_cell_indexs(6, face_index) = convert_structure_index_to_unstructure_index(i + 3, j, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
         face_index = face_index + 1
@@ -769,41 +737,41 @@ module class_nlgrid_parser
         integer(int_kind     ), intent(in   ) :: i, j, k
         ! # inner cells
         ! ## cell i,j,k -x face
-        normal_vectors     (face_index, 1:3) = -1.d0 * self%normal_vecs_i_drct_face(i - 1, j, k, 1:3)
-        tangential1_vectors(face_index, 1:3) = self%tan1_vecs_i_drct_face  (i - 1, j, k, 1:3)
-        tangential2_vectors(face_index, 1:3) = self%tan2_vecs_i_drct_face  (i - 1, j, k, 1:3)
+        normal_vectors     (1:3, face_index) = -1.d0 * self%normal_vecs_i_drct_face(i - 1, j, k, 1:3)
+        tangential1_vectors(1:3, face_index) = self%tan1_vecs_i_drct_face  (i - 1, j, k, 1:3)
+        tangential2_vectors(1:3, face_index) = self%tan2_vecs_i_drct_face  (i - 1, j, k, 1:3)
         areas              (     face_index) = self%areas_i_drct_face      (i - 1, j, k     )
-        positions          (face_index, 1  ) = 0.25d0 *( &
+        positions          (1  , face_index) = 0.25d0 *( &
             + self%x_poss_cell_edge(i - 1, j    , k    ) &
             + self%x_poss_cell_edge(i - 1, j - 1, k    ) &
             + self%x_poss_cell_edge(i - 1, j    , k - 1) &
             + self%x_poss_cell_edge(i - 1, j - 1, k - 1) )
-        positions          (face_index, 2  ) = 0.25d0 *( &
+        positions          (2  , face_index) = 0.25d0 *( &
             + self%y_poss_cell_edge(i - 1, j    , k    ) &
             + self%y_poss_cell_edge(i - 1, j - 1, k    ) &
             + self%y_poss_cell_edge(i - 1, j    , k - 1) &
             + self%y_poss_cell_edge(i - 1, j - 1, k - 1) )
-        positions          (face_index, 3  ) = 0.25d0 *( &
+        positions          (3  , face_index) = 0.25d0 *( &
             + self%z_poss_cell_edge(i - 1, j    , k    ) &
             + self%z_poss_cell_edge(i - 1, j - 1, k    ) &
             + self%z_poss_cell_edge(i - 1, j    , k - 1) &
             + self%z_poss_cell_edge(i - 1, j - 1, k - 1) )
-        reference_cell_indexs(face_index, 1) = convert_structure_index_to_unstructure_index(i + 2, j, k,&
+        reference_cell_indexs(1, face_index) = convert_structure_index_to_unstructure_index(i + 2, j, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 2) = convert_structure_index_to_unstructure_index(i + 1, j, k,&
+        reference_cell_indexs(2, face_index) = convert_structure_index_to_unstructure_index(i + 1, j, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 3) = convert_structure_index_to_unstructure_index(i + 0, j, k,&
+        reference_cell_indexs(3, face_index) = convert_structure_index_to_unstructure_index(i + 0, j, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 4) = convert_structure_index_to_unstructure_index(i - 1, j, k,&
+        reference_cell_indexs(4, face_index) = convert_structure_index_to_unstructure_index(i - 1, j, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 5) = convert_structure_index_to_unstructure_index(i - 2, j, k,&
+        reference_cell_indexs(5, face_index) = convert_structure_index_to_unstructure_index(i - 2, j, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 6) = convert_structure_index_to_unstructure_index(i - 3, j, k,&
+        reference_cell_indexs(6, face_index) = convert_structure_index_to_unstructure_index(i - 3, j, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
         face_index = face_index + 1
@@ -822,41 +790,41 @@ module class_nlgrid_parser
         integer(int_kind     ), intent(in   ) :: i, j, k
 
         ! ## cell i,j,k -y face
-        normal_vectors     (face_index, 1:3) = -1.d0 * self%normal_vecs_j_drct_face(i, j - 1, k, 1:3)
-        tangential1_vectors(face_index, 1:3) = self%tan1_vecs_j_drct_face  (i, j - 1, k, 1:3)
-        tangential2_vectors(face_index, 1:3) = self%tan2_vecs_j_drct_face  (i, j - 1, k, 1:3)
+        normal_vectors     (1:3, face_index) = -1.d0 * self%normal_vecs_j_drct_face(i, j - 1, k, 1:3)
+        tangential1_vectors(1:3, face_index) = self%tan1_vecs_j_drct_face  (i, j - 1, k, 1:3)
+        tangential2_vectors(1:3, face_index) = self%tan2_vecs_j_drct_face  (i, j - 1, k, 1:3)
         areas              (     face_index) = self%areas_j_drct_face      (i, j - 1, k     )
-        positions          (face_index, 1  ) = 0.25d0 *( &
+        positions          (1  , face_index) = 0.25d0 *( &
             + self%x_poss_cell_edge(i    , j - 1, k    ) &
             + self%x_poss_cell_edge(i - 1, j - 1, k    ) &
             + self%x_poss_cell_edge(i    , j - 1, k - 1) &
             + self%x_poss_cell_edge(i - 1, j - 1, k - 1) )
-        positions          (face_index, 2  ) = 0.25d0 *( &
+        positions          (2  , face_index) = 0.25d0 *( &
             + self%y_poss_cell_edge(i    , j - 1, k    ) &
             + self%y_poss_cell_edge(i - 1, j - 1, k    ) &
             + self%y_poss_cell_edge(i    , j - 1, k - 1) &
             + self%y_poss_cell_edge(i - 1, j - 1, k - 1) )
-        positions          (face_index, 3  ) = 0.25d0 *( &
+        positions          (3  , face_index) = 0.25d0 *( &
             + self%z_poss_cell_edge(i    , j - 1, k    ) &
             + self%z_poss_cell_edge(i - 1, j - 1, k    ) &
             + self%z_poss_cell_edge(i    , j - 1, k - 1) &
             + self%z_poss_cell_edge(i - 1, j - 1, k - 1) )
-        reference_cell_indexs(face_index, 1) = convert_structure_index_to_unstructure_index(i, j + 2, k,&
+        reference_cell_indexs(1, face_index) = convert_structure_index_to_unstructure_index(i, j + 2, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 2) = convert_structure_index_to_unstructure_index(i, j + 1, k,&
+        reference_cell_indexs(2, face_index) = convert_structure_index_to_unstructure_index(i, j + 1, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 3) = convert_structure_index_to_unstructure_index(i, j + 0, k,&
+        reference_cell_indexs(3, face_index) = convert_structure_index_to_unstructure_index(i, j + 0, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 4) = convert_structure_index_to_unstructure_index(i, j - 1, k,&
+        reference_cell_indexs(4, face_index) = convert_structure_index_to_unstructure_index(i, j - 1, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 5) = convert_structure_index_to_unstructure_index(i, j - 2, k,&
+        reference_cell_indexs(5, face_index) = convert_structure_index_to_unstructure_index(i, j - 2, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 6) = convert_structure_index_to_unstructure_index(i, j - 3, k,&
+        reference_cell_indexs(6, face_index) = convert_structure_index_to_unstructure_index(i, j - 3, k,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
         face_index = face_index + 1
@@ -875,206 +843,170 @@ module class_nlgrid_parser
         integer(int_kind     ), intent(in   ) :: i, j, k
 
         ! ## cell i,j,k -z face
-        normal_vectors     (face_index, 1:3) = -1.d0 * self%normal_vecs_k_drct_face(i, j, k - 1, 1:3)
-        tangential1_vectors(face_index, 1:3) = self%tan1_vecs_k_drct_face  (i, j, k - 1, 1:3)
-        tangential2_vectors(face_index, 1:3) = self%tan2_vecs_k_drct_face  (i, j, k - 1, 1:3)
+        normal_vectors     (1:3, face_index) = -1.d0 * self%normal_vecs_k_drct_face(i, j, k - 1, 1:3)
+        tangential1_vectors(1:3, face_index) = self%tan1_vecs_k_drct_face  (i, j, k - 1, 1:3)
+        tangential2_vectors(1:3, face_index) = self%tan2_vecs_k_drct_face  (i, j, k - 1, 1:3)
         areas              (     face_index) = self%areas_k_drct_face      (i, j, k - 1     )
-        positions          (face_index, 1  ) = 0.25d0 *( &
+        positions          (1  , face_index) = 0.25d0 *( &
             + self%x_poss_cell_edge(i    , j    , k - 1) &
             + self%x_poss_cell_edge(i - 1, j    , k - 1) &
             + self%x_poss_cell_edge(i    , j - 1, k - 1) &
             + self%x_poss_cell_edge(i - 1, j - 1, k - 1) )
-        positions          (face_index, 2  ) = 0.25d0 *( &
+        positions          (2  , face_index) = 0.25d0 *( &
             + self%y_poss_cell_edge(i    , j    , k - 1) &
             + self%y_poss_cell_edge(i - 1, j    , k - 1) &
             + self%y_poss_cell_edge(i    , j - 1, k - 1) &
             + self%y_poss_cell_edge(i - 1, j - 1, k - 1) )
-        positions          (face_index, 3  ) = 0.25d0 *( &
+        positions          (3  , face_index) = 0.25d0 *( &
             + self%z_poss_cell_edge(i    , j    , k - 1) &
             + self%z_poss_cell_edge(i - 1, j    , k - 1) &
             + self%z_poss_cell_edge(i    , j - 1, k - 1) &
             + self%z_poss_cell_edge(i - 1, j - 1, k - 1) )
-        reference_cell_indexs(face_index, 1) = convert_structure_index_to_unstructure_index(i, j, k + 2,&
+        reference_cell_indexs(1, face_index) = convert_structure_index_to_unstructure_index(i, j, k + 2,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 2) = convert_structure_index_to_unstructure_index(i, j, k + 1,&
+        reference_cell_indexs(2, face_index) = convert_structure_index_to_unstructure_index(i, j, k + 1,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 3) = convert_structure_index_to_unstructure_index(i, j, k + 0,&
+        reference_cell_indexs(3, face_index) = convert_structure_index_to_unstructure_index(i, j, k + 0,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 4) = convert_structure_index_to_unstructure_index(i, j, k - 1,&
+        reference_cell_indexs(4, face_index) = convert_structure_index_to_unstructure_index(i, j, k - 1,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 5) = convert_structure_index_to_unstructure_index(i, j, k - 2,&
+        reference_cell_indexs(5, face_index) = convert_structure_index_to_unstructure_index(i, j, k - 2,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
-        reference_cell_indexs(face_index, 6) = convert_structure_index_to_unstructure_index(i, j, k - 3,&
+        reference_cell_indexs(6, face_index) = convert_structure_index_to_unstructure_index(i, j, k - 3,&
             self%imin - self%num_ghost_cells_, self%jmin - self%num_ghost_cells_, self%kmin - self%num_ghost_cells_, &
             self%imax + self%num_ghost_cells_, self%jmax + self%num_ghost_cells_, self%kmax + self%num_ghost_cells_   )
         face_index = face_index + 1
     end subroutine assign_lower_z_face
 
-    subroutine get_boundaries(self, outflow_face_indexs, slipwall_face_indexs, symmetric_face_indexs)
-        class  (nlgrid_parser), intent(in   ) :: self
-        integer(int_kind     ), intent(inout) :: outflow_face_indexs  (:)
-        integer(int_kind     ), intent(inout) :: slipwall_face_indexs (:)
-        integer(int_kind     ), intent(inout) :: symmetric_face_indexs(:)
+    subroutine get_boundaries(self, face_types)
+        class  (nlgrid_parser      ), intent(in   ) :: self
+        integer(kind(face_type)), intent(inout) :: face_types(:)
 
         integer(int_kind) :: i, j, k
-        integer(int_kind) :: outflow_index, slipwall_index, symmetric_index, face_index
+        integer(int_kind) :: face_index
 
         if(.not. self%parsed)then
             call call_error("'parse' method of nlgrid_parser is not called yet. But you call 'get_boundaries' method.")
         end if
-
-        outflow_index   = 1
-        slipwall_index  = 1
-        symmetric_index = 1
 
         face_index = 1
         do k = self%kmin, self%kmax - 1, 1
             do j = self%jmin, self%jmax - 1, 1
                 do i = self%imin, self%imax, 1
                     if(i == self%imin)then
-                        if(self%x_minus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
-                        if(self%x_minus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
-                        if(self%x_minus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                        face_types(face_index) = self%x_minus_direction
+                    else
+                        face_types(face_index) = 0
                     end if
                     face_index = face_index + 1
                     if(j == self%jmin)then
-                        if(self%y_minus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
-                        if(self%y_minus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
-                        if(self%y_minus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                        face_types(face_index) = self%y_minus_direction
+                    else
+                        face_types(face_index) = 0
                     end if
                     face_index = face_index + 1
                     if(k == self%kmin)then
-                        if(self%z_minus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
-                        if(self%z_minus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
-                        if(self%z_minus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                        face_types(face_index) = self%z_minus_direction
+                    else
+                        face_types(face_index) = 0
                     end if
                     face_index = face_index + 1
                 end do
                 ! # imax boundary cells
-                if(self%x_plus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
-                if(self%x_plus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
-                if(self%x_plus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                face_types(face_index) = self%x_plus_direction
                 face_index = face_index + 1
             end do
             ! # jmax boundary cells
             do i = self%imin, self%imax, 1
                 if(i == self%imin)then
-                    if(self%x_minus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
-                    if(self%x_minus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
-                    if(self%x_minus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                    face_types(face_index) = self%x_minus_direction
+                else
+                    face_types(face_index) = 0
                 end if
                 face_index = face_index + 1
                 if(self%jmin == self%jmax)then
-                    if(self%y_minus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
-                    if(self%y_minus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
-                    if(self%y_minus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                    face_types(face_index) = self%y_minus_direction
+                else
+                    face_types(face_index) = 0
                 end if
                 face_index = face_index + 1
                 if(k == self%kmin)then
-                    if(self%z_minus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
-                    if(self%z_minus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
-                    if(self%z_minus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                    face_types(face_index) = self%z_minus_direction
+                else
+                    face_types(face_index) = 0
                 end if
                 face_index = face_index + 1
-                if(self%y_plus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
-                if(self%y_plus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
-                if(self%y_plus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                face_types(face_index) = self%y_plus_direction
                 face_index = face_index + 1
             end do
-            if(self%x_plus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
-            if(self%x_plus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
-            if(self%x_plus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+            face_types(face_index) = self%x_plus_direction
             face_index = face_index + 1
         end do
         ! # kmax boundary cells
         do j = self%jmin, self%jmax - 1, 1
             do i = self%imin, self%imax, 1
                 if(i == self%imin)then
-                    if(self%x_minus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
-                    if(self%x_minus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
-                    if(self%x_minus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+                    face_types(face_index) = self%x_minus_direction
+                else
+                    face_types(face_index) = 0
                 end if
                 face_index = face_index + 1
                 if(j == self%jmin)then
-                    if(self%y_minus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
-                    if(self%y_minus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
-                    if(self%y_minus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+                    face_types(face_index) = self%y_minus_direction
+                else
+                    face_types(face_index) = 0
                 end if
                 face_index = face_index + 1
                 if(self%kmin == self%kmax)then
-                    if(self%z_minus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
-                    if(self%z_minus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
-                    if(self%z_minus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                    face_types(face_index) = self%z_minus_direction
+                else
+                    face_types(face_index) = 0
                 end if
                 face_index = face_index + 1
-                if(self%z_plus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
-                if(self%z_plus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
-                if(self%z_plus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+                face_types(face_index) = self%z_plus_direction
                 face_index = face_index + 1
             end do
-            if(self%x_plus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
-            if(self%x_plus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
-            if(self%x_plus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+            face_types(face_index) = self%x_plus_direction
             face_index = face_index + 1
         end do
         do i = self%imin, self%imax, 1
             if(i == self%imin)then
-                if(self%x_minus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
-                if(self%x_minus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
-                if(self%x_minus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+                face_types(face_index) = self%x_minus_direction
+            else
+                face_types(face_index) = 0
             end if
             face_index = face_index + 1
             if(self%jmin == self%jmax)then
-                if(self%y_minus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
-                if(self%y_minus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
-                if(self%y_minus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                face_types(face_index) = self%y_minus_direction
+            else
+                face_types(face_index) = 0
             end if
             face_index = face_index + 1
             if(self%kmin == self%kmax)then
-                if(self%z_minus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index  , face_index)
-                if(self%z_minus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs, symmetric_index, face_index)
-                if(self%z_minus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs , slipwall_index , face_index)
+                face_types(face_index) = self%z_minus_direction
+            else
+                face_types(face_index) = 0
             end if
             face_index = face_index + 1
-            if(self%y_plus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
-            if(self%y_plus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
-            if(self%y_plus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+            face_types(face_index) = self%y_plus_direction
             face_index = face_index + 1
-            if(self%z_plus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
-            if(self%z_plus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
-            if(self%z_plus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
+            face_types(face_index) = self%z_plus_direction
             face_index = face_index + 1
         end do
-        if(self%x_plus_direction == outflow_boundary_type  ) call self%assign_boundary(outflow_face_indexs  , outflow_index, face_index)
-        if(self%x_plus_direction == symmetric_boundary_type) call self%assign_boundary(symmetric_face_indexs , symmetric_index, face_index)
-        if(self%x_plus_direction == slipwall_boundary_type ) call self%assign_boundary(slipwall_face_indexs, slipwall_index, face_index)
-#ifdef _DEBUG
-        print *, "DEBUG: nlgrid parser:"
-        print *, "Outflow-faces   (", outflow_index  -1, "/", self%get_number_of_outflow_faces  (), ") are assigned."
-        print *, "Symmetric-faces (", symmetric_index-1, "/", self%get_number_of_symmetric_faces(), ") are assigned."
-        print *, "Slipwall-faces  (", slipwall_index -1, "/", self%get_number_of_slipwall_faces (), ") are assigned."
-#endif
+        face_types(face_index) = self%x_plus_direction
+
     end subroutine get_boundaries
 
-    subroutine assign_boundary(self, boundary_face_indexs, boundary_index, face_index)
-        class  (nlgrid_parser), intent(in   ) :: self
-        integer(int_kind     ), intent(inout) :: boundary_face_indexs(:)
-        integer(int_kind     ), intent(inout) :: boundary_index
-        integer(int_kind     ), intent(in   ) :: face_index
-
-        boundary_face_indexs(boundary_index) = face_index
-        boundary_index = boundary_index + 1
-    end subroutine assign_boundary
-
-    subroutine get_cell_geometries(self, points, cell_geometries)
+    subroutine get_cell_geometries(self, points, cell_geometries, cell_types)
         class  (nlgrid_parser), intent(in   ) :: self
         real   (real_kind    ), intent(inout) :: points         (:, :)
         class  (point_id_list), intent(inout) :: cell_geometries(:)
+        integer(type_kind    ), intent(inout) :: cell_types     (:)
 
         integer(int_kind) :: i, j, k, n, n_assigned_point, n_assigned_geom
         integer(int_kind) :: p(8)
@@ -1091,9 +1023,9 @@ module class_nlgrid_parser
                     n = convert_structure_index_to_unstructure_index(i, j, k, &
                         self%imin - 1, self%jmin - 1, self%kmin - 1,          &
                         self%imax    , self%jmax    , self%kmax                )
-                    points(n, 1) = self%x_poss_cell_edge(i, j, k)
-                    points(n, 2) = self%y_poss_cell_edge(i, j, k)
-                    points(n, 3) = self%z_poss_cell_edge(i, j, k)
+                    points(1, n) = self%x_poss_cell_edge(i, j, k)
+                    points(2, n) = self%y_poss_cell_edge(i, j, k)
+                    points(3, n) = self%z_poss_cell_edge(i, j, k)
                     n_assigned_point = n_assigned_point + 1
                 end do
             end do
@@ -1139,6 +1071,8 @@ module class_nlgrid_parser
                     call cell_geometries(n)%set_point_id(6, p(6))
                     call cell_geometries(n)%set_point_id(7, p(7))
                     call cell_geometries(n)%set_point_id(8, p(8))
+
+                    cell_types(n) = 12
 
                     n_assigned_geom = n_assigned_geom + 1
                 end do

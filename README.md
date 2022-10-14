@@ -1,36 +1,49 @@
-# Fortran Fine-volume Fluid Dynamics Solver (F3DS) Flamework & Collection
+# Fortran Finite-volume Fluid Dynamics Solver (F3DS) Flamework & Collection
 
-F3DS is the modern Fortran (such as Fortran 2003, 2008, ...) library for development fluid dynamics solvers by Fine-volume method (FVM).  
+F3DS is the modern Fortran (such as Fortran 2003, 2008, ...) library for development fluid dynamics solvers by Finite-volume method (FVM).  
 This library support for Object Oriented Desing (OOD) and Structure of Arrays (SoA) layout. 
 We provide a fast, maintainable FVM library and solvers.  
 
 Status: **DEVELOPMENT**  
 
-Solvers are specialized. We need to recompile by changing parameters and methods. 
-We are currently working on improving to modify methods/parameters from external files.
+Solvers are generalized. We can change parameters by a configuration file witch writen by JSON or XML file format. Of course we can also change a grid and an initial condition.  
+We can easily build a solver for any non-viscous fluid using this flamework.  
+We are currently working on developing a function for computing viscous flux.
 
 ## Feature
 
-### Equation Collection
+### F3DS Collection
 
 - [x] 5 equation model (in collection/five_equation_model. Binary name is "f5eq")
     - Additional terms
         - [x] with -K * div(u) term [Kapila 2001]
-        - [ ] with surface tension term [Garrick 2017]
+        - [x] with surface tension term [Garrick 2017]
         - [ ] with viscosity term [Coralic 2014]
-    - Approximate Riemann solvers
-        - [x] HLLC [Toro 1997]
-- [ ] Euler equation
+        - [ ] with cavitation model
+        - [ ] with gravity
 
-### Flamework
+- [ ] Euler equation (in collection/euler. Binary name is "feuler")
+
+### F3DS Flamework
 
 #### EoS
 
-- EoS
-    - [ ] Ideal gas EoS
-- Mixture EoS
-    - [x] Stiffened-gas EoS
-    - [ ] Noble-Abel Stiffened-gas EoS
+- [ ] Ideal gas EoS
+- [x] Stiffened-gas EoS
+- [ ] Noble-Abel Stiffened-gas EoS
+
+#### Approximate Riemann solvers
+
+- HLL family
+    - [x] HLLC [Toro 1997]
+    - [ ] HLLE (also called HLL)
+    - [ ] Rusanov
+- AUSM family
+    - [ ] AUSM
+    - [ ] SLAW
+- Rotate Riemann solvers
+    - [ ] Rotate
+    - [ ] Rotate-hybrid
 
 #### Reconstruction Methods
 
@@ -39,14 +52,24 @@ We are currently working on improving to modify methods/parameters from external
         - [x] with minimod flux limmiter
         - [ ] with monotonized central flux limmiter
     - [ ] MUSCL3 + THINC
+    - [x] MUSCL3 + rho-THINC (5-equation model only)
     - [x] WENO5 (5th order)
         - [x] with original smoothing indicator (WENO5) [Liu 1994]
         - [x] with smoothing indicator proposed by Jiang & Shu (WENO5-JS) [Jiang 1996]
         - [x] with monotonicity-preserving schemes (MP-WENO5-JS) [Balsara 2000]
 - For unstructure grid
-    - [ ] Unstructured-MUSCL (3rd order)
-    - [ ] Unstructured-MUSCL + Unstructure-THINC (3rd order)
-    - [ ] k-expect WENO5 (5th order)
+    - [ ] UMUSCL3 (3rd order)
+    - [ ] UMUSCL3 + THINC (3rd order)
+
+#### Gradient scheme
+
+- [x] Green-Gauss
+- [x] Weighted Green-Gauss
+
+#### Divergence scheme
+
+- [x] Gauss divergence
+- [x] Weighted Gauss divergence
 
 #### Time Stepping
 
@@ -65,7 +88,7 @@ We are currently working on improving to modify methods/parameters from external
 #### Grid I/O
 
 - Structure grid format
-    - [x] Nishida Lab. legacy format
+    - [x] Nishida Lab. legacy format ([NL Grid Toolbox](https://165.93.124.207/gitlab/tishikawa/nl-grid-toolbox) is helpfull for you.)
     - [ ] xyz format
 - Unstructure grid format
     - [ ] gmsh
@@ -80,6 +103,7 @@ We are currently working on improving to modify methods/parameters from external
 #### Initial Condition
 
 - [x] Input from Nishida Lab. legacy format
+- [ ] Unifoam flow generation
 
 #### Parallelization Backend
 
@@ -97,10 +121,10 @@ We are currently working on improving to modify methods/parameters from external
 
 #### Measurement Tools
 
-- [x] Sensor (Probe)
-- [x] Measurement surface
+- [ ] Sensor (Probe)
+- [ ] Measurement surface
 - [ ] Virtual measurement surface
-- [x] Line plotting tool
+- [ ] Line plotting tool
 
 #### Other tools
 
@@ -109,9 +133,17 @@ We are currently working on improving to modify methods/parameters from external
     - [ ] [Annoy](https://github.com/spotify/annoy)
 - [x] Data Description Language I/O
     - [x] JSON ([JSON-Fortran](https://github.com/jacobwilliams/json-fortran) backend)
-    - [x] XML ([FoXy](https://github.com/Fortran-FOSS-Programmers/FoXy) backend)
+    - [X] XML ([FoXy](https://github.com/Fortran-FOSS-Programmers/FoXy) backend)
 
 ## How to compile
+
+At first, we should clone the repository and download submodules.
+
+```:shell
+git clone https://165.93.124.207/gitlab/tishikawa/f3ds.git
+git submodule init
+git submodule update
+```
 
 F3DS only support for Linux system now. We can compile F3DS by Makefile like this.
 
