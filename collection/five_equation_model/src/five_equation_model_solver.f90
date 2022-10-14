@@ -28,7 +28,8 @@ program five_eq_model_solver
     ! Termination criteria
     use class_end_time_criterion
     ! Time increment control
-    use class_constant_time_increment_controller
+    use abstract_time_increment_controller
+    use time_increment_controller_generator_module
     ! Parallel computing support
     use class_openmp_parallelizer
     ! Measurements
@@ -51,16 +52,16 @@ program five_eq_model_solver
     type(gauss_divergence                  ) :: a_divergence_calculator
     type(vtk_result_writer                 ) :: a_result_writer
     type(end_time_criterion                ) :: a_termination_criterion
-    type(constant_time_increment_controller) :: a_time_increment_controller
     type(openmp_parallelizer               ) :: a_parallelizer
     type(line_plotter                      ) :: a_line_plotter
     type(control_volume_profiler           ) :: a_control_volume_profiler
 
     type(five_equation_model_space_discretization) :: a_model
 
-    ! These schemes can be cahnge from configuration file you set.
-    class(time_stepping), pointer :: a_time_stepping
-    class(reconstructor), pointer :: a_reconstructor
+    ! These schemes and methods can be cahnge from configuration file you set.
+    class(time_stepping            ), pointer :: a_time_stepping
+    class(reconstructor            ), pointer :: a_reconstructor
+    class(time_increment_controller), pointer :: a_time_increment_controller
 
     ! Loop index
     integer(int_kind) :: state_num, cell_index
@@ -69,8 +70,9 @@ program five_eq_model_solver
     call a_configuration%parse("config.json")
 
     ! Allocate schemes
-    call default_time_stepping_generator            (a_configuration, a_time_stepping)
-    call five_equation_model_reconstructor_generator(a_configuration, a_reconstructor)
+    call default_time_stepping_generator            (a_configuration, a_time_stepping            )
+    call five_equation_model_reconstructor_generator(a_configuration, a_reconstructor            )
+    call f3ds_time_increment_controller_generator   (a_configuration, a_time_increment_controller)
 
     ! Support for parallel computing
     call a_parallelizer%initialize(a_configuration)
