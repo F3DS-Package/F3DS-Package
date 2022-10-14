@@ -42,14 +42,14 @@ module class_mp_weno5_js
         class(configuration), intent(inout) :: config
         logical :: found
 
-        call config%get_real("Reconstructor.MP-WENO5.Epsilon", self%epsilon_, found, 1.d-6)
-        if(.not. found) call write_warring("'Reconstructor.MP-WENO5.Epsilon' is not found in configration you set. To be set dafault value.")
+        call config%get_real("Reconstructor.MP-WENO5-JS.Epsilon", self%epsilon_, found, 1.d-6)
+        if(.not. found) call write_warring("'Reconstructor.MP-WENO5-JS.Epsilon' is not found in configration you set. To be set dafault value.")
 
-        call config%get_real("Reconstructor.MP-WENO5.Alpha", self%alpha_, found, 10.d0)
-        if(.not. found) call write_warring("'Reconstructor.MP-WENO5.Alpha' is not found in configration you set. To be set dafault value.")
+        call config%get_real("Reconstructor.MP-WENO5-JS.Alpha", self%alpha_, found, 10.d0)
+        if(.not. found) call write_warring("'Reconstructor.MP-WENO5-JS.Alpha' is not found in configration you set. To be set dafault value.")
 
-        call config%get_real("Reconstructor.MP-WENO5.Beta", self%beta_, found, 4.d0)
-        if(.not. found) call write_warring("'Reconstructor.MP-WENO5.Beta' is not found in configration you set. To be set dafault value.")
+        call config%get_real("Reconstructor.MP-WENO5-JS.Beta", self%beta_, found, 4.d0)
+        if(.not. found) call write_warring("'Reconstructor.MP-WENO5-JS.Beta' is not found in configration you set. To be set dafault value.")
     end subroutine initialize
 
     pure function reconstruct_lhc( &
