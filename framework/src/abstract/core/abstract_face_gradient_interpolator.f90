@@ -31,7 +31,7 @@ module abstract_face_gradient_interpolator
             real   (real_kind                 ), intent(in) :: rhc_position          (3)
             integer(int_kind                  ), intent(in) :: num_variables
 
-            real   (real_kind                 )             :: face_gradient_variables(num_variables)
+            real   (real_kind                 )             :: face_gradient_variables(num_variables*3)
         end function interpolate_interface
     end interface
 end module abstract_face_gradient_interpolator
