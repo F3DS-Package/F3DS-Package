@@ -5,6 +5,7 @@ module vector_module
 
     private
 
+    public :: vector_normalize
     public :: vector_angle
     public :: vector_magnitude
     public :: vector_squared
@@ -15,6 +16,12 @@ module vector_module
     public :: vector_unrotate
 
     contains
+
+    pure function vector_normalize(vector) result(normalize)
+        real(real_kind), intent(in) :: vector(3)
+        real(real_kind)             :: normalize(3)
+        normalize = vector / vector_magnitude(vector)
+    end function vector_normalize
 
     pure function vector_angle(vector1, vector2) result(angle)
         real(real_kind), intent(in) :: vector1 (3)

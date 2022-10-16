@@ -81,6 +81,7 @@ FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/termination_criterion/*.f90)
 FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/time_increment_controller/*.f90)
 FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/parallelizer/*.f90)
 FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/measurement_tools/*.f90)
+FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/face_gradient_interpolator/*.f90)
 # Tier 1 layer
 FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/generator/*.f90)
 FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/cellsystem/*.f90)
