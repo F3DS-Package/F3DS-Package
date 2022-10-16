@@ -367,13 +367,20 @@ module class_cellsystem
         self%time_increment = large_value
         do i = 1, self%num_faces, 1
             associate(                                                                                                             &
-                lhc_r => spectral_radius_function(an_eos, variables_set(:, self%face_to_cell_indexes(self%num_local_cells+0, i))), &
-                rhc_r => spectral_radius_function(an_eos, variables_set(:, self%face_to_cell_indexes(self%num_local_cells+1, i))), &
-                lhc_v => self%cell_volumes                                (self%face_to_cell_indexes(self%num_local_cells+0, i)) , &
-                rhc_v => self%cell_volumes                                (self%face_to_cell_indexes(self%num_local_cells+1, i)) , &
-                s     => self%face_areas                                                                                    (i)    &
+                lhc_r        => spectral_radius_function(an_eos, variables_set(:, self%face_to_cell_indexes(self%num_local_cells+0, i))), &
+                rhc_r        => spectral_radius_function(an_eos, variables_set(:, self%face_to_cell_indexes(self%num_local_cells+1, i))), &
+                lhc_v        => self%cell_volumes                                (self%face_to_cell_indexes(self%num_local_cells+0, i)) , &
+                rhc_v        => self%cell_volumes                                (self%face_to_cell_indexes(self%num_local_cells+1, i)) , &
+                s            => self%face_areas                                                                                    (i)  , &
+                lhc_is_real  => self%is_real_cell                                (self%face_to_cell_indexes(self%num_local_cells+0, i)) , &
+                rhc_is_real  => self%is_real_cell                                (self%face_to_cell_indexes(self%num_local_cells+1, i))   &
             )
-                self%time_increment = min(controller%compute_local_dt(lhc_v, s, lhc_r), controller%compute_local_dt(rhc_v, s, rhc_r), self%time_increment)
+                if(lhc_is_real)then
+                    self%time_increment = min(controller%compute_local_dt(lhc_v, s, lhc_r), self%time_increment)
+                end if
+                if(rhc_is_real)then
+                    self%time_increment = min(controller%compute_local_dt(rhc_v, s, rhc_r), self%time_increment)
+                end if
             end associate
         end do
     end subroutine update_time_increment
