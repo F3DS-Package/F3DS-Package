@@ -19,6 +19,7 @@ module class_cellsystem
     use abstract_termination_criterion
     use abstract_time_increment_controller
     use abstract_initial_condition_parser
+    use abstract_face_gradient_interpolator
     use abstract_model
     use class_line_plotter
     use class_control_volume_profiler
@@ -28,18 +29,18 @@ module class_cellsystem
     private
 
     ! Data structure and rule:
-    ! (local cell index)   -2        -1         0         1         2         3
-    !                       |         |         |         |         |         |
+    ! (local cell index)          1         2         3         4         5         6
+    !                             |         |         |         |         |         |
     !
-    !                  *---------*---------*---------*---------*---------*---------*
-    !                  |         |         |         | n       |         |         | "n" is a normal vector.
-    !                  |    o    |    o    |    o    x--> o    |    o    |    o    | Normal vector must be oriented to the right-hand cell.
-    ! (cell index) ->  |    1    |    2    |    3    |    4    |    5    |    6    |
-    !                  *---------*---------*---------*---------*---------*---------*
+    !                        *---------*---------*---------*---------*---------*---------*
+    !                        |         |         |         | n       |         |         | "n" is a normal vector.
+    !                        |    o    |    o    |    o    x--> o    |    o    |    o    | Normal vector must be oriented to the right-hand cell.
+    ! (cell index, e.g.) ->  |   101   |   102   |   103   |   104   |   105   |   106   |
+    !                        *---------*---------*---------*---------*---------*---------*
     !
-    !   (inner cells) ______|_________|_________|    |    |_________|_________|________ (inner or ghost cells)
-    !                                                |             *If fase is boundary, ghost cells are stored right-side.
-    !                                      (boundary/inner face)
+    !         (inner cells) ______|_________|_________|    |    |_________|_________|________ (inner or ghost cells)
+    !                                                      |             *If fase is boundary, ghost cells are stored right-side.
+    !                                            (boundary/inner face)
     type, public :: cellsystem
         private
 
@@ -150,6 +151,7 @@ module class_cellsystem
         procedure, public, pass(self) :: line_plotter_initialize
         procedure, public, pass(self) :: control_volume_profiler_initialize
         procedure, public, pass(self) :: model_initialize
+        procedure, public, pass(self) :: face_gradient_interpolator_initialize
         generic  , public             :: initialize  => result_writer_initialize            , &
                                                         time_stepping_initialize            , &
                                                         reconstructor_initialize            , &
@@ -163,7 +165,8 @@ module class_cellsystem
                                                         divergence_calculator_initialize    , &
                                                         line_plotter_initialize             , &
                                                         control_volume_profiler_initialize  , &
-                                                        model_initialize
+                                                        model_initialize                    , &
+                                                        face_gradient_interpolator_initialize
         procedure, public, pass(self) :: result_writer_open_file
         generic  , public             :: open_file   => result_writer_open_file
         procedure, public, pass(self) :: result_writer_close_file
@@ -259,6 +262,16 @@ module class_cellsystem
     end type
 
     contains
+
+    ! ### Face gradient interpolator ###
+    subroutine face_gradient_interpolator_initialize(self, a_face_gradient_interpolator, config, num_conservative_variables, num_primitive_variables)
+        class   (cellsystem                ), intent(inout) :: self
+        class   (face_gradient_interpolator), intent(inout) :: a_face_gradient_interpolator
+        class   (configuration             ), intent(inout) :: config
+        integer (int_kind                  ), intent(in   ) :: num_conservative_variables
+        integer (int_kind                  ), intent(in   ) :: num_primitive_variables
+        call a_face_gradient_interpolator%initialize(config)
+    end subroutine face_gradient_interpolator_initialize
 
     ! ### Model ###
     subroutine model_initialize(self, a_model, a_config, num_conservative_variables, num_primitive_variables)
@@ -1070,19 +1083,21 @@ module class_cellsystem
         end do
     end subroutine compute_residual_functional
 
-    subroutine compute_residual_objective(self, a_reconstructor, a_riemann_solver, an_eos,                                            &
-                                          primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
-                                          primitive_to_conservative_function, a_model                                                   )
+    subroutine compute_residual_objective(self, a_reconstructor, a_riemann_solver, an_eos, a_face_gradient_interpolator,                                                &
+                                          primitive_variables_set, gradient_primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
+                                          primitive_to_conservative_function, a_model)
 
-        class  (cellsystem    ), intent(in   ) :: self
-        class  (reconstructor ), intent(in   ) :: a_reconstructor
-        class  (riemann_solver), intent(in   ) :: a_riemann_solver
-        class  (eos           ), intent(in   ) :: an_eos
-        real   (real_kind     ), intent(in   ) :: primitive_variables_set (:,:)
-        real   (real_kind     ), intent(inout) :: residual_set            (:,:)
-        integer(int_kind      ), intent(in   ) :: num_conservative_variables
-        integer(int_kind      ), intent(in   ) :: num_primitive_variables
-        class  (model         ), intent(in   ) :: a_model
+        class  (cellsystem                ), intent(in   ) :: self
+        class  (reconstructor             ), intent(in   ) :: a_reconstructor
+        class  (riemann_solver            ), intent(in   ) :: a_riemann_solver
+        class  (eos                       ), intent(in   ) :: an_eos
+        class  (face_gradient_interpolator), intent(in   ) :: a_face_gradient_interpolator
+        real   (real_kind                 ), intent(in   ) :: primitive_variables_set          (:,:)
+        real   (real_kind                 ), intent(in   ) :: gradient_primitive_variables_set (:,:)
+        real   (real_kind                 ), intent(inout) :: residual_set                     (:,:)
+        integer(int_kind                  ), intent(in   ) :: num_conservative_variables
+        integer(int_kind                  ), intent(in   ) :: num_primitive_variables
+        class  (model                     ), intent(in   ) :: a_model
 
         interface
             pure function primitive_to_conservative_function(an_eos, primitive_variables, num_conservative_values) result(conservative_values)
@@ -1096,49 +1111,57 @@ module class_cellsystem
         end interface
 
         integer(int_kind ) :: i
-        integer(int_kind ) :: lhc_index
-        integer(int_kind ) :: rhc_index
         real   (real_kind) :: reconstructed_primitive_variables_lhc   (num_primitive_variables)
         real   (real_kind) :: reconstructed_primitive_variables_rhc   (num_primitive_variables)
+        real   (real_kind) :: face_gradient_primitive_variables       (num_primitive_variables*3)
         real   (real_kind) :: reconstructed_conservative_variables_lhc(num_conservative_variables)
         real   (real_kind) :: reconstructed_conservative_variables_rhc(num_conservative_variables)
         real   (real_kind) :: residual_element                        (num_conservative_variables, 1:2)
 
-        logical :: lhc_is_dummy, rhc_is_dummy
-
-!$omp parallel do private(i,lhc_index,rhc_index,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,reconstructed_conservative_variables_lhc,reconstructed_conservative_variables_rhc,residual_element)
+!$omp parallel do private(i,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,face_gradient_primitive_variables,reconstructed_conservative_variables_lhc,reconstructed_conservative_variables_rhc,residual_element)
         do i = 1, self%num_faces, 1
-            lhc_index = self%face_to_cell_indexes(self%num_local_cells+0, i)
-            rhc_index = self%face_to_cell_indexes(self%num_local_cells+1, i)
-
-            reconstructed_primitive_variables_lhc(:) = a_reconstructor%reconstruct_lhc(                              &
-                primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
-                i, self%num_local_cells, num_primitive_variables                                                     &
-            )
-            reconstructed_primitive_variables_rhc(:) = a_reconstructor%reconstruct_rhc(                              &
-                primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
-                i, self%num_local_cells, num_primitive_variables                                                     &
+            associate(                                                             &
+                lhc_index => self%face_to_cell_indexes(self%num_local_cells+0, i), &
+                rhc_index => self%face_to_cell_indexes(self%num_local_cells+1, i)  &
             )
 
-            residual_element(:,:) = a_model%compute_residual_element( &
-                an_eos                                              , &
-                a_riemann_solver                                    , &
-                primitive_variables_set       (:,lhc_index)         , &
-                primitive_variables_set       (:,rhc_index)         , &
-                reconstructed_primitive_variables_lhc   (:)         , &
-                reconstructed_primitive_variables_rhc   (:)         , &
-                self%cell_volumes            (lhc_index)            , &
-                self%cell_volumes            (rhc_index)            , &
-                self%face_areas                  (i)                , &
-                self%face_normal_vectors     (1:3,i)                , &
-                self%face_tangential1_vectors(1:3,i)                , &
-                self%face_tangential2_vectors(1:3,i)                , &
-                num_conservative_variables                          , &
-                num_primitive_variables                               &
-            )
+                reconstructed_primitive_variables_lhc(:) = a_reconstructor%reconstruct_lhc(                              &
+                    primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
+                    i, self%num_local_cells, num_primitive_variables                                                     &
+                )
+                reconstructed_primitive_variables_rhc(:) = a_reconstructor%reconstruct_rhc(                              &
+                    primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
+                    i, self%num_local_cells, num_primitive_variables                                                     &
+                )
 
-            residual_set(:,lhc_index) = residual_set(:,lhc_index) + residual_element(:, 1)
-            residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
+                face_gradient_primitive_variables(:) = a_face_gradient_interpolator%interpolate(                  &
+                    gradient_primitive_variables_set(:,lhc_index), gradient_primitive_variables_set(:,rhc_index), &
+                    primitive_variables_set         (:,lhc_index), primitive_variables_set         (:,rhc_index), &
+                    self%cell_centor_positions      (:,lhc_index), self%cell_centor_positions      (:,rhc_index), &
+                    num_primitive_variables                                                                       &
+                )
+
+                residual_element(:,:) = a_model%compute_residual_element( &
+                    an_eos                                              , &
+                    a_riemann_solver                                    , &
+                    primitive_variables_set              (:,lhc_index)  , &
+                    primitive_variables_set              (:,rhc_index)  , &
+                    reconstructed_primitive_variables_lhc(:)            , &
+                    reconstructed_primitive_variables_rhc(:)            , &
+                    face_gradient_primitive_variables    (:)            , &
+                    self%cell_volumes                      (lhc_index)  , &
+                    self%cell_volumes                      (rhc_index)  , &
+                    self%face_areas                  (i)                , &
+                    self%face_normal_vectors     (1:3,i)                , &
+                    self%face_tangential1_vectors(1:3,i)                , &
+                    self%face_tangential2_vectors(1:3,i)                , &
+                    num_conservative_variables                          , &
+                    num_primitive_variables                               &
+                )
+
+                residual_set(:,lhc_index) = residual_set(:,lhc_index) + residual_element(:, 1)
+                residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
+            end associate
         end do
     end subroutine compute_residual_objective
 

@@ -17,25 +17,43 @@ module class_five_equation_model_space_discretization
         private
 
         integer(int_kind )              :: num_phase_
+
+        ! for Kdiv(u) term
+        logical                         :: ignore_kdivu_
+
+        ! for surface tension term
         real   (real_kind), allocatable :: surface_tension_(:)
-        logical                         :: disable_kdivu_
+
+        ! for gravity term
+        real   (real_kind)              :: gravitational_acceleration_(3)
+
+        ! for viscosity term (include thermal conduction)
+        real   (real_kind), allocatable :: dynamic_viscosity_(:)
 
         contains
 
         procedure, public, pass(self) :: initialize
         procedure, public, pass(self) :: compute_residual_element
 
-        procedure, public :: mixture_surface_tension
+        procedure :: mixture_surface_tension
+        procedure :: mixture_dynamic_viscosity
     end type five_equation_model_space_discretization
 
 
     contains
 
-    pure function mixture_surface_tension(self, z1) result(w)
+    pure function mixture_surface_tension(self, z1) result(sigma)
         class  (five_equation_model_space_discretization), intent(in) :: self
         real   (real_kind), intent(in) :: z1
-        real   (real_kind)             :: w
-        w = z1 * self%surface_tension_(1) + (1.d0 - z1) * self%surface_tension_(2)
+        real   (real_kind)             :: sigma
+        sigma = z1 * self%surface_tension_(1) + (1.d0 - z1) * self%surface_tension_(2)
+    end function
+
+    pure function mixture_dynamic_viscosity(self, z1) result(mu)
+        class  (five_equation_model_space_discretization), intent(in) :: self
+        real   (real_kind), intent(in) :: z1
+        real   (real_kind)             :: mu
+        mu = z1 * self%dynamic_viscosity_(1) + (1.d0 - z1) * self%dynamic_viscosity_(2)
     end function
 
     subroutine initialize(self, a_configuration)
@@ -48,15 +66,22 @@ module class_five_equation_model_space_discretization
         call a_configuration%get_int    ("Phase.Number of phase", self%num_phase_, found)
         if(.not. found) call call_error("'Phase.Number of phase' is not found in configuration you set. Please check your configuration file.")
 
-        allocate(self%surface_tension_(self%num_phase_))
+        allocate(self%surface_tension_  (self%num_phase_))
+        allocate(self%dynamic_viscosity_(self%num_phase_))
 
         do i = 1, self%num_phase_, 1
             call a_configuration%get_real      ("Phase.Phase property "//to_str(i)//".Surface tension", self%surface_tension_(i), found, 0.d0)
-            if(.not. found) call write_warring("'Phase.Phase property "//to_str(i)//".Surface tension' is not found in the configuration you set. To set the default value.")
+            if(.not. found) call write_warring("'Phase.Phase property "//to_str(i)//".Surface tension' is not found in the configuration you set. Set to 0.")
+
+            call a_configuration%get_real      ("Phase.Phase property "//to_str(i)//".Dynamic viscosity", self%dynamic_viscosity_(i), found, 0.d0)
+            if(.not. found) call write_warring("'Phase.Phase property "//to_str(i)//".Dynamic viscosity' is not found in the configuration you set. Set to 0.")
         end do
 
-        call a_configuration%get_bool   ("Model.Disable Kdivu", self%disable_kdivu_, found, .false.)
-        if(.not. found) call write_warring("'Model.Disable Kdivu' is not found in configuration you set. To apply this term.")
+        call a_configuration%get_bool      ("Model.Ignore kdivu", self%ignore_kdivu_, found, .false.)
+        if(.not. found) call write_warring("'Model.Ignore kdivu' is not found in configuration you set. Apply this term.")
+
+        call a_configuration%get_real_array("Model.Gravitational acceleration", self%gravitational_acceleration_, found, [0.d0, 0.d0, 0.d0])
+        if(.not. found) call write_warring("'Model.Gravitational acceleration' is not found in configuration you set. Ignore gravity term.")
     end subroutine initialize
 
     pure function compute_residual_element(       &
@@ -67,6 +92,7 @@ module class_five_equation_model_space_discretization
         primitive_variables_rhc                 , &
         reconstructed_primitive_variables_lhc   , &
         reconstructed_primitive_variables_rhc   , &
+        face_gradient_primitive_variables       , &
         lhc_cell_volume                         , &
         rhc_cell_volume                         , &
         face_area                               , &
@@ -80,10 +106,11 @@ module class_five_equation_model_space_discretization
 
         class  (eos           ), intent(in) :: an_eos
         class  (riemann_solver), intent(in) :: an_riemann_solver
-        real   (real_kind     ), intent(in) :: primitive_variables_lhc                  (:)
-        real   (real_kind     ), intent(in) :: primitive_variables_rhc                  (:)
-        real   (real_kind     ), intent(in) :: reconstructed_primitive_variables_lhc    (:)
-        real   (real_kind     ), intent(in) :: reconstructed_primitive_variables_rhc    (:)
+        real   (real_kind     ), intent(in) :: primitive_variables_lhc              (:)
+        real   (real_kind     ), intent(in) :: primitive_variables_rhc              (:)
+        real   (real_kind     ), intent(in) :: reconstructed_primitive_variables_lhc(:)
+        real   (real_kind     ), intent(in) :: reconstructed_primitive_variables_rhc(:)
+        real   (real_kind     ), intent(in) :: face_gradient_primitive_variables    (:)
         real   (real_kind     ), intent(in) :: lhc_cell_volume
         real   (real_kind     ), intent(in) :: rhc_cell_volume
         real   (real_kind     ), intent(in) :: face_area
@@ -298,7 +325,7 @@ module class_five_equation_model_space_discretization
             rhc_p       => primitive_variables_rhc(6)  , &
             rhc_z1      => primitive_variables_rhc(7)    &
         )
-            if(self%disable_kdivu_)then
+            if(self%ignore_kdivu_)then
                 lhc_k = 0.d0
                 rhc_k = 0.d0
             else
@@ -329,5 +356,8 @@ module class_five_equation_model_space_discretization
             residual_element(6, 2) = residual_element(6, 2) &
                                    + self%mixture_surface_tension(rhc_z1) * rhc_curv * (1.d0 / rhc_cell_volume) * (alpha_l * numerical_velocity - numerical_velocity) * face_area
         end associate
+
+        ! # viscosity term
+
     end function compute_residual_element
 end module class_five_equation_model_space_discretization

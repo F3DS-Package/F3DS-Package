@@ -27,6 +27,7 @@ module abstract_model
             primitive_variables_rhc                       , &
             reconstructed_primitive_variables_lhc         , &
             reconstructed_primitive_variables_rhc         , &
+            face_gradient_primitive_variables             , &
             lhc_cell_volume                               , &
             rhc_cell_volume                               , &
             face_area                                     , &
@@ -44,10 +45,11 @@ module abstract_model
             class  (model         ), intent(in) :: self
             class  (eos           ), intent(in) :: an_eos
             class  (riemann_solver), intent(in) :: an_riemann_solver
-            real   (real_kind     ), intent(in) :: primitive_variables_lhc                  (:)
-            real   (real_kind     ), intent(in) :: primitive_variables_rhc                  (:)
-            real   (real_kind     ), intent(in) :: reconstructed_primitive_variables_lhc    (:)
-            real   (real_kind     ), intent(in) :: reconstructed_primitive_variables_rhc    (:)
+            real   (real_kind     ), intent(in) :: primitive_variables_lhc              (:)
+            real   (real_kind     ), intent(in) :: primitive_variables_rhc              (:)
+            real   (real_kind     ), intent(in) :: reconstructed_primitive_variables_lhc(:)
+            real   (real_kind     ), intent(in) :: reconstructed_primitive_variables_rhc(:)
+            real   (real_kind     ), intent(in) :: face_gradient_primitive_variables    (:)
             real   (real_kind     ), intent(in) :: lhc_cell_volume
             real   (real_kind     ), intent(in) :: rhc_cell_volume
             real   (real_kind     ), intent(in) :: face_area

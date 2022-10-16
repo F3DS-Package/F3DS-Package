@@ -12,6 +12,8 @@ program five_eq_model_solver
     use class_green_gauss
     ! Divergence
     use class_gauss_divergence
+    ! Face gradient
+    use class_corrected_midpoint_face_gradient_interpolator
     ! Time stepping
     use abstract_time_stepping
     use time_stepping_generator_module
@@ -42,21 +44,75 @@ program five_eq_model_solver
 
     implicit none
 
-    type(cellsystem                        ) :: a_cellsystem
-    type(nlgrid_parser                     ) :: a_grid_parser
-    type(nlinit_parser                     ) :: an_initial_condition_parser
-    type(json_configuration                ) :: a_configuration
-    type(stiffened_gas_eos                 ) :: an_eos
-    type(hllc                              ) :: a_riemann_solver
-    type(green_gauss                       ) :: a_gradient_calculator
-    type(gauss_divergence                  ) :: a_divergence_calculator
-    type(vtk_result_writer                 ) :: a_result_writer
-    type(end_time_criterion                ) :: a_termination_criterion
-    type(openmp_parallelizer               ) :: a_parallelizer
-    type(line_plotter                      ) :: a_line_plotter
-    type(control_volume_profiler           ) :: a_control_volume_profiler
+    integer(int_kind), parameter :: num_conservative_variables       = 7
+    integer(int_kind), parameter :: num_primitive_variables          = 8
+    integer(int_kind), parameter :: num_gradient_primitive_variables = 24
+    integer(int_kind), parameter :: num_surface_tension_variables    = 4
 
+    ! Elm. 1) following variables are saved
+    ! conservative_variables_set(1  , :)   = Z1*rho1   : Z1*density of fluid1
+    ! conservative_variables_set(2  , :)   = Z2*rho2   : Z2*density of fluid2
+    ! conservative_variables_set(3:5, :)   = rho*v     : momentum vector
+    ! conservative_variables_set(6  , :)   = e         : energy density
+    ! conservative_variables_set(7  , :)   = Z1        : volume fraction of fluid1
+    ! Elm. 2) 1 : {@code num_cells}, cell index
+    real(real_kind), allocatable :: conservative_variables_set(:,:)
+
+    ! Elm. 1) following variables are saved
+    ! primitive_variables_set(1  , :)   : density of fluid1
+    ! primitive_variables_set(2  , :)   : density of fluid2
+    ! primitive_variables_set(3:5, :)   : velocity vector (u,v,w)
+    ! primitive_variables_set(6  , :)   : pressre
+    ! primitive_variables_set(7  , :)   : volume fraction of fluid1
+    ! primitive_variables_set(8  , :)   : interface curvature κ
+    ! Elm. 2) 1 : {@code num_cells}, cell index
+    real(real_kind), allocatable :: primitive_variables_set(:,:)
+
+    ! Elm. 1) following variables are saved
+    ! gradient_primitive_variables_set(1 :3 , :) : dρ1/dx, dρ1/dy, dρ1/dz
+    ! gradient_primitive_variables_set(4 :6 , :) : dρ2/dx, dρ2/dy, dρ2/dz
+    ! gradient_primitive_variables_set(7 :9 , :) : du/dx, du/dy, du/dz
+    ! gradient_primitive_variables_set(10:12, :) : dv/dx, dv/dy, dv/dz
+    ! gradient_primitive_variables_set(13:15, :) : dw/dx, dw/dy, dw/dz
+    ! gradient_primitive_variables_set(16:18, :) : dp/dx, dp/dy, dp/dz
+    ! gradient_primitive_variables_set(19:21, :) : dα1/dx, dα1/dy, dα1/dz
+    ! gradient_primitive_variables_set(22:24, :) : dκ/dx, dκ/dy, dκ/dz
+    ! Elm. 2) 1 : {@code num_cells}, cell index
+    real(real_kind), allocatable :: gradient_primitive_variables_set(:,:)
+
+    ! Elm. 1) following variables are saved
+    ! conservative_variables_set(1  , :)   = Z1*rho1   : Z1*density of fluid1
+    ! conservative_variables_set(2  , :)   = Z2*rho2   : Z2*density of fluid2
+    ! conservative_variables_set(3:5, :)   = rho*v     : momentum vector
+    ! conservative_variables_set(6  , :)   = e         : energy density
+    ! conservative_variables_set(7  , :)   = Z1        : volume fraction of fluid1
+    ! Elm. 2) 1 : {@code num_cells}, cell index
+    real(real_kind), allocatable :: residual_set(:,:)
+
+    ! Elm. 1) following variables are saved
+    ! surface_tension_variables_set(1:3, :) = normalized gradient volume fraction
+    ! surface_tension_variables_set(4  , :) = curvature
+    ! Elm. 2) 1 : {@code num_cells}, cell index
+    real(real_kind), allocatable :: surface_tension_variables_set(:,:)
+
+    ! model
     type(five_equation_model_space_discretization) :: a_model
+
+    ! F3DS Flamework
+    type(cellsystem                                   ) :: a_cellsystem
+    type(nlgrid_parser                                ) :: a_grid_parser
+    type(nlinit_parser                                ) :: an_initial_condition_parser
+    type(json_configuration                           ) :: a_configuration
+    type(stiffened_gas_eos                            ) :: an_eos
+    type(hllc                                         ) :: a_riemann_solver
+    type(green_gauss                                  ) :: a_gradient_calculator
+    type(gauss_divergence                             ) :: a_divergence_calculator
+    type(corrected_midpoint_face_gradient_interpolator) :: a_face_gradient_interpolator
+    type(vtk_result_writer                            ) :: a_result_writer
+    type(end_time_criterion                           ) :: a_termination_criterion
+    type(openmp_parallelizer                          ) :: a_parallelizer
+    type(line_plotter                                 ) :: a_line_plotter
+    type(control_volume_profiler                      ) :: a_control_volume_profiler
 
     ! These schemes and methods can be cahnge from configuration file you set.
     class(time_stepping            ), pointer :: a_time_stepping
@@ -81,22 +137,24 @@ program five_eq_model_solver
     call a_cellsystem%read(a_grid_parser, a_configuration)
 
     ! Initialize variables
-    call a_cellsystem%initialize(conservative_variables_set   , num_conservative_variables   )
-    call a_cellsystem%initialize(residual_set                 , num_conservative_variables   )
-    call a_cellsystem%initialize(primitive_variables_set      , num_primitive_variables      )
-    call a_cellsystem%initialize(surface_tension_variables_set, num_surface_tension_variables)
+    call a_cellsystem%initialize(conservative_variables_set      , num_conservative_variables      )
+    call a_cellsystem%initialize(residual_set                    , num_conservative_variables      )
+    call a_cellsystem%initialize(primitive_variables_set         , num_primitive_variables         )
+    call a_cellsystem%initialize(gradient_primitive_variables_set, num_gradient_primitive_variables)
+    call a_cellsystem%initialize(surface_tension_variables_set   , num_surface_tension_variables   )
     ! Initialize schemes & utils
-    call a_cellsystem%initialize(an_eos                     , a_configuration, num_conservative_variables, num_primitive_variables)
-    call a_cellsystem%initialize(a_riemann_solver           , a_configuration, num_conservative_variables, num_primitive_variables)
-    call a_cellsystem%initialize(a_time_stepping            , a_configuration, num_conservative_variables, num_primitive_variables)
-    call a_cellsystem%initialize(a_reconstructor            , a_configuration, num_conservative_variables, num_primitive_variables)
-    call a_cellsystem%initialize(a_gradient_calculator      , a_configuration, num_conservative_variables, num_primitive_variables)
-    call a_cellsystem%initialize(a_divergence_calculator    , a_configuration, num_conservative_variables, num_primitive_variables)
-    call a_cellsystem%initialize(a_result_writer            , a_configuration, num_conservative_variables, num_primitive_variables)
-    call a_cellsystem%initialize(a_termination_criterion    , a_configuration, num_conservative_variables, num_primitive_variables)
-    call a_cellsystem%initialize(a_time_increment_controller, a_configuration, num_conservative_variables, num_primitive_variables)
-    call a_cellsystem%initialize(a_line_plotter             , a_configuration, num_conservative_variables, num_primitive_variables)
-    call a_cellsystem%initialize(a_control_volume_profiler  , a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(an_eos                      , a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_riemann_solver            , a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_time_stepping             , a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_reconstructor             , a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_gradient_calculator       , a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_divergence_calculator     , a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_result_writer             , a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_termination_criterion     , a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_time_increment_controller , a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_line_plotter              , a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_control_volume_profiler   , a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_face_gradient_interpolator, a_configuration, num_conservative_variables, num_primitive_variables)
     ! Initialize model
     call a_cellsystem%initialize(a_model, a_configuration, num_conservative_variables, num_primitive_variables)
 
@@ -109,7 +167,7 @@ program five_eq_model_solver
         call a_cellsystem%update_time_increment(a_time_increment_controller, an_eos, primitive_variables_set, spectral_radius)
 
         if ( a_cellsystem%is_writable(a_result_writer) ) then
-            call write_result(a_cellsystem, a_result_writer)
+            call write_result(a_cellsystem, a_result_writer, primitive_variables_set, surface_tension_variables_set)
         end if
 
         if ( a_cellsystem%is_writable(a_line_plotter) ) then
@@ -132,9 +190,11 @@ program five_eq_model_solver
             call a_cellsystem%apply_slipwall_condition (primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, slipwall_bc )
             call a_cellsystem%apply_symmetric_condition(primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, symmetric_bc)
 
-            ! Compute normalized volume flaction
-            call a_cellsystem%compute_gradient(a_gradient_calculator, primitive_variables_set(7,:), surface_tension_variables_set(1:3, :))
-            call a_cellsystem%processes_variables_set(surface_tension_variables_set, primitive_variables_set, num_surface_tension_variables, normarize_gradient_volume_fraction)
+            ! Compute gradient primitive variables
+            call a_cellsystem%compute_gradient(a_gradient_calculator, primitive_variables_set(:,:), gradient_primitive_variables_set(:,:), num_primitive_variables)
+
+            ! Compute normarize gradient volume fraction
+            call a_cellsystem%processes_variables_set(surface_tension_variables_set, gradient_primitive_variables_set, num_surface_tension_variables, normarize_gradient_volume_fraction)
 
             ! Apply BC for normalized volume flaction
             call a_cellsystem%apply_empty_condition    (surface_tension_variables_set(1:3, :), 3, rotate_gradient_value, unrotate_gradient_value, gradient_volume_fraction_bc)
@@ -142,27 +202,29 @@ program five_eq_model_solver
             call a_cellsystem%apply_slipwall_condition (surface_tension_variables_set(1:3, :), 3, rotate_gradient_value, unrotate_gradient_value, gradient_volume_fraction_bc)
             call a_cellsystem%apply_symmetric_condition(surface_tension_variables_set(1:3, :), 3, rotate_gradient_value, unrotate_gradient_value, gradient_volume_fraction_bc)
 
-            ! Compute (negative) curvature
+            ! Compute negative curvature
             call a_cellsystem%compute_divergence(a_divergence_calculator, surface_tension_variables_set(1:3, :), surface_tension_variables_set(4, :))
 
-            ! Compute puressure jump induced surface tension effect
-            call a_cellsystem%processes_variables_set(primitive_variables_set, surface_tension_variables_set, num_primitive_variables, compute_pressure_jump)
+            ! Preprocess for negative curvature
+            call a_cellsystem%processes_variables_set(primitive_variables_set, surface_tension_variables_set, num_primitive_variables, curvature_preprocessing)
 
             call a_cellsystem%apply_empty_condition    (primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, empty_bc    )
             call a_cellsystem%apply_outflow_condition  (primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, outflow_bc  )
             call a_cellsystem%apply_slipwall_condition (primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, slipwall_bc )
             call a_cellsystem%apply_symmetric_condition(primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, symmetric_bc)
 
-            call a_cellsystem%compute_residual(         &
-                a_reconstructor                       , &
-                a_riemann_solver                      , &
-                an_eos                                , &
-                primitive_variables_set               , &
-                residual_set                          , &
-                num_conservative_variables            , &
-                num_primitive_variables               , &
-                primitive_to_conservative             , &
-                a_model                                 &
+            call a_cellsystem%compute_residual(   &
+                a_reconstructor                 , &
+                a_riemann_solver                , &
+                an_eos                          , &
+                a_face_gradient_interpolator    , &
+                primitive_variables_set         , &
+                gradient_primitive_variables_set, &
+                residual_set                    , &
+                num_conservative_variables      , &
+                num_primitive_variables         , &
+                primitive_to_conservative       , &
+                a_model                           &
             )
 
             call a_cellsystem%compute_next_state(a_time_stepping, an_eos, state_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, conservative_to_primitive)
@@ -172,7 +234,7 @@ program five_eq_model_solver
     end do
 
     if ( a_cellsystem%is_writable(a_result_writer) ) then
-        call write_result(a_cellsystem, a_result_writer)
+        call write_result(a_cellsystem, a_result_writer, primitive_variables_set, surface_tension_variables_set)
     end if
 
     if ( a_cellsystem%is_writable(a_line_plotter) ) then
@@ -189,9 +251,11 @@ program five_eq_model_solver
 
     contains
 
-    subroutine write_result(a_cellsystem, a_result_writer)
+    subroutine write_result(a_cellsystem, a_result_writer, primitive_variables_set, surface_tension_variables_set)
         type(cellsystem       ), intent(inout) :: a_cellsystem
         type(vtk_result_writer), intent(inout) :: a_result_writer
+        real(real_kind        ), intent(in   ) :: primitive_variables_set      (:,:)
+        real(real_kind        ), intent(in   ) :: surface_tension_variables_set(:,:)
 
         real(real_kind) :: density(a_cellsystem%get_number_of_cells())
 

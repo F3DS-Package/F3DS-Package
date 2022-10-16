@@ -9,47 +9,6 @@ module five_equation_model_variables_module
 
     private
 
-    ! surface tension coef. = 72e-3
-    real(real_kind), public, parameter :: weber_number = 1.446d0
-
-    integer(int_kind), public, parameter :: num_conservative_variables = 7
-    integer(int_kind), public, parameter :: num_primitive_variables    = 8
-    integer(int_kind), public, parameter :: num_surface_tension_variables = 4
-
-    ! Elm. 1) following variables are saved
-    ! conservative_variables_set(1  , :)   = Z1*rho1   : Z1*density of fluid1
-    ! conservative_variables_set(2  , :)   = Z2*rho2   : Z2*density of fluid2
-    ! conservative_variables_set(3:5, :)   = rho*v     : momentum vector
-    ! conservative_variables_set(6  , :)   = e         : energy density
-    ! conservative_variables_set(7  , :)   = Z1        : volume fraction of fluid1
-    ! Elm. 2) 1 : {@code num_cells}, cell index
-    real(real_kind), public, allocatable :: conservative_variables_set(:,:)
-
-    ! Elm. 1) following variables are saved
-    ! primitive_variables_set(1  , :)   : density of fluid1
-    ! primitive_variables_set(2  , :)   : density of fluid2
-    ! primitive_variables_set(3:5, :)   : velocity vector (u,v,w)
-    ! primitive_variables_set(6  , :)   : pressre
-    ! primitive_variables_set(7  , :)   : volume fraction of fluid1
-    ! primitive_variables_set(8  , :)   : pressure jump σκ (based on the surface tension coeficient σ and interface curvature κ)
-    ! Elm. 2) 1 : {@code num_cells}, cell index
-    real(real_kind), public, allocatable :: primitive_variables_set(:,:)
-
-    ! Elm. 1) following variables are saved
-    ! conservative_variables_set(1  , :)   = Z1*rho1   : Z1*density of fluid1
-    ! conservative_variables_set(2  , :)   = Z2*rho2   : Z2*density of fluid2
-    ! conservative_variables_set(3:5, :)   = rho*v     : momentum vector
-    ! conservative_variables_set(6  , :)   = e         : energy density
-    ! conservative_variables_set(7  , :)   = Z1        : volume fraction of fluid1
-    ! Elm. 2) 1 : {@code num_cells}, cell index
-    real(real_kind), public, allocatable :: residual_set(:,:)
-
-    ! Elm. 1) following variables are saved
-    ! surface_tension_variables_set(1:3, :) = gradient volume fraction (to be normalized)
-    ! surface_tension_variables_set(4  , :) = curvature
-    ! Elm. 2) 1 : {@code num_cells}, cell index
-    real(real_kind), public, allocatable :: surface_tension_variables_set(:,:)
-
     public :: conservative_to_primitive
     public :: primitive_to_conservative
     public :: spectral_radius
@@ -58,7 +17,7 @@ module five_equation_model_variables_module
     public :: normarize_gradient_volume_fraction
     public :: rotate_gradient_value
     public :: unrotate_gradient_value
-    public :: compute_pressure_jump
+    public :: curvature_preprocessing
 
     contains
 
@@ -198,18 +157,18 @@ module five_equation_model_variables_module
         p(8  ) = primitives(8)
     end function unrotate_primitive
 
-    pure function normarize_gradient_volume_fraction(surface_tension_variables, primitives, num_variables) result(dst_surface_tension_variables)
-        real   (real_kind ), intent(in) :: surface_tension_variables(:), primitives(:)
-        integer(int_kind  ), intent(in) :: num_variables
-        real   (real_kind )             :: dst_surface_tension_variables(num_variables)
+    pure function normarize_gradient_volume_fraction(surface_tension_variables, gradient_primitive_variables, num_surface_tension_variables) result(dst_surface_tension_variables)
+        real   (real_kind ), intent(in) :: surface_tension_variables(:), gradient_primitive_variables(:)
+        integer(int_kind  ), intent(in) :: num_surface_tension_variables
+        real   (real_kind )             :: dst_surface_tension_variables(num_surface_tension_variables)
 
-        associate(                                                   &
-            mag => vector_magnitude(surface_tension_variables(1:3)), &
-            z   => primitives(7)                                     &
+        associate(                                                                    &
+            mag_grad_alpha => vector_magnitude(gradient_primitive_variables(19:21)),  &
+            grad_alpha     => gradient_primitive_variables(19:21)                     &
         )
-            if(mag > machine_epsilon)then
+            if(mag_grad_alpha > machine_epsilon)then
                 ! {@code z} must to be set a heaviest fluid.
-                dst_surface_tension_variables(1:3) = surface_tension_variables(1:3) / mag
+                dst_surface_tension_variables(1:3) = grad_alpha / mag_grad_alpha
             else
                 dst_surface_tension_variables(1:3) = 0.d0
             endif
@@ -251,7 +210,7 @@ module five_equation_model_variables_module
         p(1:3) = vector_unrotate(gradient_value(1:3), face_normal_vector, face_tangential1_vector, face_tangential2_vector)
     end function unrotate_gradient_value
 
-    pure function compute_pressure_jump(primitives, surface_tension_variables, num_variables) result(dst_primitives)
+    pure function curvature_preprocessing(primitives, surface_tension_variables, num_variables) result(dst_primitives)
         real   (real_kind ), intent(in) :: surface_tension_variables(:), primitives(:)
         integer(int_kind  ), intent(in) :: num_variables
         real   (real_kind )             :: dst_primitives(num_variables)
@@ -265,10 +224,10 @@ module five_equation_model_variables_module
             kappa => surface_tension_variables(4)  &
         )
             if((interface_threshold < z) .and. (z < 1.d0 - interface_threshold))then
-                dst_primitives(8) = (1.d0 / weber_number) * max(-carvature_limit, min(kappa, carvature_limit))
+                dst_primitives(8) = max(-carvature_limit, min(kappa, carvature_limit))
             else
                 dst_primitives(8) = 0.d0
             endif
         end associate
-    end function compute_pressure_jump
+    end function curvature_preprocessing
 end module five_equation_model_variables_module
