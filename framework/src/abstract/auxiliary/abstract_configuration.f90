@@ -14,6 +14,8 @@ module abstract_configuration
         procedure(get_bool_interface), pass(self), deferred :: get_bool
         procedure(get_char_interface), pass(self), deferred :: get_char
 
+        procedure(get_real_array_interface), pass(self), deferred :: get_real_array
+
         !procedure(add_real_interface), pass(self), deferred :: add_real
         !procedure(add_int_interface ), pass(self), deferred :: add_int
         !procedure(add_bool_interface), pass(self), deferred :: add_bool
@@ -71,6 +73,16 @@ module abstract_configuration
             logical                 , intent(inout), optional    :: found
             character(len=*        ), intent(in   ), optional    :: default
         end subroutine get_char_interface
+
+        subroutine get_real_array_interface(self, tag, val, found, default)
+            use typedef_module
+            import configuration
+            class    (configuration), intent(inout)            :: self
+            character(len=*        ), intent(in   )            :: tag
+            real     (real_kind    ), intent(inout)            :: val(:)
+            logical                 , intent(inout), optional  :: found
+            real     (real_kind    ), intent(in   ), optional  :: default(:)
+        end subroutine get_real_array_interface
 
         !subroutine add_real_interface(self, tag, val)
         !    use typedef_module

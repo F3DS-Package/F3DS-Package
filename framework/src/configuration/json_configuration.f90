@@ -26,6 +26,7 @@ module class_json_configuration
         procedure, public, pass(self) :: get_int
         procedure, public, pass(self) :: get_bool
         procedure, public, pass(self) :: get_char
+        procedure, public, pass(self) :: get_real_array
         !procedure, public, pass(self) :: add_real
         !procedure, public, pass(self) :: add_int
         !procedure, public, pass(self) :: add_bool
@@ -118,6 +119,36 @@ module class_json_configuration
         call self%json%get(tag, val, found)
         if(.not. found .and. present(default)) val = default
     end subroutine get_char
+
+    subroutine get_real_array(self, tag, val, found, default)
+        class    (json_configuration), intent(inout)           :: self
+        character(len=*             ), intent(in   )           :: tag
+        real     (real_kind         ), intent(inout)           :: val(:)
+        logical                      , intent(inout), optional :: found
+        real     (real_kind         ), intent(in   ), optional :: default(:)
+
+        real(json_RK), allocatable :: array_json_file(:)
+        logical                    :: match_array_range
+
+        if(.not. self%parsed) call call_error("Configuration file is not parsed.")
+
+        if(present(default))then
+            match_array_range = ((lbound(val(:), 1) == lbound(default(:), 1)) .and. (ubound(val(:), 1) == ubound(default(:), 1)))
+            if(.not. match_array_range) call call_error("Array range of 'val' does not match 'default'.")
+        end if
+
+        call self%json%get(tag, array_json_file, found)
+
+        if(.not. found .and. present(default))then
+            val = default
+            return
+        end if
+
+        match_array_range = ((lbound(val(:), 1) == lbound(array_json_file(:), 1)) .and. (ubound(val(:), 1) == ubound(array_json_file(:), 1)))
+        if(.not. match_array_range) call call_error("Array range of 'val' dose not match array range of json path you set.")
+
+        val = array_json_file
+    end subroutine get_real_array
 
     !subroutine add_real(self, tag, val)
     !    class    (json_configuration), intent(inout) :: self
