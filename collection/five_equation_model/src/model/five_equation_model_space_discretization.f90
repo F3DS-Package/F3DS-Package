@@ -8,6 +8,8 @@ module class_five_equation_model_space_discretization
     use abstract_riemann_solver
     use abstract_model
     use five_equation_model_variables_module
+    use matrix_module
+    use vector_module
 
     implicit none
 
@@ -122,19 +124,30 @@ module class_five_equation_model_space_discretization
 
         real   (real_kind)                  :: residual_element(num_conservative_values, 1:2)
 
+        ! ## face coordinate variables
         real(real_kind) :: local_coordinate_primitives_lhc  (num_primitive_values)
         real(real_kind) :: local_coordinate_primitives_rhc  (num_primitive_values)
         real(real_kind) :: local_coordinate_conservative_lhc(num_conservative_values)
         real(real_kind) :: local_coordinate_conservative_rhc(num_conservative_values)
-        real(real_kind) :: nonviscosity_flux                (num_conservative_values)
+
+        ! ## cell variables
         real(real_kind) :: lhc_soundspeed, lhc_pressure, lhc_density, lhc_main_velocity, lhc_pressure_jump
         real(real_kind) :: rhc_soundspeed, rhc_pressure, rhc_density, rhc_main_velocity, rhc_pressure_jump
+
+        ! ## rieman solver
+        real(real_kind) :: nonviscosity_flux      (num_conservative_values)
         real(real_kind) :: rieman_solver_features(7)
 
+        ! ## face variables
         real(real_kind) :: numerical_velocity, interface_volume_fraction
 
-        ! ## kapila K
+        ! ## kapila Kdiv(u)
         real(real_kind) :: rhc_k, lhc_k
+
+        ! ## viscosity variables
+        real(real_kind) :: tau (3,3)
+        real(real_kind) :: beta(3)
+        real(real_kind) :: viscosity_flux(num_conservative_values)
 
         ! # compute primitive-variables of face local coordinate
         ! ## left-side
@@ -357,7 +370,49 @@ module class_five_equation_model_space_discretization
                                    + self%mixture_surface_tension(rhc_z1) * rhc_curv * (1.d0 / rhc_cell_volume) * (alpha_l * numerical_velocity - numerical_velocity) * face_area
         end associate
 
-        ! # viscosity term
+        ! # viscosity term (Stokes hypothesis)
+        associate(                                                                         &
+            dudx => face_gradient_primitive_variables(7 )                                , &
+            dudy => face_gradient_primitive_variables(8 )                                , &
+            dudz => face_gradient_primitive_variables(9 )                                , &
+            dvdx => face_gradient_primitive_variables(10)                                , &
+            dvdy => face_gradient_primitive_variables(11)                                , &
+            dvdz => face_gradient_primitive_variables(12)                                , &
+            dwdx => face_gradient_primitive_variables(13)                                , &
+            dwdy => face_gradient_primitive_variables(14)                                , &
+            dwdz => face_gradient_primitive_variables(15)                                , &
+            u    => 0.5d0 * (primitive_variables_lhc(3:5) + primitive_variables_rhc(3:5)), &
+            mu   => self%mixture_dynamic_viscosity(interface_volume_fraction)            , &
+            n    => face_normal_vector                                                     &
+        )
+            tau(1,1) = 2.d0 * mu * dudx - (2.d0 / 3.d0) * mu * (dudx + dvdy + dwdz)
+            tau(2,2) = 2.d0 * mu * dvdy - (2.d0 / 3.d0) * mu * (dudx + dvdy + dwdz)
+            tau(3,3) = 2.d0 * mu * dwdz - (2.d0 / 3.d0) * mu * (dudx + dvdy + dwdz)
+            tau(1,2) = mu * (dudy + dvdx)
+            tau(1,3) = mu * (dudz + dwdx)
+            tau(2,3) = mu * (dwdy + dvdz)
+            tau(2,1) = tau(1,2)
+            tau(3,1) = tau(1,3)
+            tau(3,2) = tau(2,3)
+            beta(1) = vector_multiply(tau(1,:), u) ! not inculde heat diffusion !
+            beta(2) = vector_multiply(tau(2,:), u)
+            beta(3) = vector_multiply(tau(3,:), u)
+
+            viscosity_flux(1:2) = 0.d0
+            viscosity_flux(3:5) = matrix_multiply(tau , n)
+            viscosity_flux(6  ) = vector_multiply(beta, n)
+            viscosity_flux(7  ) = 0.d0
+
+            viscosity_flux(3:5) = vector_unrotate( &
+                viscosity_flux(3:5)              , &
+                face_normal_vector               , &
+                face_tangential1_vector          , &
+                face_tangential2_vector            &
+            )
+
+            residual_element(1:7, 1) = residual_element(1:7, 1) - (1.d0 / lhc_cell_volume) * viscosity_flux(:) * face_area
+            residual_element(1:7, 2) = residual_element(1:7, 2) + (1.d0 / rhc_cell_volume) * viscosity_flux(:) * face_area
+        end associate
 
     end function compute_residual_element
 end module class_five_equation_model_space_discretization
