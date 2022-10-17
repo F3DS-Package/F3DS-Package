@@ -43,8 +43,8 @@ module class_corrected_midpoint_face_gradient_interpolator
             normalize     => vector_normalize(lhc_position - rhc_position)              &
         )
             do i = 1, num_variables, 1
-                face_gradient_variables(i:i+2) = midpoint_grad(i:i+2)                                                                                               &
-                                               + (vector_multiply(midpoint_grad(i:i+2), normalize) - (lhc_variables(i) - rhc_variables(i)) / magnitude) * normalize
+                face_gradient_variables(3*(i-1)+1:3*(i-1)+3) = midpoint_grad(3*(i-1)+1:3*(i-1)+3)                                                                                               &
+                                                             + (vector_multiply(midpoint_grad(3*(i-1)+1:3*(i-1)+3), normalize) - (lhc_variables(i) - rhc_variables(i)) / magnitude) * normalize
             end do
         end associate
     end function interpolate
