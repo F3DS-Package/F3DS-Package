@@ -191,7 +191,10 @@ module class_cellsystem
                                                                     processes_variables_set_two_array
 
         ! ### Time increment control ###
-        procedure, public, pass(self) :: update_time_increment
+        procedure, public, pass(self) :: update_time_increment_functional_api
+        procedure, public, pass(self) :: update_time_increment_objective_api
+        generic  , public             :: update_time_increment => update_time_increment_functional_api, &
+                                                                  update_time_increment_objective_api
 
         ! ### Termination criterion ###
         procedure, public, pass(self) :: satisfies_termination_criterion
@@ -216,10 +219,12 @@ module class_cellsystem
                                                                compute_divergence_2darray
 
         ! ### Resudual ###
-        procedure, public, pass(self) :: compute_residual_functional
-        procedure, public, pass(self) :: compute_residual_objective
-        generic  , public             :: compute_residual => compute_residual_functional, &
-                                                             compute_residual_objective
+        procedure, public, pass(self) :: compute_residual_functional_api
+        procedure, public, pass(self) :: compute_residual_objective_api
+        generic  , public             :: compute_residual => compute_residual_functional_api, &
+                                                             compute_residual_objective_api
+        procedure, public, pass(self) :: compute_source_term_objective_api
+        generic  , public             :: compute_source_term => compute_source_term_objective_api
 
         ! ### Time Stepping ###
         procedure, public, pass(self) :: compute_next_state
@@ -341,18 +346,19 @@ module class_cellsystem
         call controller%initialize(config)
     end subroutine time_increment_controller_initialize
 
-    subroutine update_time_increment(self, controller, an_eos, variables_set, spectral_radius_function)
+    subroutine update_time_increment_functional_api(self, controller, an_eos, variables_set, spectral_radius_function)
         class  (cellsystem               ), intent(inout) :: self
         class  (time_increment_controller), intent(in   ) :: controller
         class  (eos                      ), intent(in   ) :: an_eos
         real   (real_kind                ), intent(in   ) :: variables_set(:,:)
 
         interface
-            pure function spectral_radius_function(an_eos, variables) result(r)
+            pure function spectral_radius_function(an_eos, variables, length) result(r)
                 use abstract_eos
                 use typedef_module
                 class  (eos      ), intent(in) :: an_eos
                 real   (real_kind), intent(in) :: variables(:)
+                real   (real_kind), intent(in) :: length
                 real   (real_kind) :: r
             end function spectral_radius_function
         end interface
@@ -367,23 +373,58 @@ module class_cellsystem
         self%time_increment = large_value
         do i = 1, self%num_faces, 1
             associate(                                                                                                             &
-                lhc_r        => spectral_radius_function(an_eos, variables_set(:, self%face_to_cell_indexes(self%num_local_cells+0, i))), &
-                rhc_r        => spectral_radius_function(an_eos, variables_set(:, self%face_to_cell_indexes(self%num_local_cells+1, i))), &
-                lhc_v        => self%cell_volumes                                (self%face_to_cell_indexes(self%num_local_cells+0, i)) , &
-                rhc_v        => self%cell_volumes                                (self%face_to_cell_indexes(self%num_local_cells+1, i)) , &
-                s            => self%face_areas                                                                                    (i)  , &
-                lhc_is_real  => self%is_real_cell                                (self%face_to_cell_indexes(self%num_local_cells+0, i)) , &
-                rhc_is_real  => self%is_real_cell                                (self%face_to_cell_indexes(self%num_local_cells+1, i))   &
+                lhc_q        => variables_set    (:, self%face_to_cell_indexes(self%num_local_cells+0, i)), &
+                rhc_q        => variables_set    (:, self%face_to_cell_indexes(self%num_local_cells+1, i)), &
+                lhc_v        => self%cell_volumes   (self%face_to_cell_indexes(self%num_local_cells+0, i)), &
+                rhc_v        => self%cell_volumes   (self%face_to_cell_indexes(self%num_local_cells+1, i)), &
+                s            => self%face_areas                                                       (i) , &
+                lhc_is_real  => self%is_real_cell   (self%face_to_cell_indexes(self%num_local_cells+0, i)), &
+                rhc_is_real  => self%is_real_cell   (self%face_to_cell_indexes(self%num_local_cells+1, i))  &
             )
                 if(lhc_is_real)then
-                    self%time_increment = min(controller%compute_local_dt(lhc_v, s, lhc_r), self%time_increment)
+                    self%time_increment = min(controller%compute_local_dt(lhc_v, s, spectral_radius_function(an_eos, lhc_q, lhc_v / s)), self%time_increment)
                 end if
                 if(rhc_is_real)then
-                    self%time_increment = min(controller%compute_local_dt(rhc_v, s, rhc_r), self%time_increment)
+                    self%time_increment = min(controller%compute_local_dt(rhc_v, s, spectral_radius_function(an_eos, rhc_q, rhc_v / s)), self%time_increment)
                 end if
             end associate
         end do
-    end subroutine update_time_increment
+    end subroutine update_time_increment_functional_api
+
+    subroutine update_time_increment_objective_api(self, controller, an_eos, variables_set, a_model)
+        class  (cellsystem               ), intent(inout) :: self
+        class  (time_increment_controller), intent(in   ) :: controller
+        class  (eos                      ), intent(in   ) :: an_eos
+        real   (real_kind                ), intent(in   ) :: variables_set(:,:)
+        class  (model                    ), intent(in   ) :: a_model
+
+        integer(int_kind ) :: i
+
+        if ( controller%returns_constant() ) then
+            self%time_increment = controller%get_constant_dt()
+            return
+        end if
+
+        self%time_increment = large_value
+        do i = 1, self%num_faces, 1
+            associate(                                                                                                             &
+                lhc_q        => variables_set    (:, self%face_to_cell_indexes(self%num_local_cells+0, i)), &
+                rhc_q        => variables_set    (:, self%face_to_cell_indexes(self%num_local_cells+1, i)), &
+                lhc_v        => self%cell_volumes   (self%face_to_cell_indexes(self%num_local_cells+0, i)), &
+                rhc_v        => self%cell_volumes   (self%face_to_cell_indexes(self%num_local_cells+1, i)), &
+                s            => self%face_areas                                                       (i) , &
+                lhc_is_real  => self%is_real_cell   (self%face_to_cell_indexes(self%num_local_cells+0, i)), &
+                rhc_is_real  => self%is_real_cell   (self%face_to_cell_indexes(self%num_local_cells+1, i))  &
+            )
+                if(lhc_is_real)then
+                    self%time_increment = min(controller%compute_local_dt(lhc_v, s, a_model%spectral_radius(an_eos, lhc_q, lhc_v / s)), self%time_increment)
+                end if
+                if(rhc_is_real)then
+                    self%time_increment = min(controller%compute_local_dt(rhc_v, s, a_model%spectral_radius(an_eos, rhc_q, rhc_v / s)), self%time_increment)
+                end if
+            end associate
+        end do
+    end subroutine update_time_increment_objective_api
 
     ! ### Termination criterion ###
     subroutine termination_criterion_initialize(self, criterion, config, num_conservative_variables, num_primitive_variables)
@@ -977,7 +1018,7 @@ module class_cellsystem
     end subroutine eos_initialize
 
     ! ### Resudual ###
-    subroutine compute_residual_functional(self, a_reconstructor, a_riemann_solver, an_eos,                                            &
+    subroutine compute_residual_functional_api(self, a_reconstructor, a_riemann_solver, an_eos,                                            &
                                            primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
                                            primitive_to_conservative_function, residual_element_function                                )
 
@@ -1088,9 +1129,9 @@ module class_cellsystem
             residual_set(:,lhc_index) = residual_set(:,lhc_index) + residual_element(:, 1)
             residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
         end do
-    end subroutine compute_residual_functional
+    end subroutine compute_residual_functional_api
 
-    subroutine compute_residual_objective(self, a_reconstructor, a_riemann_solver, an_eos, a_face_gradient_interpolator,                                                &
+    subroutine compute_residual_objective_api(self, a_reconstructor, a_riemann_solver, an_eos, a_face_gradient_interpolator,                                                &
                                           primitive_variables_set, gradient_primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
                                           primitive_to_conservative_function, a_model)
 
@@ -1170,7 +1211,22 @@ module class_cellsystem
                 residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
             end associate
         end do
-    end subroutine compute_residual_objective
+    end subroutine compute_residual_objective_api
+
+    subroutine compute_source_term_objective_api(self, variables_set, residual_set, num_conservative_variables, a_model)
+        class  (cellsystem), intent(in   ) :: self
+        real   (real_kind ), intent(in   ) :: variables_set(:,:)
+        real   (real_kind ), intent(inout) :: residual_set (:,:)
+        integer(int_kind  ), intent(in   ) :: num_conservative_variables
+        class  (model     ), intent(in   ) :: a_model
+
+        integer(int_kind ) :: i
+
+!$omp parallel do private(i)
+        do i = 1, self%num_cells, 1
+            residual_set(:,i) = residual_set(:,i) + a_model%compute_source_term(variables_set(:,i), num_conservative_variables)
+        end do
+    end subroutine compute_source_term_objective_api
 
     ! ### Riemann solver ###
     subroutine riemann_solver_initialize(self, a_riemann_solver, config, num_conservative_variables, num_primitive_variables)

@@ -64,17 +64,15 @@ module abstract_model
             real   (real_kind)                  :: residual_element(num_conservative_values, 1:2)
         end function compute_residual_element_interface
 
-        pure function compute_source_term_interface(self, primitive_variables, gradient_primitive_variables, cell_volume, num_primitive_values) result(source)
+        pure function compute_source_term_interface(self, variables, num_conservative_values) result(source)
             use typedef_module
             use abstract_eos
             import model
 
             class  (model    ), intent(in) :: self
-            real   (real_kind), intent(in) :: primitive_variables          (:)
-            real   (real_kind), intent(in) :: gradient_primitive_variables (:)
-            real   (real_kind), intent(in) :: cell_volume
-            integer(int_kind ), intent(in) :: num_primitive_values
-            real   (real_kind)             :: source(num_primitive_values)
+            real   (real_kind), intent(in) :: variables(:)
+            integer(int_kind ), intent(in) :: num_conservative_values
+            real   (real_kind)             :: source(num_conservative_values)
         end function compute_source_term_interface
 
         pure function spectral_radius_interface(self, an_eos, primitive_variables, length) result(r)

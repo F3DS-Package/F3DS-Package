@@ -431,18 +431,16 @@ module class_five_equation_model_space_discretization
         end associate
     end function compute_residual_element
 
-    pure function compute_source_term(self, primitive_variables, gradient_primitive_variables, cell_volume, num_primitive_values) result(source)
+    pure function compute_source_term(self, variables, num_conservative_values) result(source)
         class  (five_equation_model_space_discretization), intent(in) :: self
-        real   (real_kind), intent(in) :: primitive_variables          (:)
-        real   (real_kind), intent(in) :: gradient_primitive_variables (:)
-        real   (real_kind), intent(in) :: cell_volume
-        integer(int_kind ), intent(in) :: num_primitive_values
-        real   (real_kind)             :: source(num_primitive_values)
+        real   (real_kind), intent(in) :: variables(:)
+        integer(int_kind ), intent(in) :: num_conservative_values
+        real   (real_kind)             :: source(num_conservative_values)
 
-        associate(                                                         &
-            density  => self%compute_mixture_density(primitive_variables), &
-            g        => self%gravitational_acceleration_(:)              , &
-            velocity => primitive_variables(3:5)                           &
+        associate(                                               &
+            density  => self%compute_mixture_density(variables), &
+            g        => self%gravitational_acceleration_(:)    , &
+            velocity => variables(3:5)                           &
         )
             source(3:5) = density * g
             source(6  ) = vector_multiply(density * g, velocity)

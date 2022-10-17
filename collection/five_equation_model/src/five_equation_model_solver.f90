@@ -164,7 +164,7 @@ program five_eq_model_solver
 
     ! Timestepping loop
     do while ( .not. a_cellsystem%satisfies_termination_criterion(a_termination_criterion) )
-        call a_cellsystem%update_time_increment(a_time_increment_controller, an_eos, primitive_variables_set, spectral_radius_function)
+        call a_cellsystem%update_time_increment(a_time_increment_controller, an_eos, primitive_variables_set, a_model)
 
         if ( a_cellsystem%is_writable(a_result_writer) ) then
             call write_result(a_cellsystem, a_result_writer, primitive_variables_set, surface_tension_variables_set)
@@ -226,6 +226,8 @@ program five_eq_model_solver
                 primitive_to_conservative       , &
                 a_model                           &
             )
+
+            call a_cellsystem%compute_source_term(primitive_variables_set, residual_set, num_conservative_variables, a_model)
 
             call a_cellsystem%compute_next_state(a_time_stepping, an_eos, state_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, conservative_to_primitive)
         end do
