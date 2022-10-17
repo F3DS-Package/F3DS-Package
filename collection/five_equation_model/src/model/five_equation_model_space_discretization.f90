@@ -36,9 +36,12 @@ module class_five_equation_model_space_discretization
 
         procedure, public, pass(self) :: initialize
         procedure, public, pass(self) :: compute_residual_element
+        procedure, public, pass(self) :: compute_source_term
+        procedure, public, pass(self) :: spectral_radius
 
         procedure :: mixture_surface_tension
         procedure :: mixture_dynamic_viscosity
+        procedure :: compute_mixture_density
     end type five_equation_model_space_discretization
 
 
@@ -56,6 +59,19 @@ module class_five_equation_model_space_discretization
         real   (real_kind), intent(in) :: z1
         real   (real_kind)             :: mu
         mu = z1 * self%dynamic_viscosity_(1) + (1.d0 - z1) * self%dynamic_viscosity_(2)
+    end function
+
+    pure function compute_mixture_density(self, primitive_variables) result(density)
+        class(five_equation_model_space_discretization), intent(in) :: self
+        real (real_kind                               ), intent(in) :: primitive_variables(:)
+        real (real_kind                               )             :: density
+        associate(                            &
+            rho1   => primitive_variables(1), &
+            rho2   => primitive_variables(2), &
+            alpha1 => primitive_variables(7)  &
+        )
+            density = alpha1 * rho1 + (1.d0 - alpha1) * rho2
+        end associate
     end function
 
     subroutine initialize(self, a_configuration)
@@ -413,6 +429,40 @@ module class_five_equation_model_space_discretization
             residual_element(1:7, 1) = residual_element(1:7, 1) - (1.d0 / lhc_cell_volume) * viscosity_flux(:) * face_area
             residual_element(1:7, 2) = residual_element(1:7, 2) + (1.d0 / rhc_cell_volume) * viscosity_flux(:) * face_area
         end associate
-
     end function compute_residual_element
+
+    pure function compute_source_term(self, primitive_variables, gradient_primitive_variables, cell_volume, num_primitive_values) result(source)
+        class  (five_equation_model_space_discretization), intent(in) :: self
+        real   (real_kind), intent(in) :: primitive_variables          (:)
+        real   (real_kind), intent(in) :: gradient_primitive_variables (:)
+        real   (real_kind), intent(in) :: cell_volume
+        integer(int_kind ), intent(in) :: num_primitive_values
+        real   (real_kind)             :: source(num_primitive_values)
+
+        associate(                                                         &
+            density  => self%compute_mixture_density(primitive_variables), &
+            g        => self%gravitational_acceleration_(:)              , &
+            velocity => primitive_variables(3:5)                           &
+        )
+            source(3:5) = density * g
+            source(6  ) = vector_multiply(density * g, velocity)
+        end associate
+    end function compute_source_term
+
+    pure function spectral_radius(self, an_eos, primitive_variables, length) result(r)
+        class  (five_equation_model_space_discretization), intent(in) :: self
+        class(eos      ), intent(in) :: an_eos
+        real (real_kind), intent(in) :: primitive_variables(:)
+        real (real_kind), intent(in) :: length
+        real (real_kind) :: r
+
+        associate(                                                         &
+            density  => self%compute_mixture_density(primitive_variables), &
+            velocity => primitive_variables(3:5)                         , &
+            pressure => primitive_variables(6)                           , &
+            alpha1   => primitive_variables(7)                             &
+        )
+            r = an_eos%compute_soundspeed(pressure, density, alpha1) + vector_magnitude(velocity) + self%mixture_dynamic_viscosity(alpha1) / (density * length)
+        end associate
+    end function spectral_radius
 end module class_five_equation_model_space_discretization

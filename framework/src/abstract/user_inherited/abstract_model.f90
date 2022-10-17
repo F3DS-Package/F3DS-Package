@@ -8,6 +8,8 @@ module abstract_model
 
         procedure(initialize_interface              ), pass(self), deferred :: initialize
         procedure(compute_residual_element_interface), pass(self), deferred :: compute_residual_element
+        procedure(compute_source_term_interface     ), pass(self), deferred :: compute_source_term
+        procedure(spectral_radius_interface         ), pass(self), deferred :: spectral_radius
     end type model
 
     abstract interface
@@ -61,5 +63,30 @@ module abstract_model
 
             real   (real_kind)                  :: residual_element(num_conservative_values, 1:2)
         end function compute_residual_element_interface
+
+        pure function compute_source_term_interface(self, primitive_variables, gradient_primitive_variables, cell_volume, num_primitive_values) result(source)
+            use typedef_module
+            use abstract_eos
+            import model
+
+            class  (model    ), intent(in) :: self
+            real   (real_kind), intent(in) :: primitive_variables          (:)
+            real   (real_kind), intent(in) :: gradient_primitive_variables (:)
+            real   (real_kind), intent(in) :: cell_volume
+            integer(int_kind ), intent(in) :: num_primitive_values
+            real   (real_kind)             :: source(num_primitive_values)
+        end function compute_source_term_interface
+
+        pure function spectral_radius_interface(self, an_eos, primitive_variables, length) result(r)
+            use typedef_module
+            use abstract_eos
+            import model
+
+            class(model    ), intent(in) :: self
+            class(eos      ), intent(in) :: an_eos
+            real (real_kind), intent(in) :: primitive_variables(:)
+            real (real_kind), intent(in) :: length
+            real (real_kind) :: r
+        end function spectral_radius_interface
     end interface
 end module abstract_model

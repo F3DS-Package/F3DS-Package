@@ -11,7 +11,7 @@ module five_equation_model_variables_module
 
     public :: conservative_to_primitive
     public :: primitive_to_conservative
-    public :: spectral_radius
+    public :: spectral_radius_function
     public :: rotate_primitive
     public :: unrotate_primitive
     public :: normarize_gradient_volume_fraction
@@ -93,7 +93,7 @@ module five_equation_model_variables_module
         end associate
     end function conservative_to_primitive
 
-    pure function spectral_radius(an_eos, primitive_variables) result(r)
+    pure function spectral_radius_function(an_eos, primitive_variables) result(r)
         class(eos      ), intent(in) :: an_eos
         real (real_kind), intent(in) :: primitive_variables(:)
         real (real_kind) :: r
@@ -111,7 +111,7 @@ module five_equation_model_variables_module
             c   = an_eos%compute_soundspeed(p, rho, z1)
             r = c + vector_magnitude(vel)
         end associate
-    end function spectral_radius
+    end function spectral_radius_function
 
     pure function rotate_primitive( &
         primitives                , &
