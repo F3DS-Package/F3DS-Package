@@ -4,6 +4,7 @@ module time_stepping_generator_module
     use abstract_time_stepping
     use class_second_order_tvd_rk
     use class_third_order_tvd_rk
+    use class_forward_euler
 
     implicit none
 
@@ -38,6 +39,8 @@ module time_stepping_generator_module
             allocate(second_order_tvd_rk :: method)
         else if(name == "3rd order TVD RK") then
             allocate(third_order_tvd_rk :: method)
+        else if(name == "Forward Euler") then
+            allocate(forward_euler :: method)
         else
             call call_error("Unknow time stepping name '"//name//"' is found.")
         end if
