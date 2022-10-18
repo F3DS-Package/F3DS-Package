@@ -426,8 +426,8 @@ module class_five_equation_model_space_discretization
                 face_tangential2_vector            &
             )
 
-            residual_element(1:7, 1) = residual_element(1:7, 1) - (1.d0 / lhc_cell_volume) * viscosity_flux(:) * face_area
-            residual_element(1:7, 2) = residual_element(1:7, 2) + (1.d0 / rhc_cell_volume) * viscosity_flux(:) * face_area
+            residual_element(1:7, 1) = residual_element(1:7, 1) - (1.d0 / lhc_cell_volume) * viscosity_flux(1:7) * face_area
+            residual_element(1:7, 2) = residual_element(1:7, 2) + (1.d0 / rhc_cell_volume) * viscosity_flux(1:7) * face_area
         end associate
     end function compute_residual_element
 
