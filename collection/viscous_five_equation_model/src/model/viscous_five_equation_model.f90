@@ -1,4 +1,4 @@
-module class_five_equation_model_space_discretization
+module class_viscous_five_equation_model
     use vector_module
     use typedef_module
     use stdio_module
@@ -7,7 +7,7 @@ module class_five_equation_model_space_discretization
     use abstract_eos
     use abstract_riemann_solver
     use abstract_model
-    use five_equation_model_variables_module
+    use viscous_five_equation_model_utils_module
     use matrix_module
     use vector_module
 
@@ -15,7 +15,7 @@ module class_five_equation_model_space_discretization
 
     private
 
-    type, public, extends(model) :: five_equation_model_space_discretization
+    type, public, extends(model) :: viscous_five_equation_model
         private
 
         integer(int_kind )              :: num_phase_
@@ -42,29 +42,29 @@ module class_five_equation_model_space_discretization
         procedure :: mixture_surface_tension
         procedure :: mixture_dynamic_viscosity
         procedure :: compute_mixture_density
-    end type five_equation_model_space_discretization
+    end type viscous_five_equation_model
 
 
     contains
 
     pure function mixture_surface_tension(self, z1) result(sigma)
-        class  (five_equation_model_space_discretization), intent(in) :: self
-        real   (real_kind), intent(in) :: z1
-        real   (real_kind)             :: sigma
+        class  (viscous_five_equation_model), intent(in) :: self
+        real   (real_kind                  ), intent(in) :: z1
+        real   (real_kind                  )             :: sigma
         sigma = z1 * self%surface_tension_(1) + (1.d0 - z1) * self%surface_tension_(2)
     end function
 
     pure function mixture_dynamic_viscosity(self, z1) result(mu)
-        class  (five_equation_model_space_discretization), intent(in) :: self
-        real   (real_kind), intent(in) :: z1
-        real   (real_kind)             :: mu
+        class  (viscous_five_equation_model), intent(in) :: self
+        real   (real_kind                  ), intent(in) :: z1
+        real   (real_kind                  )             :: mu
         mu = z1 * self%dynamic_viscosity_(1) + (1.d0 - z1) * self%dynamic_viscosity_(2)
     end function
 
     pure function compute_mixture_density(self, primitive_variables) result(density)
-        class(five_equation_model_space_discretization), intent(in) :: self
-        real (real_kind                               ), intent(in) :: primitive_variables(:)
-        real (real_kind                               )             :: density
+        class(viscous_five_equation_model), intent(in) :: self
+        real (real_kind                  ), intent(in) :: primitive_variables(:)
+        real (real_kind                  )             :: density
         associate(                            &
             rho1   => primitive_variables(1), &
             rho2   => primitive_variables(2), &
@@ -75,8 +75,8 @@ module class_five_equation_model_space_discretization
     end function
 
     subroutine initialize(self, a_configuration)
-        class  (five_equation_model_space_discretization), intent(inout) :: self
-        class  (configuration                           ), intent(inout) :: a_configuration
+        class  (viscous_five_equation_model), intent(inout) :: self
+        class  (configuration              ), intent(inout) :: a_configuration
 
         logical           :: found
         integer(int_kind) :: i
@@ -120,7 +120,7 @@ module class_five_equation_model_space_discretization
         num_conservative_values                 , &
         num_primitive_values                      ) result(residual_element)
 
-        class  (five_equation_model_space_discretization), intent(in) :: self
+        class  (viscous_five_equation_model), intent(in) :: self
 
         class  (eos           ), intent(in) :: an_eos
         class  (riemann_solver), intent(in) :: an_riemann_solver
@@ -432,10 +432,10 @@ module class_five_equation_model_space_discretization
     end function compute_residual_element
 
     pure function compute_source_term(self, variables, num_conservative_values) result(source)
-        class  (five_equation_model_space_discretization), intent(in) :: self
-        real   (real_kind), intent(in) :: variables(:)
-        integer(int_kind ), intent(in) :: num_conservative_values
-        real   (real_kind)             :: source(num_conservative_values)
+        class  (viscous_five_equation_model), intent(in) :: self
+        real   (real_kind                  ), intent(in) :: variables(:)
+        integer(int_kind                   ), intent(in) :: num_conservative_values
+        real   (real_kind                  )             :: source(num_conservative_values)
 
         associate(                                               &
             density  => self%compute_mixture_density(variables), &
@@ -450,11 +450,11 @@ module class_five_equation_model_space_discretization
     end function compute_source_term
 
     pure function spectral_radius(self, an_eos, primitive_variables, length) result(r)
-        class  (five_equation_model_space_discretization), intent(in) :: self
-        class(eos      ), intent(in) :: an_eos
-        real (real_kind), intent(in) :: primitive_variables(:)
-        real (real_kind), intent(in) :: length
-        real (real_kind) :: r
+        class(viscous_five_equation_model), intent(in) :: self
+        class(eos                        ), intent(in) :: an_eos
+        real (real_kind                  ), intent(in) :: primitive_variables(:)
+        real (real_kind                  ), intent(in) :: length
+        real (real_kind                  ) :: r
 
         associate(                                                         &
             density  => self%compute_mixture_density(primitive_variables), &
@@ -465,4 +465,4 @@ module class_five_equation_model_space_discretization
             r = an_eos%compute_soundspeed(pressure, density, alpha1) + vector_magnitude(velocity) + self%mixture_dynamic_viscosity(alpha1) / (density * length)
         end associate
     end function spectral_radius
-end module class_five_equation_model_space_discretization
+end module class_viscous_five_equation_model

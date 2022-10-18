@@ -1,4 +1,4 @@
-module five_equation_model_boundary_condition_module
+module viscous_five_equation_model_boundary_condition_module
     use typedef_module
     use vector_module
 
@@ -51,4 +51,4 @@ module five_equation_model_boundary_condition_module
         real   (real_kind)             :: ghost_gradient_values(num_gradient_values)
         ghost_gradient_values(1:3) = inner_gradient_values(1:3)
     end function bc_for_normarized_gradient_volume_fraction
-end module five_equation_model_boundary_condition_module
+end module viscous_five_equation_model_boundary_condition_module

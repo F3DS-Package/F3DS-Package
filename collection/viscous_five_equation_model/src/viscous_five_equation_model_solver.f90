@@ -1,4 +1,4 @@
-program five_eq_model_solver
+program viscous_five_equation_model_solver
     ! Utils
     use typedef_module
     use stdio_module
@@ -19,7 +19,7 @@ program five_eq_model_solver
     use time_stepping_generator_module
     ! Reconstructor
     use abstract_reconstructor
-    use five_equation_model_reconstructor_generator_module
+    use viscous_five_equation_model_reconstructor_generator_module
     ! Rieman solver
     use class_hllc
     ! Grid & initial condition reader
@@ -38,9 +38,9 @@ program five_eq_model_solver
     use class_line_plotter
     use class_control_volume_profiler
     ! Model
-    use five_equation_model_variables_module
-    use five_equation_model_boundary_condition_module
-    use class_five_equation_model_space_discretization
+    use viscous_five_equation_model_utils_module
+    use viscous_five_equation_model_boundary_condition_module
+    use class_viscous_five_equation_model
 
     implicit none
 
@@ -96,7 +96,7 @@ program five_eq_model_solver
     real(real_kind), allocatable :: surface_tension_variables_set(:,:)
 
     ! model
-    type(five_equation_model_space_discretization) :: a_model
+    type(viscous_five_equation_model) :: a_model
 
     ! F3DS Flamework
     type(cellsystem                                   ) :: a_cellsystem
@@ -127,7 +127,7 @@ program five_eq_model_solver
 
     ! Allocate schemes
     call f3ds_time_stepping_generator               (a_configuration, a_time_stepping            )
-    call five_equation_model_reconstructor_generator(a_configuration, a_reconstructor            )
+    call viscous_five_equation_model_reconstructor_generator(a_configuration, a_reconstructor            )
     call f3ds_time_increment_controller_generator   (a_configuration, a_time_increment_controller)
 
     ! Support for parallel computing
@@ -285,4 +285,4 @@ program five_eq_model_solver
         call a_cellsystem%write_scolar(a_result_writer, "Curvature"               , surface_tension_variables_set(  4, :))
         call a_cellsystem%close_file  (a_result_writer)
     end subroutine write_result
-end program five_eq_model_solver
+end program viscous_five_equation_model_solver

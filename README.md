@@ -19,7 +19,7 @@ We are currently working on developing a function for computing viscous flux.
         - [ ] with Kdiv(u) term [Kapila 2001]
         - [ ] with cavitation model
 
-- [x] viscosity 5 equation model (in collection/visco_five_equation_model. Binary name is "fv5eq") [Perigaud 2005] [Coralic 2014]
+- [x] viscosity 5 equation model (in collection/viscous_five_equation_model. Binary name is "fv5eq") [Perigaud 2005] [Coralic 2014]
     - Additional terms
         - [x] with Kdiv(u) term [Kapila 2001]
         - [x] with surface tension term [Perigaud 2005] [Garrick 2017]

@@ -87,29 +87,34 @@ FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/face_gradient_interpolator/*.f90)
 FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/generator/*.f90)
 FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/cellsystem/*.f90)
 
+# Flamework objects
+FRAMEWORK_OBJS=$(subst $(JSONFORTDIR)/,$(OBJDIR)/, $(JSONFORTSRCS))
+FRAMEWORK_OBJS+=$(subst $(PENF_DIR)/, $(OBJDIR)/, $(PENF_SRC))
+FRAMEWORK_OBJS+=$(subst $(FACE_DIR)/, $(OBJDIR)/, $(FACE_SRC))
+FRAMEWORK_OBJS+=$(subst $(BEFOR64_DIR)/, $(OBJDIR)/, $(BEFOR64_SRC))
+FRAMEWORK_OBJS+=$(subst $(STRINGIFOR_DIR)/, $(OBJDIR)/, $(STRINGIFOR_SRC))
+FRAMEWORK_OBJS+=$(subst $(FoXy_DIR)/, $(OBJDIR)/, $(FoXy_SRC))
+FRAMEWORK_OBJS+=$(subst $(VTKFORTRAN_DIR)/, $(OBJDIR)/, $(VTKFORTRAN_SRC))
+FRAMEWORK_OBJS+=$(subst $(FRAMEWORK_SRCDIR)/, $(OBJDIR)/, $(FRAMEWORK_SRCS))
+FRAMEWORK_OBJS:=$(subst .f90,.o,$(FRAMEWORK_OBJS))
+FRAMEWORK_OBJS:=$(subst .F90,.o,$(FRAMEWORK_OBJS))
+
 # F3DS Collection
-# Five-equation model
-FIVE_EQ_MODEL_SRCDIR=collection/five_equation_model/src
-FIVE_EQ_MODEL_SRCS=$(wildcard $(FIVE_EQ_MODEL_SRCDIR)/variables/*.f90)
-FIVE_EQ_MODEL_SRCS+=$(wildcard $(FIVE_EQ_MODEL_SRCDIR)/model/*.f90)
-FIVE_EQ_MODEL_SRCS+=$(wildcard $(FIVE_EQ_MODEL_SRCDIR)/special_reconstructor/*.f90)
-FIVE_EQ_MODEL_SRCS+=$(wildcard $(FIVE_EQ_MODEL_SRCDIR)/special_generator/*.f90)
-FIVE_EQ_MODEL_SRCS+=$(wildcard $(FIVE_EQ_MODEL_SRCDIR)/*.f90)
+# Viscous five-equation model
+VISCOUS_FIVE_EQUATION_MODEL_TARGET=fv5eq
+VISCOUS_FIVE_EQUATION_MODEL_SRCDIR=collection/viscous_five_equation_model/src
 
-TARGET=f5eq
-OBJS=$(subst $(JSONFORTDIR)/,$(OBJDIR)/, $(JSONFORTSRCS))
-OBJS+=$(subst $(PENF_DIR)/, $(OBJDIR)/, $(PENF_SRC))
-OBJS+=$(subst $(FACE_DIR)/, $(OBJDIR)/, $(FACE_SRC))
-OBJS+=$(subst $(BEFOR64_DIR)/, $(OBJDIR)/, $(BEFOR64_SRC))
-OBJS+=$(subst $(STRINGIFOR_DIR)/, $(OBJDIR)/, $(STRINGIFOR_SRC))
-OBJS+=$(subst $(FoXy_DIR)/, $(OBJDIR)/, $(FoXy_SRC))
-OBJS+=$(subst $(VTKFORTRAN_DIR)/, $(OBJDIR)/, $(VTKFORTRAN_SRC))
-OBJS+=$(subst $(FRAMEWORK_SRCDIR)/, $(OBJDIR)/, $(FRAMEWORK_SRCS))
-OBJS+=$(subst $(FIVE_EQ_MODEL_SRCDIR)/, $(OBJDIR)/, $(FIVE_EQ_MODEL_SRCS))
-OBJS:=$(subst .f90,.o,$(OBJS))
-OBJS:=$(subst .F90,.o,$(OBJS))
+VISCOUS_FIVE_EQUATION_MODEL_SRCS=$(wildcard $(VISCOUS_FIVE_EQUATION_MODEL_SRCDIR)/variables/*.f90)
+VISCOUS_FIVE_EQUATION_MODEL_SRCS+=$(wildcard $(VISCOUS_FIVE_EQUATION_MODEL_SRCDIR)/model/*.f90)
+VISCOUS_FIVE_EQUATION_MODEL_SRCS+=$(wildcard $(VISCOUS_FIVE_EQUATION_MODEL_SRCDIR)/special_reconstructor/*.f90)
+VISCOUS_FIVE_EQUATION_MODEL_SRCS+=$(wildcard $(VISCOUS_FIVE_EQUATION_MODEL_SRCDIR)/special_generator/*.f90)
+VISCOUS_FIVE_EQUATION_MODEL_SRCS+=$(wildcard $(VISCOUS_FIVE_EQUATION_MODEL_SRCDIR)/*.f90)
 
-$(TARGET): $(OBJS)
+VISCOUS_FIVE_EQUATION_MODEL_OBJS=$(FRAMEWORK_OBJS)
+VISCOUS_FIVE_EQUATION_MODEL_OBJS+=$(subst .f90,.o, $(subst $(VISCOUS_FIVE_EQUATION_MODEL_SRCDIR)/, $(OBJDIR)/, $(VISCOUS_FIVE_EQUATION_MODEL_SRCS)))
+
+# Viscous five-equation model compiling rule
+$(VISCOUS_FIVE_EQUATION_MODEL_TARGET): $(VISCOUS_FIVE_EQUATION_MODEL_OBJS)
 	[ -d $(BINDIR) ] || mkdir -p $(BINDIR)
 	$(FC) $(FCFLAGS) $+ -o $(BINDIR)/$@
 
@@ -169,8 +174,8 @@ $(OBJDIR)/%.o: $(FRAMEWORK_SRCDIR)/%.f90
 	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
 	$(FC) $(FCFLAGS) -c $< -o $@
 
-# Five-equation model
-$(OBJDIR)/%.o: $(FIVE_EQ_MODEL_SRCDIR)/%.f90
+# Viscous five-equation model
+$(OBJDIR)/%.o: $(VISCOUS_FIVE_EQUATION_MODEL_SRCDIR)/%.f90
 	[ -d $(dir $@) ] || mkdir -p $(dir $@)
 	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
 	$(FC) $(FCFLAGS) -c $< -o $@
@@ -182,4 +187,5 @@ clean:
 	rm -rf $(BINDIR)
 
 list:
-	echo $(OBJS)
+	echo $(FRAMEWORK_OBJS)
+	echo $(VISCOUS_FIVE_EQUATION_MODEL_OBJS)

@@ -1,4 +1,4 @@
-module five_equation_model_variables_module
+module viscous_five_equation_model_utils_module
     use typedef_module
     use stdio_module
     use abstract_eos
@@ -230,4 +230,4 @@ module five_equation_model_variables_module
             endif
         end associate
     end function curvature_preprocessing
-end module five_equation_model_variables_module
+end module viscous_five_equation_model_utils_module

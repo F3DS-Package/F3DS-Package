@@ -1,4 +1,4 @@
-module five_equation_model_reconstructor_generator_module
+module viscous_five_equation_model_reconstructor_generator_module
     use abstract_configuration
     use stdio_module
     use abstract_reconstructor
@@ -10,11 +10,11 @@ module five_equation_model_reconstructor_generator_module
 
     private
 
-    public :: five_equation_model_reconstructor_generator
+    public :: viscous_five_equation_model_reconstructor_generator
 
-    interface five_equation_model_reconstructor_generator
+    interface viscous_five_equation_model_reconstructor_generator
         module procedure with_config, with_name
-    end interface five_equation_model_reconstructor_generator
+    end interface viscous_five_equation_model_reconstructor_generator
 
     contains
 
@@ -47,4 +47,4 @@ module five_equation_model_reconstructor_generator_module
             call call_error("Unknow reconstructor name '"//name//"' is found.")
         end if
     end subroutine with_name
-end module five_equation_model_reconstructor_generator_module
+end module viscous_five_equation_model_reconstructor_generator_module
