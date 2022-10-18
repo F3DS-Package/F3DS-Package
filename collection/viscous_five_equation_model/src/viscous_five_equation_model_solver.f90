@@ -249,7 +249,7 @@ program viscous_five_equation_model_solver
 
     call a_result_writer%cleanup()
 
-    call write_message("f5eq is successfully terminated. done...")
+    call write_message("fv5eq is successfully terminated. done...")
 
     contains
 
