@@ -281,7 +281,7 @@ program five_eq_model_solver
         call a_cellsystem%write_vector(a_result_writer, "Velocity"       , primitive_variables_set(3:5, :))
         call a_cellsystem%write_scolar(a_result_writer, "Pressure"       , primitive_variables_set(6  , :))
         call a_cellsystem%write_scolar(a_result_writer, "Volume fraction", primitive_variables_set(7  , :))
-        call a_cellsystem%write_vector(a_result_writer, "Gradient volume fraction", surface_tension_variables_set(1:3, :))
+        call a_cellsystem%write_vector(a_result_writer, "Interface normal vector" , surface_tension_variables_set(1:3, :))
         call a_cellsystem%write_scolar(a_result_writer, "Curvature"               , surface_tension_variables_set(  4, :))
         call a_cellsystem%close_file  (a_result_writer)
     end subroutine write_result

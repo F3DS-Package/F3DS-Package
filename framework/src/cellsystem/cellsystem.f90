@@ -1167,6 +1167,8 @@ module class_cellsystem
         real   (real_kind) :: reconstructed_conservative_variables_rhc(num_conservative_variables)
         real   (real_kind) :: residual_element                        (num_conservative_variables, 1:2)
 
+        real   (real_kind) :: grad_dbg1(num_primitive_variables*3)
+
 !$omp parallel do private(i,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,face_gradient_primitive_variables,reconstructed_conservative_variables_lhc,reconstructed_conservative_variables_rhc,residual_element)
         do i = 1, self%num_faces, 1
             associate(                                                             &
@@ -1805,9 +1807,7 @@ module class_cellsystem
                 dphi => lhc_variables(i) - rhc_variables(i)    , &
                 dx   => lhc_position - rhc_position              &
             )
-                grad(1) = dphi / dx(1)
-                grad(2) = dphi / dx(2)
-                grad(3) = dphi / dx(3)
+                grad(1:3) = vector_normalize(dx) * (dphi / vector_magnitude(dx))
             end associate
         end do
     end function compute_boundary_gradient

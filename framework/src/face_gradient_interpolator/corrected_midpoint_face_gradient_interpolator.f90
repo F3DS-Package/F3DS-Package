@@ -37,16 +37,19 @@ module class_corrected_midpoint_face_gradient_interpolator
 
         integer(int_kind) :: i
 
-        associate(                                                                      &
-            midpoint_grad => 0.5d0 * (lhc_gradient_variables + rhc_gradient_variables), &
-            magnitude     => vector_magnitude(lhc_position - rhc_position)            , &
-            normalize     => vector_normalize(lhc_position - rhc_position)              &
-        )
-            do i = 1, num_variables, 1
-                face_gradient_variables(3*(i-1)+1:3*(i-1)+3) = midpoint_grad(3*(i-1)+1:3*(i-1)+3)                                                                                               &
-                                                             + (vector_multiply(midpoint_grad(3*(i-1)+1:3*(i-1)+3), normalize) - (lhc_variables(i) - rhc_variables(i)) / magnitude) * normalize
-            end do
-        end associate
+
+        do i = 1, num_variables, 1
+            associate(                                                                      &
+                midpoint_grad => 0.5d0 * (lhc_gradient_variables + rhc_gradient_variables), &
+                magnitude     => vector_magnitude(lhc_position - rhc_position)            , &
+                normalize     => vector_normalize(lhc_position - rhc_position)            , &
+                start_index   => 3*(i-1)+1                                                , &
+                end_index     => 3*(i-1)+3                                                  &
+            )
+                face_gradient_variables(start_index:end_index) = midpoint_grad(start_index:end_index)                                                                                               &
+                                                               - (vector_multiply(midpoint_grad(start_index:end_index), normalize) - (lhc_variables(i) - rhc_variables(i)) / magnitude) * normalize
+            end associate
+        end do
     end function interpolate
 
 end module class_corrected_midpoint_face_gradient_interpolator

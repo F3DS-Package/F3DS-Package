@@ -387,19 +387,19 @@ module class_five_equation_model_space_discretization
         end associate
 
         ! # viscosity term (Stokes hypothesis)
-        associate(                                                                         &
-            dudx => face_gradient_primitive_variables(7 )                                , &
-            dudy => face_gradient_primitive_variables(8 )                                , &
-            dudz => face_gradient_primitive_variables(9 )                                , &
-            dvdx => face_gradient_primitive_variables(10)                                , &
-            dvdy => face_gradient_primitive_variables(11)                                , &
-            dvdz => face_gradient_primitive_variables(12)                                , &
-            dwdx => face_gradient_primitive_variables(13)                                , &
-            dwdy => face_gradient_primitive_variables(14)                                , &
-            dwdz => face_gradient_primitive_variables(15)                                , &
-            u    => 0.5d0 * (primitive_variables_lhc(3:5) + primitive_variables_rhc(3:5)), &
-            mu   => self%mixture_dynamic_viscosity(interface_volume_fraction)            , &
-            n    => face_normal_vector                                                     &
+        associate(                                                                                                         &
+            dudx => face_gradient_primitive_variables(7 )                                                                , &
+            dudy => face_gradient_primitive_variables(8 )                                                                , &
+            dudz => face_gradient_primitive_variables(9 )                                                                , &
+            dvdx => face_gradient_primitive_variables(10)                                                                , &
+            dvdy => face_gradient_primitive_variables(11)                                                                , &
+            dvdz => face_gradient_primitive_variables(12)                                                                , &
+            dwdx => face_gradient_primitive_variables(13)                                                                , &
+            dwdy => face_gradient_primitive_variables(14)                                                                , &
+            dwdz => face_gradient_primitive_variables(15)                                                                , &
+            u    =>                                0.5d0 * (primitive_variables_lhc(3:5) + primitive_variables_rhc(3:5)) , &
+            mu   => self%mixture_dynamic_viscosity(0.5d0 * (primitive_variables_lhc(7  ) + primitive_variables_rhc(7  ))), &
+            n    => face_normal_vector                                                                                     &
         )
             tau(1,1) = 2.d0 * mu * dudx - (2.d0 / 3.d0) * mu * (dudx + dvdy + dwdz)
             tau(2,2) = 2.d0 * mu * dvdy - (2.d0 / 3.d0) * mu * (dudx + dvdy + dwdz)
@@ -426,8 +426,8 @@ module class_five_equation_model_space_discretization
                 face_tangential2_vector            &
             )
 
-            residual_element(1:7, 1) = residual_element(1:7, 1) - (1.d0 / lhc_cell_volume) * viscosity_flux(:) * face_area
-            residual_element(1:7, 2) = residual_element(1:7, 2) + (1.d0 / rhc_cell_volume) * viscosity_flux(:) * face_area
+            residual_element(1:7, 1) = residual_element(1:7, 1) + (1.d0 / lhc_cell_volume) * viscosity_flux(:) * face_area
+            residual_element(1:7, 2) = residual_element(1:7, 2) - (1.d0 / rhc_cell_volume) * viscosity_flux(:) * face_area
         end associate
     end function compute_residual_element
 
