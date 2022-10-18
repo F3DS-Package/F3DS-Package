@@ -6,7 +6,8 @@ module five_equation_model_boundary_condition_module
 
     private
 
-    public :: outflow_bc, wall_bc, symmetric_bc, empty_bc, gradient_volume_fraction_bc
+    public :: outflow_bc, wall_bc, symmetric_bc, empty_bc
+    public :: bc_for_normarized_gradient_volume_fraction
 
     contains
 
@@ -22,8 +23,8 @@ module five_equation_model_boundary_condition_module
         integer(int_kind ), intent(in) :: num_primitive_variables
         real   (real_kind)             :: ghost_primitive_variables(num_primitive_variables)
         ghost_primitive_variables(1:2) =         inner_primitive_variables(1:2)
-        ghost_primitive_variables(3  ) = -1.d0 * inner_primitive_variables(3)
-        ghost_primitive_variables(4:8) =         inner_primitive_variables(4:8)
+        ghost_primitive_variables(3:5) = -1.d0 * inner_primitive_variables(3:5) ! nonslip-wall condition
+        ghost_primitive_variables(6:8) =         inner_primitive_variables(6:8)
     end function wall_bc
 
     pure function symmetric_bc(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
@@ -44,12 +45,10 @@ module five_equation_model_boundary_condition_module
         ghost_primitive_variables(4:8) =         inner_primitive_variables(4:8)
     end function empty_bc
 
-    pure function gradient_volume_fraction_bc(inner_gradient_values, num_gradient_values) result(ghost_gradient_values)
+    pure function bc_for_normarized_gradient_volume_fraction(inner_gradient_values, num_gradient_values) result(ghost_gradient_values)
         real   (real_kind), intent(in) :: inner_gradient_values(:)
         integer(int_kind ), intent(in) :: num_gradient_values
         real   (real_kind)             :: ghost_gradient_values(num_gradient_values)
-        ghost_gradient_values(1) = inner_gradient_values(1)
-        ghost_gradient_values(2) = inner_gradient_values(2)
-        ghost_gradient_values(3) = inner_gradient_values(3)
-    end function gradient_volume_fraction_bc
+        ghost_gradient_values(1:3) = inner_gradient_values(1:3)
+    end function bc_for_normarized_gradient_volume_fraction
 end module five_equation_model_boundary_condition_module

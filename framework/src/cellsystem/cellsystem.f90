@@ -264,6 +264,7 @@ module class_cellsystem
         procedure, private, pass(self) :: finalize_cells
         procedure, private, pass(self) :: finalize_boundary_references
         procedure, private, pass(self) :: assign_boundary
+        procedure, private, pass(self) :: compute_boundary_gradient ! TODO: Move it! Make 'compute_face_gradient' class!
     end type
 
     contains
@@ -1182,12 +1183,20 @@ module class_cellsystem
                     i, self%num_local_cells, num_primitive_variables                                                     &
                 )
 
-                face_gradient_primitive_variables(:) = a_face_gradient_interpolator%interpolate(                  &
-                    gradient_primitive_variables_set(:,lhc_index), gradient_primitive_variables_set(:,rhc_index), &
-                    primitive_variables_set         (:,lhc_index), primitive_variables_set         (:,rhc_index), &
-                    self%cell_centor_positions      (:,lhc_index), self%cell_centor_positions      (:,rhc_index), &
-                    num_primitive_variables                                                                       &
-                )
+                if(.not. self%is_real_cell(rhc_index))then
+                    face_gradient_primitive_variables(:) = self%compute_boundary_gradient(                &
+                        primitive_variables_set   (:,lhc_index), primitive_variables_set   (:,rhc_index), &
+                        self%cell_centor_positions(:,lhc_index), self%cell_centor_positions(:,rhc_index), &
+                        num_primitive_variables                                                           &
+                    )
+                else
+                    face_gradient_primitive_variables(:) = a_face_gradient_interpolator%interpolate(                  &
+                        gradient_primitive_variables_set(:,lhc_index), gradient_primitive_variables_set(:,rhc_index), &
+                        primitive_variables_set         (:,lhc_index), primitive_variables_set         (:,rhc_index), &
+                        self%cell_centor_positions      (:,lhc_index), self%cell_centor_positions      (:,rhc_index), &
+                        num_primitive_variables                                                                       &
+                    )
+                end if
 
                 residual_element(:,:) = a_model%compute_residual_element( &
                     an_eos                                              , &
@@ -1780,4 +1789,26 @@ module class_cellsystem
         self%num_wall_faces  = 0
         self%num_symmetric_faces = 0
     end subroutine finalize_boundary_references
+
+    pure function compute_boundary_gradient(self, lhc_variables, rhc_variables, lhc_position, rhc_position, num_variables) result(gradient_variables)
+        class  (cellsystem), intent(in) :: self
+        real   (real_kind ), intent(in) :: lhc_variables(:)
+        real   (real_kind ), intent(in) :: rhc_variables(:)
+        real   (real_kind ), intent(in) :: lhc_position(3)
+        real   (real_kind ), intent(in) :: rhc_position(3)
+        integer(int_kind  ), intent(in) :: num_variables
+        real   (real_kind )             :: gradient_variables(num_variables*3)
+        integer(int_kind  ) :: i
+        do i = 1, num_variables, 1
+            associate(                                           &
+                grad => gradient_variables(3*(i-1)+1:3*(i-1)+3), &
+                dphi => lhc_variables(i) - rhc_variables(i)    , &
+                dx   => lhc_position - rhc_position              &
+            )
+                grad(1) = dphi / dx(1)
+                grad(2) = dphi / dx(2)
+                grad(3) = dphi / dx(3)
+            end associate
+        end do
+    end function compute_boundary_gradient
 end module class_cellsystem
