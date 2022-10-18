@@ -6,7 +6,7 @@ module five_equation_model_boundary_condition_module
 
     private
 
-    public :: outflow_bc, slipwall_bc, symmetric_bc, empty_bc, gradient_volume_fraction_bc
+    public :: outflow_bc, wall_bc, symmetric_bc, empty_bc, gradient_volume_fraction_bc
 
     contains
 
@@ -17,14 +17,14 @@ module five_equation_model_boundary_condition_module
         ghost_primitive_variables(:) = inner_primitive_variables(:)
     end function outflow_bc
 
-    pure function slipwall_bc(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
+    pure function wall_bc(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
         real   (real_kind), intent(in) :: inner_primitive_variables(:)
         integer(int_kind ), intent(in) :: num_primitive_variables
         real   (real_kind)             :: ghost_primitive_variables(num_primitive_variables)
         ghost_primitive_variables(1:2) =         inner_primitive_variables(1:2)
         ghost_primitive_variables(3  ) = -1.d0 * inner_primitive_variables(3)
         ghost_primitive_variables(4:8) =         inner_primitive_variables(4:8)
-    end function slipwall_bc
+    end function wall_bc
 
     pure function symmetric_bc(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
         real   (real_kind), intent(in) :: inner_primitive_variables(:)

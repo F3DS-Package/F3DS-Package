@@ -3,7 +3,7 @@ module face_type_module
         enumerator :: face_type = 0
         enumerator :: outflow_face_type
         enumerator :: symmetric_face_type
-        enumerator :: slip_wall_face_type
+        enumerator :: wall_face_type
         enumerator :: empty_face_type
         enumerator :: unknown_face_type
     end enum
@@ -19,8 +19,8 @@ contains
             type = outflow_face_type
         else if (string == "symmetric") then
             type = symmetric_face_type
-        else if (string == "slip wall") then
-            type = slip_wall_face_type
+        else if (string == "wall") then
+            type = wall_face_type
         else if (string == "empty") then
             type = empty_face_type
         else
