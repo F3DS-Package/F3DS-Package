@@ -401,18 +401,18 @@ module class_five_equation_model_space_discretization
             mu   => self%mixture_dynamic_viscosity(0.5d0 * (primitive_variables_lhc(7  ) + primitive_variables_rhc(7  ))), &
             n    => face_normal_vector                                                                                     &
         )
-            tau(1,1) = 2.d0 * mu * dudx - (2.d0 / 3.d0) * mu * (dudx + dvdy + dwdz)
-            tau(2,2) = 2.d0 * mu * dvdy - (2.d0 / 3.d0) * mu * (dudx + dvdy + dwdz)
-            tau(3,3) = 2.d0 * mu * dwdz - (2.d0 / 3.d0) * mu * (dudx + dvdy + dwdz)
-            tau(1,2) = mu * (dudy + dvdx)
-            tau(1,3) = mu * (dudz + dwdx)
-            tau(2,3) = mu * (dwdy + dvdz)
-            tau(2,1) = tau(1,2)
-            tau(3,1) = tau(1,3)
-            tau(3,2) = tau(2,3)
-            beta(1) = vector_multiply(tau(1,:), u) ! not inculde heat diffusion !
-            beta(2) = vector_multiply(tau(2,:), u)
-            beta(3) = vector_multiply(tau(3,:), u)
+            tau (1,1) = 2.d0 * mu * dudx - (2.d0 / 3.d0) * mu * (dudx + dvdy + dwdz)
+            tau (2,2) = 2.d0 * mu * dvdy - (2.d0 / 3.d0) * mu * (dudx + dvdy + dwdz)
+            tau (3,3) = 2.d0 * mu * dwdz - (2.d0 / 3.d0) * mu * (dudx + dvdy + dwdz)
+            tau (1,2) = mu * (dudy + dvdx)
+            tau (1,3) = mu * (dudz + dwdx)
+            tau (2,3) = mu * (dwdy + dvdz)
+            tau (2,1) = tau(1,2)
+            tau (3,1) = tau(1,3)
+            tau (3,2) = tau(2,3)
+            beta(1)   = vector_multiply(tau(1,:), u) ! not inculde heat diffusion !
+            beta(2)   = vector_multiply(tau(2,:), u)
+            beta(3)   = vector_multiply(tau(3,:), u)
 
             viscosity_flux(1:2) = 0.d0
             viscosity_flux(3:5) = matrix_multiply(tau , n)
@@ -426,8 +426,8 @@ module class_five_equation_model_space_discretization
                 face_tangential2_vector            &
             )
 
-            residual_element(1:7, 1) = residual_element(1:7, 1) + (1.d0 / lhc_cell_volume) * viscosity_flux(:) * face_area
-            residual_element(1:7, 2) = residual_element(1:7, 2) - (1.d0 / rhc_cell_volume) * viscosity_flux(:) * face_area
+            residual_element(1:7, 1) = residual_element(1:7, 1) - (1.d0 / lhc_cell_volume) * viscosity_flux(:) * face_area
+            residual_element(1:7, 2) = residual_element(1:7, 2) + (1.d0 / rhc_cell_volume) * viscosity_flux(:) * face_area
         end associate
     end function compute_residual_element
 
@@ -442,8 +442,10 @@ module class_five_equation_model_space_discretization
             g        => self%gravitational_acceleration_(:)    , &
             velocity => variables(3:5)                           &
         )
+            source(1:2) = 0.d0
             source(3:5) = density * g
             source(6  ) = vector_multiply(density * g, velocity)
+            source(7  ) = 0.d0
         end associate
     end function compute_source_term
 

@@ -1232,10 +1232,12 @@ module class_cellsystem
         class  (model     ), intent(in   ) :: a_model
 
         integer(int_kind ) :: i
+        integer(int_kind ) :: element(num_conservative_variables)
 
 !$omp parallel do private(i)
         do i = 1, self%num_cells, 1
-            residual_set(:,i) = residual_set(:,i) + a_model%compute_source_term(variables_set(:,i), num_conservative_variables)
+            element(:) = a_model%compute_source_term(variables_set(:,i), num_conservative_variables)
+            residual_set(:,i) = residual_set(:,i) + element(:)
         end do
     end subroutine compute_source_term_objective_api
 
