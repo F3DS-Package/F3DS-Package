@@ -19,7 +19,7 @@ program viscous_five_equation_model_solver
     use time_stepping_generator_module
     ! Reconstructor
     use abstract_reconstructor
-    use viscous_five_equation_model_reconstructor_generator_module
+    use five_equation_model_reconstructor_generator_module
     ! Rieman solver
     use class_hllc
     ! Grid & initial condition reader
@@ -127,7 +127,7 @@ program viscous_five_equation_model_solver
 
     ! Allocate schemes
     call f3ds_time_stepping_generator               (a_configuration, a_time_stepping            )
-    call viscous_five_equation_model_reconstructor_generator(a_configuration, a_reconstructor            )
+    call five_equation_model_reconstructor_generator(a_configuration, a_reconstructor            )
     call f3ds_time_increment_controller_generator   (a_configuration, a_time_increment_controller)
 
     ! Support for parallel computing

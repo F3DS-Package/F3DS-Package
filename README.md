@@ -14,9 +14,9 @@ We are currently working on developing a function for computing viscous flux.
 
 ### F3DS Collection
 
-- [ ] 5 equation model (in collection/five_equation_model. Binary name is "f5eq") [Kapila 2001] [Allaire 2002]
+- [x] 5 equation model (in collection/five_equation_model. Binary name is "f5eq") [Kapila 2001] [Allaire 2002]
     - Additional terms
-        - [ ] with Kdiv(u) term [Kapila 2001]
+        - [x] with Kdiv(u) term [Kapila 2001]
         - [ ] with cavitation model
 
 - [x] viscosity 5 equation model (in collection/viscous_five_equation_model. Binary name is "fv5eq") [Perigaud 2005] [Coralic 2014]

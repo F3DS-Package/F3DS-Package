@@ -100,18 +100,39 @@ FRAMEWORK_OBJS:=$(subst .f90,.o,$(FRAMEWORK_OBJS))
 FRAMEWORK_OBJS:=$(subst .F90,.o,$(FRAMEWORK_OBJS))
 
 # F3DS Collection
+# Five-equation model common tools
+FIVE_EQUATION_MODEL_COMMON_SRCDIR=collection/five_equation_model_common/src
+FIVE_EQUATION_MODEL_COMMON_SRCS=$(wildcard  $(FIVE_EQUATION_MODEL_COMMON_SRCDIR)/special_reconstructor/*.f90)
+FIVE_EQUATION_MODEL_COMMON_SRCS+=$(wildcard $(FIVE_EQUATION_MODEL_COMMON_SRCDIR)/special_generator/*.f90)
+FIVE_EQUATION_MODEL_COMMON_OBJS=$(FRAMEWORK_OBJS)
+FIVE_EQUATION_MODEL_COMMON_OBJS+=$(subst .f90,.o, $(subst $(FIVE_EQUATION_MODEL_COMMON_SRCDIR)/, $(OBJDIR)/, $(FIVE_EQUATION_MODEL_COMMON_SRCS)))
+
+# Five-equation model
+FIVE_EQUATION_MODEL_TARGET=f5eq
+FIVE_EQUATION_MODEL_SRCDIR=collection/five_equation_model/src
+FIVE_EQUATION_MODEL_SRCS=$(wildcard $(FIVE_EQUATION_MODEL_SRCDIR)/variables/*.f90)
+FIVE_EQUATION_MODEL_SRCS+=$(wildcard $(FIVE_EQUATION_MODEL_SRCDIR)/model/*.f90)
+FIVE_EQUATION_MODEL_SRCS+=$(wildcard $(FIVE_EQUATION_MODEL_SRCDIR)/special_reconstructor/*.f90)
+FIVE_EQUATION_MODEL_SRCS+=$(wildcard $(FIVE_EQUATION_MODEL_SRCDIR)/special_generator/*.f90)
+FIVE_EQUATION_MODEL_SRCS+=$(wildcard $(FIVE_EQUATION_MODEL_SRCDIR)/*.f90)
+FIVE_EQUATION_MODEL_OBJS=$(FIVE_EQUATION_MODEL_COMMON_OBJS)
+FIVE_EQUATION_MODEL_OBJS+=$(subst .f90,.o, $(subst $(FIVE_EQUATION_MODEL_SRCDIR)/, $(OBJDIR)/, $(FIVE_EQUATION_MODEL_SRCS)))
+
 # Viscous five-equation model
 VISCOUS_FIVE_EQUATION_MODEL_TARGET=fv5eq
 VISCOUS_FIVE_EQUATION_MODEL_SRCDIR=collection/viscous_five_equation_model/src
-
 VISCOUS_FIVE_EQUATION_MODEL_SRCS=$(wildcard $(VISCOUS_FIVE_EQUATION_MODEL_SRCDIR)/variables/*.f90)
 VISCOUS_FIVE_EQUATION_MODEL_SRCS+=$(wildcard $(VISCOUS_FIVE_EQUATION_MODEL_SRCDIR)/model/*.f90)
-VISCOUS_FIVE_EQUATION_MODEL_SRCS+=$(wildcard $(VISCOUS_FIVE_EQUATION_MODEL_SRCDIR)/special_reconstructor/*.f90)
-VISCOUS_FIVE_EQUATION_MODEL_SRCS+=$(wildcard $(VISCOUS_FIVE_EQUATION_MODEL_SRCDIR)/special_generator/*.f90)
 VISCOUS_FIVE_EQUATION_MODEL_SRCS+=$(wildcard $(VISCOUS_FIVE_EQUATION_MODEL_SRCDIR)/*.f90)
-
-VISCOUS_FIVE_EQUATION_MODEL_OBJS=$(FRAMEWORK_OBJS)
+VISCOUS_FIVE_EQUATION_MODEL_OBJS=$(FIVE_EQUATION_MODEL_COMMON_OBJS)
 VISCOUS_FIVE_EQUATION_MODEL_OBJS+=$(subst .f90,.o, $(subst $(VISCOUS_FIVE_EQUATION_MODEL_SRCDIR)/, $(OBJDIR)/, $(VISCOUS_FIVE_EQUATION_MODEL_SRCS)))
+
+all: $(FIVE_EQUATION_MODEL_TARGET) $(VISCOUS_FIVE_EQUATION_MODEL_TARGET)
+
+# Five-equation model compiling rule
+$(FIVE_EQUATION_MODEL_TARGET): $(FIVE_EQUATION_MODEL_OBJS)
+	[ -d $(BINDIR) ] || mkdir -p $(BINDIR)
+	$(FC) $(FCFLAGS) $+ -o $(BINDIR)/$@
 
 # Viscous five-equation model compiling rule
 $(VISCOUS_FIVE_EQUATION_MODEL_TARGET): $(VISCOUS_FIVE_EQUATION_MODEL_OBJS)
@@ -170,6 +191,18 @@ $(OBJDIR)/%.o: $(VTKFORTRAN_DIR)/%.F90
 
 # F3DS Flamework
 $(OBJDIR)/%.o: $(FRAMEWORK_SRCDIR)/%.f90
+	[ -d $(dir $@) ] || mkdir -p $(dir $@)
+	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
+	$(FC) $(FCFLAGS) -c $< -o $@
+
+# Five-equation model common tools
+$(OBJDIR)/%.o: $(FIVE_EQUATION_MODEL_COMMON_SRCDIR)/%.f90
+	[ -d $(dir $@) ] || mkdir -p $(dir $@)
+	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
+	$(FC) $(FCFLAGS) -c $< -o $@
+
+# Five-equation model
+$(OBJDIR)/%.o: $(FIVE_EQUATION_MODEL_SRCDIR)/%.f90
 	[ -d $(dir $@) ] || mkdir -p $(dir $@)
 	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
 	$(FC) $(FCFLAGS) -c $< -o $@
