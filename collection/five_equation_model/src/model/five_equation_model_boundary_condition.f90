@@ -23,7 +23,7 @@ module five_equation_model_boundary_condition_module
         real   (real_kind)             :: ghost_primitive_variables(num_primitive_variables)
         ghost_primitive_variables(1:2) =         inner_primitive_variables(1:2)
         ghost_primitive_variables(3  ) = -1.d0 * inner_primitive_variables(3)  ! slipwall
-        ghost_primitive_variables(4:8) =         inner_primitive_variables(4:8)
+        ghost_primitive_variables(4:7) =         inner_primitive_variables(4:7)
     end function wall_bc
 
     pure function symmetric_bc(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
@@ -32,7 +32,7 @@ module five_equation_model_boundary_condition_module
         real   (real_kind)             :: ghost_primitive_variables(num_primitive_variables)
         ghost_primitive_variables(1:2) =         inner_primitive_variables(1:2)
         ghost_primitive_variables(3  ) = -1.d0 * inner_primitive_variables(3)
-        ghost_primitive_variables(4:8) =         inner_primitive_variables(4:8)
+        ghost_primitive_variables(4:7) =         inner_primitive_variables(4:7)
     end function symmetric_bc
 
     pure function empty_bc(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
@@ -41,6 +41,6 @@ module five_equation_model_boundary_condition_module
         real   (real_kind)             :: ghost_primitive_variables(num_primitive_variables)
         ghost_primitive_variables(1:2) =         inner_primitive_variables(1:2)
         ghost_primitive_variables(3  ) = -1.d0 * inner_primitive_variables(3)
-        ghost_primitive_variables(4:8) =         inner_primitive_variables(4:8)
+        ghost_primitive_variables(4:7) =         inner_primitive_variables(4:7)
     end function empty_bc
 end module five_equation_model_boundary_condition_module
