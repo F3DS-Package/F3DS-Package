@@ -9,9 +9,9 @@ module class_third_order_tvd_rk
     private
 
     integer(int_kind ), parameter :: nmu_stage_ = 3
-    real   (real_kind), parameter :: alpha1_(1:3) = [real(real_kind) :: 1, 3/4, 1/3]
-    real   (real_kind), parameter :: alpha2_(1:3) = [real(real_kind) :: 0, 1/4, 2/3]
-    real   (real_kind), parameter :: beta_  (1:3) = [real(real_kind) :: 1, 1/4, 2/3]
+    real   (real_kind), parameter :: alpha1_(1:3) = [real(real_kind) :: 1.d0, 3.d0/4.d0, 1.d0/3.d0]
+    real   (real_kind), parameter :: alpha2_(1:3) = [real(real_kind) :: 0.d0, 1.d0/4.d0, 2.d0/3.d0]
+    real   (real_kind), parameter :: beta_  (1:3) = [real(real_kind) :: 1.d0, 1.d0/4.d0, 2.d0/3.d0]
 
     type, public, extends(time_stepping) :: third_order_tvd_rk
         private
