@@ -77,6 +77,8 @@ We are currently working on developing a function for computing viscous flux.
 
 #### Time Stepping
 
+- Explicit
+    - [x] Forward Euler
 - Explicit Runge-Kutta
     - [x] 2nd order TVD(SPP) Runge-Kutta
     - [x] 3rd order TVD(SPP) Runge-Kutta
