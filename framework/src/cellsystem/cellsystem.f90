@@ -276,6 +276,9 @@ module class_cellsystem
         class   (configuration             ), intent(inout) :: config
         integer (int_kind                  ), intent(in   ) :: num_conservative_variables
         integer (int_kind                  ), intent(in   ) :: num_primitive_variables
+#ifdef _DEBUG
+        call write_debuginfo("In face_gradient_interpolator_initialize(), cellsystem.")
+#endif
         call a_face_gradient_interpolator%initialize(config)
     end subroutine face_gradient_interpolator_initialize
 
@@ -286,6 +289,9 @@ module class_cellsystem
         class   (configuration), intent(inout) :: a_config
         integer(int_kind      ), intent(in   ) :: num_conservative_variables
         integer(int_kind      ), intent(in   ) :: num_primitive_variables
+#ifdef _DEBUG
+        call write_debuginfo("In model_initialize(), cellsystem.")
+#endif
         call a_model%initialize(a_config)
     end subroutine model_initialize
 
@@ -296,6 +302,9 @@ module class_cellsystem
         class(configuration          ), intent(inout) :: config
         integer(int_kind             ), intent(in   ) :: num_conservative_variables
         integer(int_kind             ), intent(in   ) :: num_primitive_variables
+#ifdef _DEBUG
+        call write_debuginfo("In control_volume_profiler_initialize(), cellsystem.")
+#endif
         call plotter%initialize(config, self%cell_centor_positions, self%is_real_cell, self%num_cells)
     end subroutine control_volume_profiler_initialize
 
@@ -303,6 +312,9 @@ module class_cellsystem
         class(cellsystem             ), intent(inout) :: self
         class(control_volume_profiler), intent(inout) :: plotter
         real (real_kind              ), intent(in   ) :: values_set(:,:)
+#ifdef _DEBUG
+        call write_debuginfo("In control_volume_profiler_write(), cellsystem.")
+#endif
         call plotter%write(self%time, values_set, self%cell_centor_positions, self%cell_volumes)
     end subroutine control_volume_profiler_write
 
@@ -320,6 +332,9 @@ module class_cellsystem
         class(configuration), intent(inout) :: config
         integer(int_kind   ), intent(in   ) :: num_conservative_variables
         integer(int_kind   ), intent(in   ) :: num_primitive_variables
+#ifdef _DEBUG
+        call write_debuginfo("In line_plotter_initialize(), cellsystem.")
+#endif
         call plotter%initialize(config, self%cell_centor_positions, self%is_real_cell, self%num_cells)
     end subroutine line_plotter_initialize
 
@@ -327,13 +342,16 @@ module class_cellsystem
         class(cellsystem  ), intent(inout) :: self
         class(line_plotter), intent(inout) :: plotter
         real (real_kind   ), intent(in   ) :: values_set(:,:)
+#ifdef _DEBUG
+        call write_debuginfo("In line_plotter_write(), cellsystem.")
+#endif
         call plotter%write(self%time, values_set, self%cell_centor_positions)
     end subroutine line_plotter_write
 
     pure function line_plotter_is_writable(self, plotter) result(juge)
         class(cellsystem  ), intent(in) :: self
         class(line_plotter), intent(in) :: plotter
-        logical                            :: juge
+        logical                         :: juge
         juge = plotter%is_writable(self%time)
     end function line_plotter_is_writable
 
@@ -344,6 +362,9 @@ module class_cellsystem
         class(configuration            ), intent(inout) :: config
         integer(int_kind               ), intent(in   ) :: num_conservative_variables
         integer(int_kind               ), intent(in   ) :: num_primitive_variables
+#ifdef _DEBUG
+        call write_debuginfo("In time_increment_controller_initialize(), cellsystem.")
+#endif
         call controller%initialize(config)
     end subroutine time_increment_controller_initialize
 
@@ -365,6 +386,10 @@ module class_cellsystem
         end interface
 
         integer(int_kind ) :: i
+
+#ifdef _DEBUG
+        call write_debuginfo("In update_time_increment_functional_api(), cellsystem.")
+#endif
 
         if ( controller%returns_constant() ) then
             self%time_increment = controller%get_constant_dt()
@@ -401,6 +426,10 @@ module class_cellsystem
 
         integer(int_kind ) :: i
 
+#ifdef _DEBUG
+        call write_debuginfo("In update_time_increment_objective_api(), cellsystem.")
+#endif
+
         if ( controller%returns_constant() ) then
             self%time_increment = controller%get_constant_dt()
             return
@@ -434,6 +463,9 @@ module class_cellsystem
         class  (configuration        ), intent(inout) :: config
         integer(int_kind             ), intent(in   ) :: num_conservative_variables
         integer(int_kind             ), intent(in   ) :: num_primitive_variables
+#ifdef _DEBUG
+        call write_debuginfo("In termination_criterion_initialize(), cellsystem.")
+#endif
         call criterion%initialize(config)
     end subroutine termination_criterion_initialize
 
@@ -493,6 +525,10 @@ module class_cellsystem
         end interface
 
         integer :: i, face_index
+
+#ifdef _DEBUG
+        call write_debuginfo("In apply_outflow_condition(), cellsystem.")
+#endif
 
         !$omp parallel do private(face_index)
         do i = 1, self%num_outflow_faces, 1
@@ -561,6 +597,10 @@ module class_cellsystem
 
         integer :: i, face_index
 
+#ifdef _DEBUG
+        call write_debuginfo("In apply_wall_condition(), cellsystem.")
+#endif
+
         !$omp parallel do private(face_index)
         do i = 1, self%num_wall_faces, 1
             face_index = self%wall_face_indexes(i)
@@ -627,6 +667,10 @@ module class_cellsystem
         end interface
 
         integer :: i, face_index
+
+#ifdef _DEBUG
+        call write_debuginfo("In apply_symmetric_condition(), cellsystem.")
+#endif
 
         !$omp parallel do private(face_index)
         do i = 1, self%num_symmetric_faces, 1
@@ -695,6 +739,10 @@ module class_cellsystem
 
         integer :: i, face_index
 
+#ifdef _DEBUG
+        call write_debuginfo("In apply_empty_condition(), cellsystem.")
+#endif
+
         !$omp parallel do private(face_index)
         do i = 1, self%num_empty_faces, 1
             face_index = self%empty_face_indexes(i)
@@ -719,6 +767,10 @@ module class_cellsystem
         real   (real_kind ), intent(inout), allocatable :: variables_set(:,:)
         integer(int_kind  ), intent(in   )              :: num_variables
 
+#ifdef _DEBUG
+        call write_debuginfo("In variables_initialize(), cellsystem.")
+#endif
+
         if(.not. self%read_cellsystem) call call_error("'read' subroutine is not called. You should call with following steps: first you call 'read' subroutine, next you initialze variables with 'initialze' subroutine. Please check your cord.")
 
         if(allocated(variables_set))then
@@ -731,6 +783,10 @@ module class_cellsystem
     subroutine variables_1darray_initialize(self, variables_set)
         class  (cellsystem), intent(inout)              :: self
         real   (real_kind ), intent(inout), allocatable :: variables_set(:)
+
+#ifdef _DEBUG
+        call write_debuginfo("In variables_1darray_initialize(), cellsystem.")
+#endif
 
         if(.not. self%read_cellsystem) call call_error("'read' subroutine is not called. You should call with following steps: first you call 'read' subroutine, next you initialze variables with 'initialze' subroutine. Please check your cord.")
 
@@ -750,6 +806,10 @@ module class_cellsystem
         character(len=:), allocatable :: filepath
         logical          :: found
         integer          :: i
+
+#ifdef _DEBUG
+        call write_debuginfo("In read_initial_condition(), cellsystem.")
+#endif
 
         ! TODO: Following lines move to {@code initial_condition_parser} class.
         call config%get_char("Initial condition.Filepath", filepath, found)
@@ -779,6 +839,10 @@ module class_cellsystem
 
         integer(int_kind) :: i
 
+#ifdef _DEBUG
+        call write_debuginfo("In conservative_to_primitive_variables_all(), cellsystem.")
+#endif
+
         !$omp parallel do private(i)
         do i = 1, self%num_cells, 1
             primitive_variables_set(:,i) = conservative_to_primitive_function(an_eos, conservative_variables_set(:,i), num_primitive_variables)
@@ -799,6 +863,10 @@ module class_cellsystem
         end interface
 
         integer(int_kind) :: i
+
+#ifdef _DEBUG
+        call write_debuginfo("In processes_variables_set_single_array(), cellsystem.")
+#endif
 
         !$omp parallel do private(i)
         do i = 1, self%num_cells, 1
@@ -821,6 +889,10 @@ module class_cellsystem
 
         integer(int_kind) :: i
 
+#ifdef _DEBUG
+        call write_debuginfo("In processes_variables_set_two_array(), cellsystem.")
+#endif
+
         !$omp parallel do private(i)
         do i = 1, self%num_cells, 1
             primary_variables_set(:,i) = processing_function(primary_variables_set(:,i), secondary_variables_set(:,i), num_variables)
@@ -834,7 +906,9 @@ module class_cellsystem
         class  (configuration      ), intent(inout) :: config
         integer(int_kind           ), intent(in   ) :: num_conservative_variables
         integer(int_kind           ), intent(in   ) :: num_primitive_variables
-
+#ifdef _DEBUG
+        call write_debuginfo("In gradient_calculator_initialize(), cellsystem.")
+#endif
         call a_gradient_calculator%initialize(config)
     end subroutine gradient_calculator_initialize
 
@@ -846,6 +920,10 @@ module class_cellsystem
         integer(int_kind           ), intent(in   ) :: num_variables
 
         integer(int_kind ) :: face_index, cell_index, rhc_index, lhc_index, var_index
+
+#ifdef _DEBUG
+        call write_debuginfo("In compute_gradient_2darray(), cellsystem.")
+#endif
 
 !$omp parallel do private(cell_index)
         do cell_index = 1, self%num_cells, 1
@@ -887,6 +965,10 @@ module class_cellsystem
 
         integer(int_kind) :: face_index, cell_index, rhc_index, lhc_index
 
+#ifdef _DEBUG
+        call write_debuginfo("In compute_gradient_1darray(), cellsystem.")
+#endif
+
 !$omp parallel do private(cell_index)
         do cell_index = 1, self%num_cells, 1
             gradient_variable_set(:,cell_index) = 0.d0
@@ -923,7 +1005,9 @@ module class_cellsystem
         class  (configuration        ), intent(inout) :: config
         integer(int_kind             ), intent(in   ) :: num_conservative_variables
         integer(int_kind             ), intent(in   ) :: num_primitive_variables
-
+#ifdef _DEBUG
+        call write_debuginfo("In divergence_calculator_initialize(), cellsystem.")
+#endif
         call a_divergence_calculator%initialize(config)
     end subroutine divergence_calculator_initialize
 
@@ -936,6 +1020,10 @@ module class_cellsystem
 
         integer(int_kind) :: face_index, cell_index, rhc_index, lhc_index, var_index, num_divergence_variables
         real  (real_kind) :: residual
+
+#ifdef _DEBUG
+        call write_debuginfo("In compute_divergence_2darray(), cellsystem.")
+#endif
 
 !$omp parallel do private(cell_index)
         do cell_index = 1, self%num_cells, 1
@@ -979,6 +1067,10 @@ module class_cellsystem
 
         integer(int_kind) :: face_index, cell_index, rhc_index, lhc_index
 
+#ifdef _DEBUG
+        call write_debuginfo("In compute_divergence_1darray(), cellsystem.")
+#endif
+
 !$omp parallel do private(cell_index)
         do cell_index = 1, self%num_cells, 1
             divergence_variable_set(cell_index) = 0.d0
@@ -1014,7 +1106,9 @@ module class_cellsystem
         class  (configuration ), intent(inout) :: config
         integer(int_kind      ), intent(in   ) :: num_conservative_variables
         integer(int_kind      ), intent(in   ) :: num_primitive_variables
-
+#ifdef _DEBUG
+        call write_debuginfo("In eos_initialize(), cellsystem.")
+#endif
         call an_eos%initialize(config)
     end subroutine eos_initialize
 
@@ -1092,6 +1186,10 @@ module class_cellsystem
 
         logical :: lhc_is_dummy, rhc_is_dummy
 
+#ifdef _DEBUG
+        call write_debuginfo("In compute_residual_functional_api(), cellsystem.")
+#endif
+
 !$omp parallel do private(i,lhc_index,rhc_index,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,reconstructed_conservative_variables_lhc,reconstructed_conservative_variables_rhc,residual_element)
         do i = 1, self%num_faces, 1
             lhc_index = self%face_to_cell_indexes(self%num_local_cells+0, i)
@@ -1167,7 +1265,9 @@ module class_cellsystem
         real   (real_kind) :: reconstructed_conservative_variables_rhc(num_conservative_variables)
         real   (real_kind) :: residual_element                        (num_conservative_variables, 1:2)
 
-        real   (real_kind) :: grad_dbg1(num_primitive_variables*3)
+#ifdef _DEBUG
+        call write_debuginfo("In compute_residual_objective_api(), cellsystem.")
+#endif
 
 !$omp parallel do private(i,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,face_gradient_primitive_variables,reconstructed_conservative_variables_lhc,reconstructed_conservative_variables_rhc,residual_element)
         do i = 1, self%num_faces, 1
@@ -1234,6 +1334,10 @@ module class_cellsystem
         integer(int_kind ) :: i
         integer(int_kind ) :: element(num_conservative_variables)
 
+#ifdef _DEBUG
+        call write_debuginfo("In compute_source_term_objective_api(), cellsystem.")
+#endif
+
 !$omp parallel do private(i)
         do i = 1, self%num_cells, 1
             element(:) = a_model%compute_source_term(variables_set(:,i), num_conservative_variables)
@@ -1248,7 +1352,9 @@ module class_cellsystem
         class  (configuration ), intent(inout) :: config
         integer(int_kind      ), intent(in   ) :: num_conservative_variables
         integer(int_kind      ), intent(in   ) :: num_primitive_variables
-
+#ifdef _DEBUG
+        call write_debuginfo("In riemann_solver_initialize(), cellsystem.")
+#endif
         call a_riemann_solver%initialize(config)
     end subroutine riemann_solver_initialize
 
@@ -1259,7 +1365,9 @@ module class_cellsystem
         class  (configuration ), intent(inout) :: config
         integer(int_kind      ), intent(in   ) :: num_conservative_variables
         integer(int_kind      ), intent(in   ) :: num_primitive_variables
-
+#ifdef _DEBUG
+        call write_debuginfo("In reconstructor_initialize(), cellsystem.")
+#endif
         call a_reconstructor%initialize(config)
     end subroutine reconstructor_initialize
 
@@ -1270,7 +1378,9 @@ module class_cellsystem
         class  (configuration), intent(inout) :: config
         integer(int_kind     ), intent(in   ) :: num_conservative_variables
         integer(int_kind     ), intent(in   ) :: num_primitive_variables
-
+#ifdef _DEBUG
+        call write_debuginfo("In time_stepping_initialize(), cellsystem.")
+#endif
         call a_time_stepping%initialize(config, self%num_cells, num_conservative_variables)
     end subroutine time_stepping_initialize
 
@@ -1299,6 +1409,10 @@ module class_cellsystem
 
         integer(int_kind) :: i
 
+#ifdef _DEBUG
+        call write_debuginfo("In time_stepping_initialize(), cellsystem.")
+#endif
+
 !$omp parallel do private(i)
         do i = 1, self%num_cells, 1
             call a_time_stepping%compute_next_state(i, state_num, self%time_increment, conservative_variables_set(:,i), residual_set(:,i))
@@ -1320,6 +1434,10 @@ module class_cellsystem
 
         integer(int_kind) :: i
 
+#ifdef _DEBUG
+        call write_debuginfo("In prepare_stepping(), cellsystem.")
+#endif
+
 !$omp parallel do private(i)
         do i = 1, self%num_cells, 1
             call a_time_stepping%prepare_stepping(i, conservative_variables_set(:,i), primitive_variables_set(:,i), residual_set(:,i))
@@ -1330,7 +1448,6 @@ module class_cellsystem
         class  (cellsystem   ), intent(in) :: self
         class  (time_stepping), intent(in) :: a_time_stepping
         integer(int_kind     )                :: n
-
         n = a_time_stepping%get_number_of_states()
     end function get_number_of_states
 
@@ -1341,21 +1458,27 @@ module class_cellsystem
         class  (configuration), intent(inout) :: config
         integer(int_kind     ), intent(in   ) :: num_conservative_variables
         integer(int_kind     ), intent(in   ) :: num_primitive_variables
-
+#ifdef _DEBUG
+        call write_debuginfo("In result_writer_initialize(), cellsystem.")
+#endif
         call writer%initialize(self%num_cells, self%num_points, self%is_real_cell, self%cell_geometries, self%cell_types, config)
     end subroutine result_writer_initialize
 
     subroutine result_writer_open_file(self, writer)
         class(cellsystem   ), intent(inout) :: self
         class(result_writer), intent(inout) :: writer
-
+#ifdef _DEBUG
+        call write_debuginfo("In result_writer_open_file(), cellsystem.")
+#endif
         call writer%open_file(self%time, self%points)
     end subroutine result_writer_open_file
 
     subroutine result_writer_close_file(self, writer)
         class(cellsystem   ), intent(inout) :: self
         class(result_writer), intent(inout) :: writer
-
+#ifdef _DEBUG
+        call write_debuginfo("In result_writer_close_file(), cellsystem.")
+#endif
         call writer%close_file()
     end subroutine result_writer_close_file
 
@@ -1363,7 +1486,6 @@ module class_cellsystem
         class(cellsystem   ), intent(in) :: self
         class(result_writer), intent(in) :: writer
         logical                          :: yes
-
         yes = writer%is_writable(self%time)
     end function result_writer_is_writable
 
@@ -1372,7 +1494,9 @@ module class_cellsystem
         class    (result_writer), intent(inout) :: writer
         character(len=*        ), intent(in   ) :: name
         real     (real_kind    ), intent(in   ) :: scolar_variables(:)
-
+#ifdef _DEBUG
+        call write_debuginfo("In write_scolar(), cellsystem.")
+#endif
         call writer%write_scolar(self%is_real_cell, name, scolar_variables)
     end subroutine write_scolar
 
@@ -1381,7 +1505,9 @@ module class_cellsystem
         class    (result_writer), intent(inout) :: writer
         character(len=*        ), intent(in   ) :: name
         real     (real_kind    ), intent(in   ) :: vector_variables(:,:)
-
+#ifdef _DEBUG
+        call write_debuginfo("In write_vector(), cellsystem.")
+#endif
         call writer%write_vector(self%is_real_cell, name, vector_variables)
     end subroutine write_vector
 
@@ -1389,7 +1515,6 @@ module class_cellsystem
         class    (cellsystem   ), intent(inout) :: self
         class    (result_writer), intent(inout) :: writer
         character(len=:        ), allocatable :: name
-
         name = writer%get_filename()
     end function get_filename
 
@@ -1400,6 +1525,10 @@ module class_cellsystem
         class(configuration      ), intent(inout) :: config
 
         integer(kind(face_type)), allocatable :: face_types(:)
+
+#ifdef _DEBUG
+        call write_debuginfo("In read(), cellsystem.")
+#endif
 
         ! parse grid file
         call parser%parse(config)
@@ -1428,7 +1557,7 @@ module class_cellsystem
         call parser%close()
 
 #ifdef _DEBUG
-        print *, "DEBUG: cellsystem:"
+        call write_debuginfo("Read following mesh.")
         print *, "Number of cells          : ", self%num_cells
         print *, "Number of faces          : ", self%num_faces
         print *, "Number of symmetric faces: ", self%num_symmetric_faces
@@ -1440,6 +1569,9 @@ module class_cellsystem
 
     subroutine increment_time(self)
         class(cellsystem), intent(inout) :: self
+#ifdef _DEBUG
+        call write_debuginfo("In increment_time(), cellsystem.")
+#endif
         self%time = self%time + self%time_increment
         self%num_steps = self%num_steps + 1
     end subroutine increment_time
@@ -1514,6 +1646,9 @@ module class_cellsystem
     ! ### Finalizer ###
     subroutine finalize(self)
         class(cellsystem), intent(inout) :: self
+#ifdef _DEBUG
+        call write_debuginfo("In finalize(), cellsystem.")
+#endif
         call self%finalize_cells()
         call self%finalize_faces()
         call self%finalize_boundary_references()
@@ -1526,8 +1661,12 @@ module class_cellsystem
 
         integer(int_kind) :: index, outflow_index, wall_index, symmetric_index, empty_index
 
+#ifdef _DEBUG
+        call write_debuginfo("In assign_boundary(), cellsystem.")
+#endif
+
         outflow_index   = 0
-        wall_index  = 0
+        wall_index       = 0
         symmetric_index = 0
         empty_index     = 0
 
@@ -1556,6 +1695,10 @@ module class_cellsystem
         class(cellsystem), intent(inout) :: self
         integer(int_kind), intent(in) :: num_faces
         integer(int_kind), intent(in) :: num_local_cells
+
+#ifdef _DEBUG
+        call write_debuginfo("In initialise_faces(), cellsystem.")
+#endif
 
         if(num_faces < 1)then
             call call_error("Number of face must be set over zero.")
@@ -1601,6 +1744,10 @@ module class_cellsystem
     subroutine initialise_cells(self, num_points, num_cells)
         class(cellsystem), intent(inout) :: self
         integer(int_kind), intent(in) :: num_points, num_cells
+
+#ifdef _DEBUG
+        call write_debuginfo("In initialise_cells(), cellsystem.")
+#endif
 
         if(num_points < 1)then
             call call_error("Number of points must be set over zero.")
@@ -1650,6 +1797,10 @@ module class_cellsystem
         integer(int_kind), intent(in) :: num_symetric_faces
         integer(int_kind), intent(in) :: num_empty_faces
 
+#ifdef _DEBUG
+        call write_debuginfo("In initialise_boundary_references(), cellsystem.")
+#endif
+
         if(num_outflow_faces < 0)then
             call call_error("Number of outflow BC faces must be set over zero.")
         end if
@@ -1694,6 +1845,10 @@ module class_cellsystem
     subroutine finalize_faces(self)
         class(cellsystem), intent(inout) :: self
 
+#ifdef _DEBUG
+        call write_debuginfo("In finalize_faces(), cellsystem.")
+#endif
+
         if(.not. allocated(self%face_to_cell_indexes))then
             call call_error("Array face_to_cell_indexes are not allocated. But you call the finalizer for faces.")
         end if
@@ -1731,6 +1886,10 @@ module class_cellsystem
     subroutine finalize_cells(self)
         class(cellsystem), intent(inout) :: self
 
+#ifdef _DEBUG
+        call write_debuginfo("In finalize_cells(), cellsystem.")
+#endif
+
         if(.not. allocated(self%cell_centor_positions))then
             call call_error("Array cell_centor_positions is not allocated. But you call the finalizer for cell_geometries_module.")
         end if
@@ -1767,6 +1926,10 @@ module class_cellsystem
 
     subroutine finalize_boundary_references(self)
         class(cellsystem), intent(inout) :: self
+
+#ifdef _DEBUG
+        call write_debuginfo("In finalize_boundary_references(), cellsystem.")
+#endif
 
         if(.not. allocated(self%outflow_face_indexes))then
             call call_error("Array outflow_face_indexes is not allocated. But you call the finalizer for boundary_reference module.")

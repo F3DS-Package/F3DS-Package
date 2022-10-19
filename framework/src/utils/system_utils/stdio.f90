@@ -12,6 +12,7 @@ module stdio_module
     public :: call_error
     public :: write_message
     public :: write_warring
+    public :: write_debuginfo
 
     contains
 
