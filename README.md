@@ -111,12 +111,11 @@ We are currently working on developing a function for computing viscous flux.
 - [x] Input from Nishida Lab. legacy format
 - [ ] Unifoam flow generation
 
-#### Parallelization Backend
+#### Parallelization
 
-- [x] OpenMP
-- [ ] OpenMPI (single-node/multi-node)
-- [ ] CUDA Fortran
-- [ ] OpenACC
+- [x] single-node multi-thread simd (backends none/openMP/openMP)
+- [ ] multi-node multi-thread simd (backends MPI/MPI/openMP)
+- [ ] multi-node multi-thread multi-gpu (backends MPI/MPI/{cuda, openACC})
 
 #### Grid Decomposition for Parallelization
 

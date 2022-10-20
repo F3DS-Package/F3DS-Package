@@ -21,6 +21,7 @@ module class_cellsystem
     use abstract_initial_condition_parser
     use abstract_face_gradient_interpolator
     use abstract_model
+    use abstract_parallelizer
     use class_line_plotter
     use class_control_volume_profiler
 
@@ -152,21 +153,23 @@ module class_cellsystem
         procedure, public, pass(self) :: control_volume_profiler_initialize
         procedure, public, pass(self) :: model_initialize
         procedure, public, pass(self) :: face_gradient_interpolator_initialize
-        generic  , public             :: initialize  => result_writer_initialize            , &
-                                                        time_stepping_initialize            , &
-                                                        reconstructor_initialize            , &
-                                                        riemann_solver_initialize           , &
-                                                        eos_initialize                      , &
-                                                        gradient_calculator_initialize      , &
-                                                        variables_initialize                , &
-                                                        variables_1darray_initialize        , &
-                                                        termination_criterion_initialize    , &
-                                                        time_increment_controller_initialize, &
-                                                        divergence_calculator_initialize    , &
-                                                        line_plotter_initialize             , &
-                                                        control_volume_profiler_initialize  , &
-                                                        model_initialize                    , &
-                                                        face_gradient_interpolator_initialize
+        procedure, public, pass(self) :: parallelizer_initialize
+        generic  , public             :: initialize  => result_writer_initialize             , &
+                                                        time_stepping_initialize             , &
+                                                        reconstructor_initialize             , &
+                                                        riemann_solver_initialize            , &
+                                                        eos_initialize                       , &
+                                                        gradient_calculator_initialize       , &
+                                                        variables_initialize                 , &
+                                                        variables_1darray_initialize         , &
+                                                        termination_criterion_initialize     , &
+                                                        time_increment_controller_initialize , &
+                                                        divergence_calculator_initialize     , &
+                                                        line_plotter_initialize              , &
+                                                        control_volume_profiler_initialize   , &
+                                                        model_initialize                     , &
+                                                        face_gradient_interpolator_initialize, &
+                                                        parallelizer_initialize
         procedure, public, pass(self) :: result_writer_open_file
         generic  , public             :: open_file   => result_writer_open_file
         procedure, public, pass(self) :: result_writer_close_file
@@ -268,6 +271,19 @@ module class_cellsystem
     end type
 
     contains
+
+    ! ### Parallelizer ###
+    subroutine parallelizer_initialize(self, a_parallelizer, config, num_conservative_variables, num_primitive_variables)
+        class   (cellsystem   ), intent(inout) :: self
+        class   (parallelizer ), intent(inout) :: a_parallelizer
+        class   (configuration), intent(inout) :: config
+        integer (int_kind     ), intent(in   ) :: num_conservative_variables
+        integer (int_kind     ), intent(in   ) :: num_primitive_variables
+#ifdef _DEBUG
+        call write_debuginfo("In parallelizer_initialize(), cellsystem.")
+#endif
+        call a_parallelizer%initialize(config, self%num_cells, self%num_faces)
+    end subroutine
 
     ! ### Face gradient interpolator ###
     subroutine face_gradient_interpolator_initialize(self, a_face_gradient_interpolator, config, num_conservative_variables, num_primitive_variables)

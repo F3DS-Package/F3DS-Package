@@ -130,9 +130,6 @@ program viscous_five_equation_model_solver
     call five_equation_model_reconstructor_generator(a_configuration, a_reconstructor            )
     call f3ds_time_increment_controller_generator   (a_configuration, a_time_increment_controller)
 
-    ! Support for parallel computing
-    call a_parallelizer%initialize(a_configuration)
-
     ! Read grid
     call a_cellsystem%read(a_grid_parser, a_configuration)
 
@@ -143,6 +140,7 @@ program viscous_five_equation_model_solver
     call a_cellsystem%initialize(gradient_primitive_variables_set, num_gradient_primitive_variables)
     call a_cellsystem%initialize(surface_tension_variables_set   , num_surface_tension_variables   )
     ! Initialize schemes & utils
+    call a_cellsystem%initialize(a_parallelizer              , a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(an_eos                      , a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(a_riemann_solver            , a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(a_time_stepping             , a_configuration, num_conservative_variables, num_primitive_variables)
