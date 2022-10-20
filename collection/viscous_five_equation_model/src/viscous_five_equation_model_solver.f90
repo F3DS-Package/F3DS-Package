@@ -249,39 +249,4 @@ program viscous_five_equation_model_solver
     call a_result_writer%cleanup()
 
     call write_message("fv5eq is successfully terminated. done...")
-
-    contains
-
-    subroutine write_result(a_cellsystem, a_result_writer, primitive_variables_set, surface_tension_variables_set)
-        type(cellsystem       ), intent(inout) :: a_cellsystem
-        type(vtk_result_writer), intent(inout) :: a_result_writer
-        real(real_kind        ), intent(in   ) :: primitive_variables_set      (:,:)
-        real(real_kind        ), intent(in   ) :: surface_tension_variables_set(:,:)
-
-        real(real_kind) :: density(a_cellsystem%get_number_of_cells())
-
-        call a_cellsystem%open_file   (a_result_writer)
-
-        call write_message("Write a result "//a_cellsystem%get_filename(a_result_writer)//"...")
-
-        do cell_index = 1, a_cellsystem%get_number_of_cells(), 1
-            associate(                                          &
-                rho1 => primitive_variables_set(1, cell_index), &
-                rho2 => primitive_variables_set(2, cell_index), &
-                z    => primitive_variables_set(7, cell_index)  &
-            )
-                density(cell_index) = z * rho1 + (1.d0 - z) * rho2
-            end associate
-        end do
-
-        call a_cellsystem%write_scolar(a_result_writer, "Density"        , density                        )
-        call a_cellsystem%write_scolar(a_result_writer, "Density 1"      , primitive_variables_set(1  , :))
-        call a_cellsystem%write_scolar(a_result_writer, "Density 2"      , primitive_variables_set(2  , :))
-        call a_cellsystem%write_vector(a_result_writer, "Velocity"       , primitive_variables_set(3:5, :))
-        call a_cellsystem%write_scolar(a_result_writer, "Pressure"       , primitive_variables_set(6  , :))
-        call a_cellsystem%write_scolar(a_result_writer, "Volume fraction", primitive_variables_set(7  , :))
-        call a_cellsystem%write_vector(a_result_writer, "Interface normal vector" , surface_tension_variables_set(1:3, :))
-        call a_cellsystem%write_scolar(a_result_writer, "Curvature"               , surface_tension_variables_set(  4, :))
-        call a_cellsystem%close_file  (a_result_writer)
-    end subroutine write_result
 end program viscous_five_equation_model_solver

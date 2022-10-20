@@ -4,17 +4,51 @@ module five_equation_model_utils_module
     use abstract_eos
     use math_constant_module
     use vector_module
+    use class_cellsystem
+    use abstract_result_writer
 
     implicit none
 
     private
 
+    public :: write_result
     public :: conservative_to_primitive
     public :: primitive_to_conservative
     public :: rotate_primitive
     public :: unrotate_primitive
 
     contains
+
+    subroutine write_result(a_cellsystem, a_result_writer, primitive_variables_set)
+        type (cellsystem       ), intent(inout) :: a_cellsystem
+        class(result_writer    ), intent(inout) :: a_result_writer
+        real (real_kind        ), intent(in   ) :: primitive_variables_set(:,:)
+
+        real   (real_kind) :: density(a_cellsystem%get_number_of_cells())
+        integer(int_kind ) :: cell_index
+
+        call a_cellsystem%open_file   (a_result_writer)
+
+        call write_message("Write a result "//a_cellsystem%get_filename(a_result_writer)//"...")
+
+        do cell_index = 1, a_cellsystem%get_number_of_cells(), 1
+            associate(                                          &
+                rho1 => primitive_variables_set(1, cell_index), &
+                rho2 => primitive_variables_set(2, cell_index), &
+                z    => primitive_variables_set(7, cell_index)  &
+            )
+                density(cell_index) = z * rho1 + (1.d0 - z) * rho2
+            end associate
+        end do
+
+        call a_cellsystem%write_scolar(a_result_writer, "Density"        , density                        )
+        call a_cellsystem%write_scolar(a_result_writer, "Density 1"      , primitive_variables_set(1  , :))
+        call a_cellsystem%write_scolar(a_result_writer, "Density 2"      , primitive_variables_set(2  , :))
+        call a_cellsystem%write_vector(a_result_writer, "Velocity"       , primitive_variables_set(3:5, :))
+        call a_cellsystem%write_scolar(a_result_writer, "Pressure"       , primitive_variables_set(6  , :))
+        call a_cellsystem%write_scolar(a_result_writer, "Volume fraction", primitive_variables_set(7  , :))
+        call a_cellsystem%close_file  (a_result_writer)
+    end subroutine write_result
 
     pure function primitive_to_conservative(an_eos, primitive_variables, num_conservatives) result(conservative_variables)
         class  (eos         ), intent(in)  :: an_eos
