@@ -212,6 +212,7 @@ program viscous_five_equation_model_solver
             call a_cellsystem%apply_symmetric_condition(primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, symmetric_bc)
 
             call a_cellsystem%compute_residual(   &
+                a_parallelizer                  , &
                 a_reconstructor                 , &
                 a_riemann_solver                , &
                 an_eos                          , &
@@ -225,7 +226,7 @@ program viscous_five_equation_model_solver
                 a_model                           &
             )
 
-            call a_cellsystem%compute_source_term(primitive_variables_set, residual_set, num_conservative_variables, a_model)
+            call a_cellsystem%compute_source_term(a_parallelizer, primitive_variables_set, residual_set, num_conservative_variables, a_model)
 
             call a_cellsystem%compute_next_state(a_time_stepping, an_eos, state_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, conservative_to_primitive)
         end do

@@ -155,6 +155,7 @@ program five_equation_model_solver
             call a_cellsystem%apply_symmetric_condition(primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, symmetric_bc)
 
             call a_cellsystem%compute_residual(   &
+                a_parallelizer                  , &
                 a_reconstructor                 , &
                 a_riemann_solver                , &
                 an_eos                          , &

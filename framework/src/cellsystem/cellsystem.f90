@@ -1129,11 +1129,12 @@ module class_cellsystem
     end subroutine eos_initialize
 
     ! ### Resudual ###
-    subroutine compute_residual_functional_api(self, a_reconstructor, a_riemann_solver, an_eos,                                            &
+    subroutine compute_residual_functional_api(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos,                        &
                                            primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
                                            primitive_to_conservative_function, residual_element_function                                )
 
         class  (cellsystem    ), intent(in   ) :: self
+        class  (parallelizer  ), intent(in   ) :: a_parallelizer
         class  (reconstructor ), intent(in   ) :: a_reconstructor
         class  (riemann_solver), intent(in   ) :: a_riemann_solver
         class  (eos           ), intent(in   ) :: an_eos
@@ -1191,7 +1192,7 @@ module class_cellsystem
             end function residual_element_function
         end interface
 
-        integer(int_kind ) :: i
+        integer(int_kind ) :: i,thread_number,local_index
         integer(int_kind ) :: lhc_index
         integer(int_kind ) :: rhc_index
         real   (real_kind) :: reconstructed_primitive_variables_lhc   (num_primitive_variables)
@@ -1206,51 +1207,52 @@ module class_cellsystem
         call write_debuginfo("In compute_residual_functional_api(), cellsystem.")
 #endif
 
-!$omp parallel do private(i,lhc_index,rhc_index,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,reconstructed_conservative_variables_lhc,reconstructed_conservative_variables_rhc,residual_element)
-        do i = 1, self%num_faces, 1
-            lhc_index = self%face_to_cell_indexes(self%num_local_cells+0, i)
-            rhc_index = self%face_to_cell_indexes(self%num_local_cells+1, i)
+!$omp parallel do private(i,thread_number,local_index,lhc_index,rhc_index,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,reconstructed_conservative_variables_lhc,reconstructed_conservative_variables_rhc,residual_element)
+        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
+            do local_index = 1, a_parallelizer%get_number_of_face_indexes(1, thread_number), 1
+                i = a_parallelizer%get_face_index(1, thread_number, local_index)
 
-            !lhc_is_dummy = (self%is_real_cell(lhc_index) .eqv. .false.)
-            !rhc_is_dummy = (self%is_real_cell(lhc_index) .eqv. .false.)
-            !if(lhc_is_dummy .and. rhc_is_dummy)cycle
+                lhc_index = self%face_to_cell_indexes(self%num_local_cells+0, i)
+                rhc_index = self%face_to_cell_indexes(self%num_local_cells+1, i)
 
-            reconstructed_primitive_variables_lhc(:) = a_reconstructor%reconstruct_lhc(                              &
-                primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
-                i, self%num_local_cells, num_primitive_variables                                                     &
-            )
-            reconstructed_primitive_variables_rhc(:) = a_reconstructor%reconstruct_rhc(                              &
-                primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
-                i, self%num_local_cells, num_primitive_variables                                                     &
-            )
+                reconstructed_primitive_variables_lhc(:) = a_reconstructor%reconstruct_lhc(                              &
+                    primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
+                    i, self%num_local_cells, num_primitive_variables                                                     &
+                )
+                reconstructed_primitive_variables_rhc(:) = a_reconstructor%reconstruct_rhc(                              &
+                    primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
+                    i, self%num_local_cells, num_primitive_variables                                                     &
+                )
 
-            residual_element(:,:) = residual_element_function(&
-                an_eos                                      , &
-                a_riemann_solver                            , &
-                primitive_variables_set       (:,lhc_index) , &
-                primitive_variables_set       (:,rhc_index) , &
-                reconstructed_primitive_variables_lhc   (:) , &
-                reconstructed_primitive_variables_rhc   (:) , &
-                self%cell_volumes            (lhc_index)    , &
-                self%cell_volumes            (rhc_index)    , &
-                self%face_areas                  (i)        , &
-                self%face_normal_vectors     (1:3,i)        , &
-                self%face_tangential1_vectors(1:3,i)        , &
-                self%face_tangential2_vectors(1:3,i)        , &
-                num_conservative_variables                  , &
-                num_primitive_variables                       &
-            )
+                residual_element(:,:) = residual_element_function(&
+                    an_eos                                      , &
+                    a_riemann_solver                            , &
+                    primitive_variables_set       (:,lhc_index) , &
+                    primitive_variables_set       (:,rhc_index) , &
+                    reconstructed_primitive_variables_lhc   (:) , &
+                    reconstructed_primitive_variables_rhc   (:) , &
+                    self%cell_volumes            (lhc_index)    , &
+                    self%cell_volumes            (rhc_index)    , &
+                    self%face_areas                  (i)        , &
+                    self%face_normal_vectors     (1:3,i)        , &
+                    self%face_tangential1_vectors(1:3,i)        , &
+                    self%face_tangential2_vectors(1:3,i)        , &
+                    num_conservative_variables                  , &
+                    num_primitive_variables                       &
+                )
 
-            residual_set(:,lhc_index) = residual_set(:,lhc_index) + residual_element(:, 1)
-            residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
+                residual_set(:,lhc_index) = residual_set(:,lhc_index) + residual_element(:, 1)
+                residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
+            end do
         end do
     end subroutine compute_residual_functional_api
 
-    subroutine compute_residual_objective_api(self, a_reconstructor, a_riemann_solver, an_eos, a_face_gradient_interpolator,                                                &
+    subroutine compute_residual_objective_api(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos, a_face_gradient_interpolator,                            &
                                           primitive_variables_set, gradient_primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
                                           primitive_to_conservative_function, a_model)
 
         class  (cellsystem                ), intent(in   ) :: self
+        class  (parallelizer              ), intent(in   ) :: a_parallelizer
         class  (reconstructor             ), intent(in   ) :: a_reconstructor
         class  (riemann_solver            ), intent(in   ) :: a_riemann_solver
         class  (eos                       ), intent(in   ) :: an_eos
@@ -1273,7 +1275,7 @@ module class_cellsystem
             end function primitive_to_conservative_function
         end interface
 
-        integer(int_kind ) :: i
+        integer(int_kind ) :: i, thread_number, local_index
         real   (real_kind) :: reconstructed_primitive_variables_lhc   (num_primitive_variables)
         real   (real_kind) :: reconstructed_primitive_variables_rhc   (num_primitive_variables)
         real   (real_kind) :: face_gradient_primitive_variables       (num_primitive_variables*3)
@@ -1285,79 +1287,88 @@ module class_cellsystem
         call write_debuginfo("In compute_residual_objective_api(), cellsystem.")
 #endif
 
-!$omp parallel do private(i,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,face_gradient_primitive_variables,reconstructed_conservative_variables_lhc,reconstructed_conservative_variables_rhc,residual_element)
-        do i = 1, self%num_faces, 1
-            associate(                                                             &
-                lhc_index => self%face_to_cell_indexes(self%num_local_cells+0, i), &
-                rhc_index => self%face_to_cell_indexes(self%num_local_cells+1, i)  &
-            )
+!$omp parallel do private(i,thread_number,local_index,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,face_gradient_primitive_variables,reconstructed_conservative_variables_lhc,reconstructed_conservative_variables_rhc,residual_element)
+        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
+            do local_index = 1, a_parallelizer%get_number_of_face_indexes(1, thread_number), 1
+                i = a_parallelizer%get_face_index(1, thread_number, local_index)
 
-                reconstructed_primitive_variables_lhc(:) = a_reconstructor%reconstruct_lhc(                              &
-                    primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
-                    i, self%num_local_cells, num_primitive_variables                                                     &
-                )
-                reconstructed_primitive_variables_rhc(:) = a_reconstructor%reconstruct_rhc(                              &
-                    primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
-                    i, self%num_local_cells, num_primitive_variables                                                     &
+                associate(                                                             &
+                    lhc_index => self%face_to_cell_indexes(self%num_local_cells+0, i), &
+                    rhc_index => self%face_to_cell_indexes(self%num_local_cells+1, i)  &
                 )
 
-                if(.not. self%is_real_cell(rhc_index))then
-                    face_gradient_primitive_variables(:) = self%compute_boundary_gradient(                &
-                        primitive_variables_set   (:,lhc_index), primitive_variables_set   (:,rhc_index), &
-                        self%cell_centor_positions(:,lhc_index), self%cell_centor_positions(:,rhc_index), &
-                        num_primitive_variables                                                           &
+                    reconstructed_primitive_variables_lhc(:) = a_reconstructor%reconstruct_lhc(                              &
+                        primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
+                        i, self%num_local_cells, num_primitive_variables                                                     &
                     )
-                else
-                    face_gradient_primitive_variables(:) = a_face_gradient_interpolator%interpolate(                  &
-                        gradient_primitive_variables_set(:,lhc_index), gradient_primitive_variables_set(:,rhc_index), &
-                        primitive_variables_set         (:,lhc_index), primitive_variables_set         (:,rhc_index), &
-                        self%cell_centor_positions      (:,lhc_index), self%cell_centor_positions      (:,rhc_index), &
-                        num_primitive_variables                                                                       &
+                    reconstructed_primitive_variables_rhc(:) = a_reconstructor%reconstruct_rhc(                              &
+                        primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
+                        i, self%num_local_cells, num_primitive_variables                                                     &
                     )
-                end if
 
-                residual_element(:,:) = a_model%compute_residual_element( &
-                    an_eos                                              , &
-                    a_riemann_solver                                    , &
-                    primitive_variables_set              (:,lhc_index)  , &
-                    primitive_variables_set              (:,rhc_index)  , &
-                    reconstructed_primitive_variables_lhc(:)            , &
-                    reconstructed_primitive_variables_rhc(:)            , &
-                    face_gradient_primitive_variables    (:)            , &
-                    self%cell_volumes                      (lhc_index)  , &
-                    self%cell_volumes                      (rhc_index)  , &
-                    self%face_areas                  (i)                , &
-                    self%face_normal_vectors     (1:3,i)                , &
-                    self%face_tangential1_vectors(1:3,i)                , &
-                    self%face_tangential2_vectors(1:3,i)                , &
-                    num_conservative_variables                          , &
-                    num_primitive_variables                               &
-                )
+                    if(.not. self%is_real_cell(rhc_index))then
+                        face_gradient_primitive_variables(:) = self%compute_boundary_gradient(                &
+                            primitive_variables_set   (:,lhc_index), primitive_variables_set   (:,rhc_index), &
+                            self%cell_centor_positions(:,lhc_index), self%cell_centor_positions(:,rhc_index), &
+                            num_primitive_variables                                                           &
+                        )
+                    else
+                        face_gradient_primitive_variables(:) = a_face_gradient_interpolator%interpolate(                  &
+                            gradient_primitive_variables_set(:,lhc_index), gradient_primitive_variables_set(:,rhc_index), &
+                            primitive_variables_set         (:,lhc_index), primitive_variables_set         (:,rhc_index), &
+                            self%cell_centor_positions      (:,lhc_index), self%cell_centor_positions      (:,rhc_index), &
+                            num_primitive_variables                                                                       &
+                        )
+                    end if
 
-                residual_set(:,lhc_index) = residual_set(:,lhc_index) + residual_element(:, 1)
-                residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
-            end associate
+                    residual_element(:,:) = a_model%compute_residual_element( &
+                        an_eos                                              , &
+                        a_riemann_solver                                    , &
+                        primitive_variables_set              (:,lhc_index)  , &
+                        primitive_variables_set              (:,rhc_index)  , &
+                        reconstructed_primitive_variables_lhc(:)            , &
+                        reconstructed_primitive_variables_rhc(:)            , &
+                        face_gradient_primitive_variables    (:)            , &
+                        self%cell_volumes                      (lhc_index)  , &
+                        self%cell_volumes                      (rhc_index)  , &
+                        self%face_areas                  (i)                , &
+                        self%face_normal_vectors     (1:3,i)                , &
+                        self%face_tangential1_vectors(1:3,i)                , &
+                        self%face_tangential2_vectors(1:3,i)                , &
+                        num_conservative_variables                          , &
+                        num_primitive_variables                               &
+                    )
+
+                    residual_set(:,lhc_index) = residual_set(:,lhc_index) + residual_element(:, 1)
+                    residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
+                end associate
+            end do
         end do
     end subroutine compute_residual_objective_api
 
-    subroutine compute_source_term_objective_api(self, variables_set, residual_set, num_conservative_variables, a_model)
-        class  (cellsystem), intent(in   ) :: self
-        real   (real_kind ), intent(in   ) :: variables_set(:,:)
-        real   (real_kind ), intent(inout) :: residual_set (:,:)
-        integer(int_kind  ), intent(in   ) :: num_conservative_variables
-        class  (model     ), intent(in   ) :: a_model
+    subroutine compute_source_term_objective_api(self, a_parallelizer, variables_set, residual_set, num_conservative_variables, a_model)
+        class  (cellsystem  ), intent(in   ) :: self
+        class  (parallelizer), intent(in   ) :: a_parallelizer
+        real   (real_kind   ), intent(in   ) :: variables_set(:,:)
+        real   (real_kind   ), intent(inout) :: residual_set (:,:)
+        integer(int_kind    ), intent(in   ) :: num_conservative_variables
+        class  (model       ), intent(in   ) :: a_model
 
-        integer(int_kind ) :: i
+        integer(int_kind ) :: thread_number, local_index, i
         integer(int_kind ) :: element(num_conservative_variables)
 
 #ifdef _DEBUG
         call write_debuginfo("In compute_source_term_objective_api(), cellsystem.")
 #endif
 
-!$omp parallel do private(i)
-        do i = 1, self%num_cells, 1
-            element(:) = a_model%compute_source_term(variables_set(:,i), num_conservative_variables)
-            residual_set(:,i) = residual_set(:,i) + element(:)
+!$omp parallel do private(thread_number, local_index, i, element)
+        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
+            do local_index = 1, a_parallelizer%get_number_of_cell_indexes(1, thread_number), 1
+                i = a_parallelizer%get_cell_index(1, thread_number, local_index)
+
+                element(:) = a_model%compute_source_term(variables_set(:,i), num_conservative_variables)
+                residual_set(:,i) = residual_set(:,i) + element(:)
+            end do
         end do
     end subroutine compute_source_term_objective_api
 
