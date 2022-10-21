@@ -85,7 +85,7 @@ module class_control_volume_profiler
         call make_dir("result/")
 
         open(newunit = unit_number, file = "result/"//self%output_filename_, status = 'replace')
-        write(unit_number, *) "# F3DS control volume profiler"
+        write(unit_number, '(*(g0, " "))') "# F3DS control volume profiler"
         close(unit_number)
     end subroutine initialize
 
@@ -107,7 +107,7 @@ module class_control_volume_profiler
             do i = 1, self%n_output_cells_, 1
                 integrals(:) = integrals(:) + values_set(:,self%cell_ids_(i)) * cell_volumes(self%cell_ids_(i))
             end do
-            write(unit_number, *) time, integrals(:)
+            write(unit_number, '(*(e, " "))') time, integrals(:)
             close(unit_number)
             self%next_output_time_ = self%next_output_time_ + self%output_timespan_
         end if
