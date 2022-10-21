@@ -103,9 +103,6 @@ program five_equation_model_solver
     call five_equation_model_reconstructor_generator(a_configuration, a_reconstructor            )
     call f3ds_time_increment_controller_generator   (a_configuration, a_time_increment_controller)
 
-    ! Support for parallel computing
-    call a_parallelizer%initialize(a_configuration)
-
     ! Read grid
     call a_cellsystem%read(a_grid_parser, a_configuration)
 
@@ -114,6 +111,7 @@ program five_equation_model_solver
     call a_cellsystem%initialize(residual_set                    , num_conservative_variables      )
     call a_cellsystem%initialize(primitive_variables_set         , num_primitive_variables         )
     ! Initialize schemes & utils
+    call a_cellsystem%initialize(a_parallelizer              , a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(an_eos                      , a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(a_riemann_solver            , a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(a_time_stepping             , a_configuration, num_conservative_variables, num_primitive_variables)
@@ -157,6 +155,7 @@ program five_equation_model_solver
             call a_cellsystem%apply_symmetric_condition(primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, symmetric_bc)
 
             call a_cellsystem%compute_residual(   &
+                a_parallelizer                  , &
                 a_reconstructor                 , &
                 a_riemann_solver                , &
                 an_eos                          , &
@@ -189,36 +188,4 @@ program five_equation_model_solver
     call a_result_writer%cleanup()
 
     call write_message("f5eq is successfully terminated. done...")
-
-    contains
-
-    subroutine write_result(a_cellsystem, a_result_writer, primitive_variables_set)
-        type(cellsystem       ), intent(inout) :: a_cellsystem
-        type(vtk_result_writer), intent(inout) :: a_result_writer
-        real(real_kind        ), intent(in   ) :: primitive_variables_set(:,:)
-
-        real(real_kind) :: density(a_cellsystem%get_number_of_cells())
-
-        call a_cellsystem%open_file   (a_result_writer)
-
-        call write_message("Write a result "//a_cellsystem%get_filename(a_result_writer)//"...")
-
-        do cell_index = 1, a_cellsystem%get_number_of_cells(), 1
-            associate(                                          &
-                rho1 => primitive_variables_set(1, cell_index), &
-                rho2 => primitive_variables_set(2, cell_index), &
-                z    => primitive_variables_set(7, cell_index)  &
-            )
-                density(cell_index) = z * rho1 + (1.d0 - z) * rho2
-            end associate
-        end do
-
-        call a_cellsystem%write_scolar(a_result_writer, "Density"        , density                        )
-        call a_cellsystem%write_scolar(a_result_writer, "Density 1"      , primitive_variables_set(1  , :))
-        call a_cellsystem%write_scolar(a_result_writer, "Density 2"      , primitive_variables_set(2  , :))
-        call a_cellsystem%write_vector(a_result_writer, "Velocity"       , primitive_variables_set(3:5, :))
-        call a_cellsystem%write_scolar(a_result_writer, "Pressure"       , primitive_variables_set(6  , :))
-        call a_cellsystem%write_scolar(a_result_writer, "Volume fraction", primitive_variables_set(7  , :))
-        call a_cellsystem%close_file  (a_result_writer)
-    end subroutine write_result
 end program five_equation_model_solver

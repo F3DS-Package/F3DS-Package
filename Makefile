@@ -1,14 +1,27 @@
 # Fortran Finite-volume Fluid Dynamics Solver (F3DS) Flamework & Collection
 
-FC=gfortran
-#FCFLAGS=-O0 -g -pg -ffree-line-length-none -cpp -Wall -Wextra -Warray-temporaries -Wconversion -fimplicit-none -fbacktrace -fcheck=all -ffpe-trap=invalid,zero,overflow -finit-real=nan -D_DEBUG # for debug build (gfortran)-ffpe-trap=invalid,zero,underflow,overflow
-FCFLAGS=-O3 -march=native -ffree-line-length-none -fopenmp -cpp # for release build (gfortran)
-#FCFLAGS=-g -check all -fpe0 -warn -traceback -debug extended -fpp -D_DEBUG # for debug build (ifort)
-#FCFLAGS=-fast -qopenmp -fpp# for release build (ifort) NOTE: Cannot use release build-mode by ifort
+# User inputs
+COMPILER = gfortran
+DEBUG    = no
+
+# Constants
+GNU_RELEAS_FLAGS =-O3 -march=native -ffree-line-length-none -cpp -fopenmp
+GNU_DEBUG_FLAGS  =-O0 -g -pg -ffree-line-length-none -cpp -Wall -Wextra -Warray-temporaries -Wconversion -fimplicit-none -fbacktrace -fcheck=all -ffpe-trap=invalid,zero,overflow -finit-real=nan -D_DEBUG
+
+INTEL_RELEAS_FLAGS =-fast -fpp -std03 -O3 -ipo -inline all -ipo-jobs4 -vec-report1 -qopenmp
+INTEL_DEBUG_FLAGS  =-g -std03  -check all -fpe0 -warn -traceback -debug extended -fpp -D_DEBUG
 
 OBJDIR=objs
 MODDIR=mods
 BINDIR=bins
+
+# Setup
+FC=$(COMPILER)
+ifeq "$(DEBUG)" "no"
+	FCFLAGS=$(if $(findstring gfortran, $(FC)), $(GNU_RELEAS_FLAGS), $(INTEL_RELEAS_FLAGS))
+else
+	FCFLAGS=$(if $(findstring gfortran, $(FC)), $(GNU_DEBUG_FLAGS), $(INTEL_DEBUG_FLAGS))
+endif
 
 # Flags for module strage
 FCFLAGS+=$(if $(findstring gfortran, $(FC)),-J $(MODDIR),-module $(MODDIR))
@@ -129,6 +142,17 @@ VISCOUS_FIVE_EQUATION_MODEL_OBJS+=$(subst .f90,.o, $(subst $(VISCOUS_FIVE_EQUATI
 
 all: $(FIVE_EQUATION_MODEL_TARGET) $(VISCOUS_FIVE_EQUATION_MODEL_TARGET)
 
+# Help
+help:
+	@echo -e '\033[1;32m Make options of F3DS framework & collection \033[0m'
+	@echo -e '\033[1;32m Usage: \033[0m'
+	@echo -e '  make {options}'
+	@echo -e '\033[1;32m Options: \033[0m'
+	@echo -e '  COMPILER={compiler name} : Compiler name you want to use. F3DS support for ifort and gfortran now!'
+	@echo -e '  DEBUG={yes/no}           : If you set DEBUG=yes, Debug infomations are embeded to your code.'
+	@echo -e '\033[1;32m Example use: \033[0m'
+	@echo -e '  make COMPILER=gfortran DEBUG=no'
+
 # Five-equation model compiling rule
 $(FIVE_EQUATION_MODEL_TARGET): $(FIVE_EQUATION_MODEL_OBJS)
 	[ -d $(BINDIR) ] || mkdir -p $(BINDIR)
@@ -216,9 +240,12 @@ $(OBJDIR)/%.o: $(VISCOUS_FIVE_EQUATION_MODEL_SRCDIR)/%.f90
 clean:
 	rm -rf $(OBJDIR)
 	rm -rf $(MODDIR)
-	rm -rf $(TARGET)
 	rm -rf $(BINDIR)
 
 list:
-	echo $(FRAMEWORK_OBJS)
-	echo $(VISCOUS_FIVE_EQUATION_MODEL_OBJS)
+	@echo -e '\033[1;32m Framework objects:\033[0m'
+	@echo -e $(FRAMEWORK_OBJS)
+	@echo -e '\033[1;32m Viscous 5-equation model objects:\033[0m'
+	@echo -e $(VISCOUS_FIVE_EQUATION_MODEL_OBJS)
+	@echo -e '\033[1;32m 5-equation model objects objects:\033[0m'
+	@echo -e $(FIVE_EQUATION_MODEL_OBJS)

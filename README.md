@@ -75,6 +75,11 @@ We are currently working on developing a function for computing viscous flux.
 - [x] Gauss divergence
 - [x] Weighted Gauss divergence
 
+#### Face gradient interpolation
+
+- [x] Midpoint rule
+- [x] Corrected midpoint [Nishikawa 2010]
+
 #### Time Stepping
 
 - Explicit
@@ -111,12 +116,11 @@ We are currently working on developing a function for computing viscous flux.
 - [x] Input from Nishida Lab. legacy format
 - [ ] Unifoam flow generation
 
-#### Parallelization Backend
+#### Parallelization
 
-- [x] OpenMP
-- [ ] OpenMPI (single-node/multi-node)
-- [ ] CUDA Fortran
-- [ ] OpenACC
+- [x] single-node multi-thread simd (backends none/openMP/openMP)
+- [ ] multi-node multi-thread simd (backends MPI/MPI/openMP)
+- [ ] multi-node multi-thread multi-gpu (backends MPI/MPI/{cuda, openACC})
 
 #### Grid Decomposition for Parallelization
 
@@ -157,12 +161,14 @@ F3DS only support for Linux system now. We can compile F3DS by Makefile like thi
 make
 ```
 
-Default compiler is set "gfortran". And default option is "-O3 -march=native -ffree-line-length-none -fopenmp -cpp".  
-If you want to use "ifort" and "-fast -openmp" options, you shoud type following command in your terminal.
+Default compiler is set "gfortran" with default options.  
+If you want to use "ifort" and debug options, you shoud type following command in your terminal.
 
 ```:shell
-make FC=ifort FFLAGS=-fast -openmp
+make COMPILER=ifort DEBUG=yes
 ```
+
+More details can be found in 'make help'.
 
 ## How to use
 
