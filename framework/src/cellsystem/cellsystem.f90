@@ -185,6 +185,9 @@ module class_cellsystem
         generic  , public             :: write => line_plotter_write  , &
                                                   control_volume_profiler_write
 
+        ! ### Show infomation ###
+        procedure, public, pass(self) :: show_timestepping_infomation
+
         ! ### Vatiables ###
         procedure, public, pass(self) :: read_initial_condition
         procedure, public, pass(self) :: conservative_to_primitive_variables_all
@@ -271,6 +274,12 @@ module class_cellsystem
     end type
 
     contains
+
+    ! ### Show infomaiton ###
+    subroutine show_timestepping_infomation(self)
+        class(cellsystem), intent(inout) :: self
+        print '(3(a, e))', "Step:", self%num_steps, ", Time increment:", self%time_increment, ", Time:", self%time_increment
+    end subroutine show_timestepping_infomation
 
     ! ### Parallelizer ###
     subroutine parallelizer_initialize(self, a_parallelizer, config, num_conservative_variables, num_primitive_variables)

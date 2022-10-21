@@ -133,11 +133,11 @@ module class_line_plotter
         if (.not. self%is_enabled_) return
 
         if(time >= self%next_output_time_)then
-            write(cher_n_output, "(i7.7)") self%n_output_
+            write(cher_n_output, '(i7.7)') self%n_output_
             open(newunit = unit_number, file="result/"//self%output_dir_//"/"//cher_n_output//".dat", status = 'replace')
-            write(unit_number, *) "# time = ", time
+            write(unit_number, '(a, e)') "# time = ", time
             do i = 1, self%n_output_cells_, 1
-                write(unit_number, *) cell_positions(:,self%cell_ids_(i)), values_set(:,self%cell_ids_(i))
+                write(unit_number, '(*(e, " "))') cell_positions(:,self%cell_ids_(i)), values_set(:,self%cell_ids_(i))
             end do
             close(unit_number)
             self%next_output_time_ = self%next_output_time_ + self%output_timespan_

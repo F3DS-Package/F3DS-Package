@@ -176,9 +176,7 @@ program viscous_five_equation_model_solver
             call a_cellsystem%write(a_control_volume_profiler, primitive_variables_set)
         end if
 
-        print *, "Step "          , a_cellsystem%get_number_of_steps(), ", ", &
-                 "Time increment ", a_cellsystem%get_time_increment() , ", ", &
-                 "Time "          , a_cellsystem%get_time()
+        call a_cellsystem%show_timestepping_infomation()
 
         call a_cellsystem%prepare_stepping(a_time_stepping, conservative_variables_set, primitive_variables_set, residual_set)
 
