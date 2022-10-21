@@ -7,8 +7,8 @@ We provide a fast, maintainable FVM library and solvers.
 Status: **DEVELOPMENT**  
 
 Solvers are generalized. We can change parameters by a configuration file witch writen by JSON or XML file format. Of course we can also change a grid and an initial condition.  
-We can easily build a solver for any non-viscous fluid using this flamework.  
-We are currently working on developing a function for computing viscous flux.
+We can easily build a solver for any non-viscous and viscous fluid using this flamework.  
+We are working on improving parallel computing and developing features for unstructured mesh.
 
 ## Feature
 
@@ -55,7 +55,6 @@ We are currently working on developing a function for computing viscous flux.
     - [x] MUSCL3 (3rd order)
         - [x] with minimod flux limmiter
         - [ ] with monotonized central flux limmiter
-    - [ ] MUSCL3 + THINC
     - [x] MUSCL3 + rho-THINC (5-equation model only)
     - [x] WENO5 (5th order)
         - [x] with original smoothing indicator (WENO5) [Liu 1994]
@@ -63,7 +62,7 @@ We are currently working on developing a function for computing viscous flux.
         - [x] with monotonicity-preserving schemes (MP-WENO5-JS) [Balsara 2000]
 - For unstructure grid
     - [ ] UMUSCL3 (3rd order)
-    - [ ] UMUSCL3 + THINC (3rd order)
+    - [ ] UMUSCL3 + rho-THINC (5-equation model only)
 
 #### Gradient scheme
 
@@ -100,11 +99,9 @@ We are currently working on developing a function for computing viscous flux.
 
 - Structure grid format
     - [x] Nishida Lab. legacy format ([NL Grid Toolbox](https://165.93.124.207/gitlab/tishikawa/nl-grid-toolbox) is helpfull for you.)
-    - [ ] xyz format
+    - [ ] xyz
 - Unstructure grid format
     - [ ] gmsh
-    - [ ] CGNS
-    - [ ] OpenFOAM
 
 #### Result I/O
 
@@ -124,7 +121,7 @@ We are currently working on developing a function for computing viscous flux.
 
 #### Grid Decomposition for Parallelization
 
-- [x] Structure (Simple decomposition by OpemMP)
+- [x] Structure (Simple decomposition)
 - [ ] [Metis](https://github.com/KarypisLab/METIS)
 - [ ] [Scotch](https://gitlab.inria.fr/scotch/scotch)
 - [ ] [Zoltan](https://github.com/sandialabs/Zoltan)
@@ -133,8 +130,8 @@ We are currently working on developing a function for computing viscous flux.
 
 - [ ] Sensor (Probe)
 - [ ] Measurement surface
-- [ ] Virtual measurement surface
-- [ ] Line plotting tool
+- [x] Line plotting tool
+- [x] Control volume profiler
 
 #### Other tools
 
