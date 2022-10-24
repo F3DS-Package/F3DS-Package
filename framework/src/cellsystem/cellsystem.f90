@@ -278,7 +278,7 @@ module class_cellsystem
     ! ### Show infomaiton ###
     subroutine show_timestepping_infomation(self)
         class(cellsystem), intent(inout) :: self
-        print '(3(a, e))', "Step:", self%num_steps, ", Time increment:", self%time_increment, ", Time:", self%time_increment
+        print '(3(a, g0))', "Step: ", self%num_steps, ", Time increment: ", self%time_increment, ", Time: ", self%time_increment
     end subroutine show_timestepping_infomation
 
     ! ### Parallelizer ###
@@ -291,7 +291,7 @@ module class_cellsystem
 #ifdef _DEBUG
         call write_debuginfo("In parallelizer_initialize(), cellsystem.")
 #endif
-        call a_parallelizer%initialize(config, self%num_cells, self%num_faces)
+        call a_parallelizer%initialize(config, self%num_cells, self%num_faces, self%num_outflow_faces, self%num_wall_faces, self%num_symmetric_faces, self%num_empty_faces)
     end subroutine
 
     ! ### Face gradient interpolator ###
@@ -1560,7 +1560,7 @@ module class_cellsystem
         class(grid_parser        ), intent(inout) :: parser
         class(configuration      ), intent(inout) :: config
 
-        integer(kind(face_type)), allocatable :: face_types(:)
+        integer(boundary_face_type_kind), allocatable :: face_types(:)
 
 #ifdef _DEBUG
         call write_debuginfo("In read(), cellsystem.")
@@ -1693,7 +1693,7 @@ module class_cellsystem
     ! ### Inner utils ###
     subroutine assign_boundary(self, face_types)
         class  (cellsystem     ), intent(inout) :: self
-        integer(kind(face_type)), intent(in   ) :: face_types(:)
+        integer(boundary_face_type_kind), intent(in   ) :: face_types(:)
 
         integer(int_kind) :: index, outflow_index, wall_index, symmetric_index, empty_index
 
@@ -1719,7 +1719,7 @@ module class_cellsystem
             else if (face_types(index) == empty_face_type) then
                 empty_index = empty_index + 1
                 self%empty_face_indexes(empty_index) = index
-            else if (face_types(index) == face_type) then
+            else if (face_types(index) == boundary_face_type) then
                 ! It is inner face.
             else
                 call call_error("Unknown boundary type found.")
