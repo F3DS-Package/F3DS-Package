@@ -110,8 +110,8 @@ module class_openmp_parallelizer
         allocate(self%num_boundary_face_indexes(number_of_boundary_face_type, self%num_threads))
         allocate(self%start_boundary_face_index(number_of_boundary_face_type, self%num_threads))
         call self%make_index_list(self%num_boundary_face_indexes(outflow_face_type  , :), self%start_boundary_face_index(outflow_face_type  , :), num_outflow_faces  )
-        call self%make_index_list(self%num_boundary_face_indexes(symmetric_face_type, :), self%start_boundary_face_index(symmetric_face_type, :), num_wall_faces     )
-        call self%make_index_list(self%num_boundary_face_indexes(wall_face_type     , :), self%start_boundary_face_index(wall_face_type     , :), num_symmetric_faces)
+        call self%make_index_list(self%num_boundary_face_indexes(symmetric_face_type, :), self%start_boundary_face_index(symmetric_face_type, :), num_symmetric_faces)
+        call self%make_index_list(self%num_boundary_face_indexes(wall_face_type     , :), self%start_boundary_face_index(wall_face_type     , :), num_wall_faces     )
         call self%make_index_list(self%num_boundary_face_indexes(empty_face_type    , :), self%start_boundary_face_index(empty_face_type    , :), num_empty_faces    )
 
     end subroutine initialize
