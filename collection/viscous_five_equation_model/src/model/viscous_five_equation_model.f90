@@ -79,6 +79,7 @@ module class_viscous_five_equation_model
         class  (configuration              ), intent(inout) :: a_configuration
 
         logical           :: found
+        logical           :: ignore_gravity = .false.
         integer(int_kind) :: i
 
         call a_configuration%get_int    ("Phase.Number of phase", self%num_phase_, found)
@@ -98,8 +99,25 @@ module class_viscous_five_equation_model
         call a_configuration%get_bool      ("Model.Ignore kdivu", self%ignore_kdivu_, found, .false.)
         if(.not. found) call write_warring("'Model.Ignore kdivu' is not found in configuration you set. Apply this term.")
 
-        call a_configuration%get_real_array("Model.Gravitational acceleration", self%gravitational_acceleration_, found, [0.d0, 0.d0, 0.d0])
-        if(.not. found) call write_warring("'Model.Gravitational acceleration' is not found in configuration you set. Ignore gravity term.")
+        call a_configuration%get_real("Model.Gravitational acceleration.x", self%gravitational_acceleration_(1), found, 0.d0)
+        if(.not. found) then
+            call write_warring("'Model.Gravitational acceleration.x' is not found in configuration you set. Ignore gravity term.")
+            ignore_gravity=.true.
+        endif
+
+        call a_configuration%get_real("Model.Gravitational acceleration.y", self%gravitational_acceleration_(2), found, 0.d0)
+        if(.not. found) then
+            call write_warring("'Model.Gravitational acceleration.y' is not found in configuration you set. Ignore gravity term.")
+            ignore_gravity=.true.
+        endif
+
+        call a_configuration%get_real("Model.Gravitational acceleration.z", self%gravitational_acceleration_(3), found, 0.d0)
+        if(.not. found) then
+            call write_warring("'Model.Gravitational acceleration.z' is not found in configuration you set. Ignore gravity term.")
+            ignore_gravity=.true.
+        endif
+
+        if (ignore_gravity) self%gravitational_acceleration_(:) = 0.d0
     end subroutine initialize
 
     pure function compute_residual_element(       &
