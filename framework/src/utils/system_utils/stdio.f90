@@ -35,6 +35,8 @@ module stdio_module
 
     subroutine write_debuginfo(message)
         character(len=*) :: message
+#ifdef _DEBUG
         print *, color_cyan//"Debug: "//esc_reset, message
+#endif
     end subroutine write_debuginfo
 end module stdio_module
