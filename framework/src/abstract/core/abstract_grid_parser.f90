@@ -60,7 +60,7 @@ module abstract_grid_parser
             use face_type_module
             import grid_parser
             class  (grid_parser        ), intent(in) :: self
-            integer(kind(face_type)), intent(in) :: type
+            integer(boundary_face_type_kind), intent(in) :: type
             integer(int_kind)                :: n
         end function get_number_of_boundary_faces_interface
 
@@ -97,7 +97,7 @@ module abstract_grid_parser
             use face_type_module
             import grid_parser
             class  (grid_parser        ), intent(in   ) :: self
-            integer(kind(face_type)), intent(inout) :: face_types(:)
+            integer(boundary_face_type_kind), intent(inout) :: face_types(:)
         end subroutine get_boundaries_interface
 
         subroutine get_cell_geometries_interface(self, points, cell_geometries, cell_types)

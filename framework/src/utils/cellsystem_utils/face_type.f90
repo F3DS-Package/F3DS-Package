@@ -1,6 +1,10 @@
 module face_type_module
+    use typedef_module
+
+    implicit none
+
     enum, bind(c)
-        enumerator :: face_type = 0
+        enumerator :: boundary_face_type = 0
         enumerator :: outflow_face_type
         enumerator :: symmetric_face_type
         enumerator :: wall_face_type
@@ -8,13 +12,17 @@ module face_type_module
         enumerator :: unknown_face_type
     end enum
 
-    public :: string_to_face_type
+    integer, public, parameter :: boundary_face_type_kind = kind(boundary_face_type)
+
+    integer(int_kind), public :: number_of_boundary_face_type = 5
+
+    public :: string_to_boundary_face_type
 
 contains
 
-    pure function string_to_face_type(string) result(type)
+    pure function string_to_boundary_face_type(string) result(type)
         character(len=*), intent(in) :: string
-        integer(kind(face_type)) :: type
+        integer(boundary_face_type_kind) :: type
         if (string == "outflow") then
             type = outflow_face_type
         else if (string == "symmetric") then
@@ -26,5 +34,5 @@ contains
         else
             type = unknown_face_type
         end if
-    end function string_to_face_type
+    end function string_to_boundary_face_type
 end module face_type_module

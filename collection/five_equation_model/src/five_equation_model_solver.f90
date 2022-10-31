@@ -124,7 +124,7 @@ program five_equation_model_solver
 
     ! Set initial condition
     call a_cellsystem%read_initial_condition(an_initial_condition_parser, a_configuration, conservative_variables_set)
-    call a_cellsystem%conservative_to_primitive_variables_all(an_eos, conservative_variables_set, primitive_variables_set, num_primitive_variables, conservative_to_primitive)
+    call a_cellsystem%conservative_to_primitive_variables_all(a_parallelizer, an_eos, conservative_variables_set, primitive_variables_set, num_primitive_variables, conservative_to_primitive)
 
     ! Timestepping loop
     do while ( .not. a_cellsystem%satisfies_termination_criterion(a_termination_criterion) )
@@ -144,13 +144,13 @@ program five_equation_model_solver
 
         call a_cellsystem%show_timestepping_infomation()
 
-        call a_cellsystem%prepare_stepping(a_time_stepping, conservative_variables_set, primitive_variables_set, residual_set)
+        call a_cellsystem%prepare_stepping(a_parallelizer, a_time_stepping, conservative_variables_set, primitive_variables_set, residual_set)
 
         do state_num = 1, a_cellsystem%get_number_of_states(a_time_stepping), 1
-            call a_cellsystem%apply_empty_condition    (primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, empty_bc    )
-            call a_cellsystem%apply_outflow_condition  (primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, outflow_bc  )
-            call a_cellsystem%apply_wall_condition     (primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, wall_bc     )
-            call a_cellsystem%apply_symmetric_condition(primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, symmetric_bc)
+            call a_cellsystem%apply_empty_condition    (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, empty_bc    )
+            call a_cellsystem%apply_outflow_condition  (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, outflow_bc  )
+            call a_cellsystem%apply_wall_condition     (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, wall_bc     )
+            call a_cellsystem%apply_symmetric_condition(a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, symmetric_bc)
 
             call a_cellsystem%compute_residual(   &
                 a_parallelizer                  , &
@@ -165,7 +165,7 @@ program five_equation_model_solver
                 compute_residual_element          &
             )
 
-            call a_cellsystem%compute_next_state(a_time_stepping, an_eos, state_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, conservative_to_primitive)
+            call a_cellsystem%compute_next_state(a_parallelizer, a_time_stepping, an_eos, state_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, conservative_to_primitive)
         end do
 
         call a_cellsystem%increment_time()

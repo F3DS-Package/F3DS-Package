@@ -50,9 +50,8 @@ module class_json_configuration
             call self%json%clear_exceptions()
             call self%json%destroy()
 #ifdef _DEBUG
-            print *, "DEBUG: JSONFortran error message:"
+            call write_debuginfo("Error occurred while parsing configration file by JSON Fortran. Error message is following:")
             print *, self%error_msg
-            print *, "---------------------------------"
 #endif
             call call_error("Can not read configration file '"//filepath//"'.")
         end if
@@ -78,6 +77,17 @@ module class_json_configuration
         if(.not. self%parsed) call call_error("Configuration file is not parsed.")
 
         call self%json%get(tag, val, found)
+
+        if (self%json%failed()) then
+            call self%json%check_for_errors(self%status_ok, self%error_msg)
+            call self%json%clear_exceptions()
+            call self%json%destroy()
+#ifdef _DEBUG
+            call write_debuginfo("Error occurred while reading configration file by JSON Fortran. Error message is following:")
+            print *, self%error_msg
+#endif
+        end if
+
         if(.not. found .and. present(default)) val = default
     end subroutine get_real
 
@@ -91,6 +101,17 @@ module class_json_configuration
         if(.not. self%parsed) call call_error("Configuration file is not parsed.")
 
         call self%json%get(tag, val, found)
+
+        if (self%json%failed()) then
+            call self%json%check_for_errors(self%status_ok, self%error_msg)
+            call self%json%clear_exceptions()
+            call self%json%destroy()
+#ifdef _DEBUG
+            call write_debuginfo("Error occurred while reading configration file by JSON Fortran. Error message is following:")
+            print *, self%error_msg
+#endif
+        end if
+
         if(.not. found .and. present(default)) val = default
     end subroutine get_int
 
@@ -104,6 +125,17 @@ module class_json_configuration
         if(.not. self%parsed) call call_error("Configuration file is not parsed.")
 
         call self%json%get(tag, val, found)
+
+        if (self%json%failed()) then
+            call self%json%check_for_errors(self%status_ok, self%error_msg)
+            call self%json%clear_exceptions()
+            call self%json%destroy()
+#ifdef _DEBUG
+            call write_debuginfo("Error occurred while reading configration file by JSON Fortran. Error message is following:")
+            print *, self%error_msg
+#endif
+        end if
+
         if(.not. found .and. present(default)) val = default
     end subroutine get_bool
 
@@ -117,6 +149,17 @@ module class_json_configuration
         if(.not. self%parsed) call call_error("Configuration file is not parsed.")
 
         call self%json%get(tag, val, found)
+
+        if (self%json%failed()) then
+            call self%json%check_for_errors(self%status_ok, self%error_msg)
+            call self%json%clear_exceptions()
+            call self%json%destroy()
+#ifdef _DEBUG
+            call write_debuginfo("Error occurred while reading configration file by JSON Fortran. Error message is following:")
+            print *, self%error_msg
+#endif
+        end if
+
         if(.not. found .and. present(default)) val = default
     end subroutine get_char
 
@@ -127,8 +170,11 @@ module class_json_configuration
         logical                      , intent(inout), optional :: found
         real     (real_kind         ), intent(in   ), optional :: default(:)
 
-        real(json_RK), allocatable :: array_json_file(:)
+        real(json_RK), dimension(:), allocatable :: array_json_file
         logical                    :: match_array_range
+
+        call call_error("'get_real_array' defined in 'json_configuration' can not be use in this version.")
+        ! TODO: Fix segmentation fault
 
         if(.not. self%parsed) call call_error("Configuration file is not parsed.")
 
@@ -137,7 +183,17 @@ module class_json_configuration
             if(.not. match_array_range) call call_error("Array range of 'val' does not match 'default'.")
         end if
 
-        call self%json%get(tag, array_json_file, found)
+        call self%json%get(tag, array_json_file)
+
+        if (self%json%failed()) then
+            call self%json%check_for_errors(self%status_ok, self%error_msg)
+            call self%json%clear_exceptions()
+            call self%json%destroy()
+#ifdef _DEBUG
+            call write_debuginfo("Error occurred while reading configration file by JSON Fortran. Error message is following:")
+            print *, self%error_msg
+#endif
+        end if
 
         if(.not. found .and. present(default))then
             val = default
