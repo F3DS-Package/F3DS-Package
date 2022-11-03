@@ -57,8 +57,8 @@ program five_eq_model_solver
     integer(int_kind ), allocatable :: line_ids(:)
     integer(int_kind )              :: n_line_ids
 
-    time_increment = 0.5d0 * 1.d-4
-    max_timestep   = 2     * 1*10**6
+    time_increment = 1.d-4
+    max_timestep   = 1*10**6
     n_output_file  = 100
     time           = 0.d0
 
@@ -94,7 +94,7 @@ program five_eq_model_solver
     normal(1) = 0.d0
     normal(2) = 1.d0
     normal(3) = 0.d0
-    call surface%initialize("surface.dat", 5.d3, 12.d0, 12.d0-0.02d0, 1.d0, 0.d0, 7.d0, 0.d0, normal, faces_to_cell_index, faces_position, faces_normal_vector, cells_is_real_cell)
+    call surface%initialize("surface.dat", 5.d3, 12.d0, 12.d0-0.04d0, 1.d0, 0.d0, 7.d0, 0.d0, normal, faces_to_cell_index, faces_position, faces_normal_vector, cells_is_real_cell)
 
     ! line plot
     allocate(line_ids(get_number_of_cells()))

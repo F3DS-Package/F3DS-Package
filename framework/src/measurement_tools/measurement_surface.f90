@@ -93,6 +93,8 @@ module measurement_surface_class
 
         n_ghost_cells = size(face_to_cell_index(1, :)) / 2
 
+        output_values(:) = 0.d0
+
         if(time >= self%next_output_time_)then
             n_output_values = size(values_set(1,:))
             do id_index = 1, self%n_faces_, 1
