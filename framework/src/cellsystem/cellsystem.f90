@@ -278,7 +278,7 @@ module class_cellsystem
     ! ### Show infomaiton ###
     subroutine show_timestepping_infomation(self)
         class(cellsystem), intent(inout) :: self
-        print '(3(a, g0))', "Step: ", self%num_steps, ", Time increment: ", self%time_increment, ", Time: ", self%time_increment
+        print '(3(a, g0))', "Step: ", self%num_steps, ", Time increment: ", self%time_increment, ", Time: ", self%time
     end subroutine show_timestepping_infomation
 
     ! ### Parallelizer ###
