@@ -190,7 +190,7 @@ program viscous_five_equation_model_solver
             call a_cellsystem%compute_gradient(a_parallelizer, a_gradient_calculator, primitive_variables_set(:,:), gradient_primitive_variables_set(:,:), num_primitive_variables)
 
             ! Compute normarize gradient volume fraction
-            call a_cellsystem%processes_variables_set(a_parallelizer, surface_tension_variables_set, gradient_primitive_variables_set, num_surface_tension_variables, normarize_gradient_volume_fraction)
+            call a_cellsystem%processes_variables_set(a_parallelizer, surface_tension_variables_set, gradient_primitive_variables_set, primitive_variables_set, num_surface_tension_variables, normarize_gradient_volume_fraction)
 
             ! Apply BC for normalized volume flaction
             call a_cellsystem%apply_empty_condition    (a_parallelizer, surface_tension_variables_set(1:3, :), 3, rotate_gradient_value, unrotate_gradient_value, bc_for_normarized_gradient_volume_fraction)
@@ -198,10 +198,10 @@ program viscous_five_equation_model_solver
             call a_cellsystem%apply_wall_condition     (a_parallelizer, surface_tension_variables_set(1:3, :), 3, rotate_gradient_value, unrotate_gradient_value, bc_for_normarized_gradient_volume_fraction)
             call a_cellsystem%apply_symmetric_condition(a_parallelizer, surface_tension_variables_set(1:3, :), 3, rotate_gradient_value, unrotate_gradient_value, bc_for_normarized_gradient_volume_fraction)
 
-            ! Compute negative curvature
+            ! Compute curvature
             call a_cellsystem%compute_divergence(a_parallelizer, a_divergence_calculator, surface_tension_variables_set(1:3, :), surface_tension_variables_set(4, :))
 
-            ! Preprocess for negative curvature
+            ! Preprocess for curvature
             call a_cellsystem%processes_variables_set(a_parallelizer, primitive_variables_set, surface_tension_variables_set, num_primitive_variables, curvature_preprocessing)
 
             call a_cellsystem%apply_empty_condition    (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, empty_bc    )

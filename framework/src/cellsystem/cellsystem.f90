@@ -193,8 +193,10 @@ module class_cellsystem
         procedure, public, pass(self) :: conservative_to_primitive_variables_all
         procedure, public, pass(self) :: processes_variables_set_single_array
         procedure, public, pass(self) :: processes_variables_set_two_array
+        procedure, public, pass(self) :: processes_variables_set_three_array
         generic  , public             :: processes_variables_set => processes_variables_set_single_array, &
-                                                                    processes_variables_set_two_array
+                                                                    processes_variables_set_two_array   , &
+                                                                    processes_variables_set_three_array
 
         ! ### Time increment control ###
         procedure, public, pass(self) :: update_time_increment_functional_api
@@ -955,6 +957,35 @@ module class_cellsystem
             end do
         end do
     end subroutine processes_variables_set_two_array
+
+    subroutine processes_variables_set_three_array(self, a_parallelizer, primary_variables_set, secondary_variables_set, tertiary_variables_set, num_variables, processing_function)
+        class  (cellsystem  ), intent(inout) :: self
+        class  (parallelizer), intent(in   ) :: a_parallelizer
+        real   (real_kind   ), intent(inout) :: primary_variables_set(:,:), secondary_variables_set(:,:), tertiary_variables_set(:,:)
+        integer(int_kind    ), intent(in   ) :: num_variables
+        interface
+            pure function processing_function(primary_variables, secondary_variables, tertiary_variables, num_variables) result(destination_variables)
+                use typedef_module
+                real   (real_kind ), intent(in) :: primary_variables(:), secondary_variables(:), tertiary_variables(:)
+                integer(int_kind  ), intent(in) :: num_variables
+                real   (real_kind )             :: destination_variables(num_variables)
+            end function processing_function
+        end interface
+
+        integer(int_kind) :: i, thread_number, local_index
+
+#ifdef _DEBUG
+        call write_debuginfo("In processes_variables_set_three_array(), cellsystem.")
+#endif
+
+!$omp parallel do private(thread_number, local_index, i)
+        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
+            do local_index = 1, a_parallelizer%get_number_of_cell_indexes(1, thread_number), 1
+                i = a_parallelizer%get_cell_index(1, thread_number, local_index)
+                primary_variables_set(:,i) = processing_function(primary_variables_set(:,i), secondary_variables_set(:,i), tertiary_variables_set(:,i), num_variables)
+            end do
+        end do
+    end subroutine processes_variables_set_three_array
 
     ! ### Gradient Calculator ###
     subroutine gradient_calculator_initialize(self, a_gradient_calculator, config, num_conservative_variables, num_primitive_variables)

@@ -195,17 +195,21 @@ module viscous_five_equation_model_utils_module
         p(8  ) = primitives(8)
     end function unrotate_primitive
 
-    pure function normarize_gradient_volume_fraction(surface_tension_variables, gradient_primitive_variables, num_surface_tension_variables) result(dst_surface_tension_variables)
-        real   (real_kind ), intent(in) :: surface_tension_variables(:), gradient_primitive_variables(:)
+    pure function normarize_gradient_volume_fraction(surface_tension_variables, gradient_primitive_variables, primitive_variables, num_surface_tension_variables) result(dst_surface_tension_variables)
+        real   (real_kind ), intent(in) :: surface_tension_variables(:), gradient_primitive_variables(:), primitive_variables(:)
         integer(int_kind  ), intent(in) :: num_surface_tension_variables
         real   (real_kind )             :: dst_surface_tension_variables(num_surface_tension_variables)
+        real   (real_kind )             :: smoothed_grad_volume_fraction(3)
+        real   (real_kind ), parameter  :: alpha = 0.1d0
 
-        associate(                                                                    &
-            mag_grad_alpha => vector_magnitude(gradient_primitive_variables(19:21)),  &
-            grad_alpha     => gradient_primitive_variables(19:21)                     &
+        associate(                                                        &
+            volume_fraction      => primitive_variables(7)              , &
+            grad_volume_fraction => gradient_primitive_variables(19:21)   &
         )
-            if(mag_grad_alpha > machine_epsilon)then
-                dst_surface_tension_variables(1:3) = grad_alpha / mag_grad_alpha
+            if((machine_epsilon < volume_fraction) .and. (volume_fraction < 1.d0 - machine_epsilon))then
+                smoothed_grad_volume_fraction(1:3) = (grad_volume_fraction * volume_fraction) &
+                                                   / (((volume_fraction * (1.d0 - volume_fraction))**(1.d0 - alpha)) * ((volume_fraction**alpha) + (1.d0 - volume_fraction)**alpha)**2.d0)
+                dst_surface_tension_variables(1:3) = smoothed_grad_volume_fraction(1:3) / vector_magnitude(smoothed_grad_volume_fraction(1:3))
             else
                 dst_surface_tension_variables(1:3) = 0.d0
             endif
