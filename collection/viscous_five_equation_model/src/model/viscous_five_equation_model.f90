@@ -178,6 +178,9 @@ module class_viscous_five_equation_model
         ! ## kapila Kdiv(u)
         real(real_kind) :: rhc_k, lhc_k
 
+        ! ## surface tension
+        real(real_kind) :: interface_alpha_heavy, rhc_alpha_heavy, lhc_alpha_heavy
+
         ! ## viscosity variables
         real(real_kind) :: tau (3,3)
         real(real_kind) :: beta(3)
@@ -380,28 +383,34 @@ module class_viscous_five_equation_model
                 rhc_k = an_eos%compute_k(rhc_p, rhc_rhos, rhc_z1)
             end if
             residual_element(7, 1) = residual_element(7, 1) &
-                                   - (-lhc_z1 - lhc_k) * (1.d0 / lhc_cell_volume) * numerical_velocity * face_area
+                                   + (lhc_z1 + lhc_k) * (1.d0 / lhc_cell_volume) * numerical_velocity * face_area
             residual_element(7, 2) = residual_element(7, 2) &
-                                   + (-rhc_z1 - rhc_k) * (1.d0 / rhc_cell_volume) * numerical_velocity * face_area
+                                   - (rhc_z1 + rhc_k) * (1.d0 / rhc_cell_volume) * numerical_velocity * face_area
         end associate
 
         ! # surface tension term
         associate(                                               &
+            lhc_rho1  => primitive_variables_lhc(1),             &
+            lhc_rho2  => primitive_variables_lhc(2),             &
             lhc_z1    => primitive_variables_lhc(7),             &
             lhc_curv  => primitive_variables_lhc(8),             &
+            rhc_rho1  => primitive_variables_rhc(1),             &
+            rhc_rho2  => primitive_variables_rhc(2),             &
             rhc_z1    => primitive_variables_rhc(7),             &
-            rhc_curv  => primitive_variables_rhc(8),             &
-            alpha_l   => (1.d0 - interface_volume_fraction)      & ! In this solver, primary volume fraction z1 is a gas volume fraction! thus we need 1.d0 - {@code interface_volume_fraction}.
+            rhc_curv  => primitive_variables_rhc(8)              &
         )
+            interface_alpha_heavy = 0.5d0 * (1.d0 + sign(1.d0,  lhc_rho1 - lhc_rho2)) * lhc_z1 + 0.5d0 * (1.d0 + sign(1.d0,  lhc_rho2 - lhc_rho1)) * (1.d0 - lhc_z1)
+            lhc_alpha_heavy       = 0.5d0 * (1.d0 + sign(1.d0,  lhc_rho1 - lhc_rho2)) * lhc_z1 + 0.5d0 * (1.d0 + sign(1.d0,  lhc_rho2 - lhc_rho1)) * (1.d0 - lhc_z1)
+            rhc_alpha_heavy       = 0.5d0 * (1.d0 + sign(1.d0,  rhc_rho1 - rhc_rho2)) * rhc_z1 + 0.5d0 * (1.d0 + sign(1.d0,  rhc_rho2 - rhc_rho1)) * (1.d0 - rhc_z1)
+
             residual_element(3:5, 1) = residual_element(3:5, 1) &
-                                   + self%mixture_surface_tension(lhc_z1) * lhc_curv * (1.d0 / lhc_cell_volume) * alpha_l * face_area * face_normal_vector(1:3)
+                                   + self%mixture_surface_tension(lhc_z1) * lhc_curv * (1.d0 / lhc_cell_volume) * interface_alpha_heavy * face_area * face_normal_vector(1:3)
             residual_element(3:5, 2) = residual_element(3:5, 2) &
-                                   - self%mixture_surface_tension(rhc_z1) * rhc_curv * (1.d0 / rhc_cell_volume) * alpha_l * face_area * face_normal_vector(1:3)
-            ! numerical velocity is defined in the direction toward the left cell
+                                   - self%mixture_surface_tension(rhc_z1) * rhc_curv * (1.d0 / rhc_cell_volume) * interface_alpha_heavy * face_area * face_normal_vector(1:3)
             residual_element(6, 1) = residual_element(6, 1) &
-                                   - self%mixture_surface_tension(lhc_z1) * lhc_curv * (1.d0 / lhc_cell_volume) * (alpha_l * numerical_velocity - numerical_velocity) * face_area
+                                   + self%mixture_surface_tension(lhc_z1) * lhc_curv * (1.d0 / lhc_cell_volume) * (interface_alpha_heavy * numerical_velocity - lhc_alpha_heavy * numerical_velocity) * face_area
             residual_element(6, 2) = residual_element(6, 2) &
-                                   + self%mixture_surface_tension(rhc_z1) * rhc_curv * (1.d0 / rhc_cell_volume) * (alpha_l * numerical_velocity - numerical_velocity) * face_area
+                                   - self%mixture_surface_tension(rhc_z1) * rhc_curv * (1.d0 / rhc_cell_volume) * (interface_alpha_heavy * numerical_velocity - rhc_alpha_heavy * numerical_velocity) * face_area
         end associate
 
         ! # viscosity term (Stokes hypothesis)
@@ -444,8 +453,8 @@ module class_viscous_five_equation_model
                 face_tangential2_vector            &
             )
 
-            residual_element(1:7, 1) = residual_element(1:7, 1) - (1.d0 / lhc_cell_volume) * viscosity_flux(1:7) * face_area
-            residual_element(1:7, 2) = residual_element(1:7, 2) + (1.d0 / rhc_cell_volume) * viscosity_flux(1:7) * face_area
+            residual_element(1:7, 1) = residual_element(1:7, 1) + (1.d0 / lhc_cell_volume) * viscosity_flux(1:7) * face_area
+            residual_element(1:7, 2) = residual_element(1:7, 2) - (1.d0 / rhc_cell_volume) * viscosity_flux(1:7) * face_area
         end associate
     end function compute_residual_element
 

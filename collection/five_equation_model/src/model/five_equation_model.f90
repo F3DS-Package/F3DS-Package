@@ -276,9 +276,9 @@ module five_equation_model_module
             rhc_k = an_eos%compute_k(rhc_p, rhc_rhos, rhc_z1)
 
             residual_element(7, 1) = residual_element(7, 1) &
-                                   - (-lhc_z1 - lhc_k) * (1.d0 / lhc_cell_volume) * numerical_velocity * face_area
+                                   + (lhc_z1 + lhc_k) * (1.d0 / lhc_cell_volume) * numerical_velocity * face_area
             residual_element(7, 2) = residual_element(7, 2) &
-                                   + (-rhc_z1 - rhc_k) * (1.d0 / rhc_cell_volume) * numerical_velocity * face_area
+                                   - (rhc_z1 + rhc_k) * (1.d0 / rhc_cell_volume) * numerical_velocity * face_area
         end associate
     end function compute_residual_element
 

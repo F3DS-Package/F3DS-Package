@@ -137,7 +137,7 @@ module class_stiffened_gas_eos
         else
             squared_c1 = self%specific_heat_ratio_(1) * (pressure + self%reference_pressure_(1)) / densities(1)
             squared_c2 = self%specific_heat_ratio_(2) * (pressure + self%reference_pressure_(2)) / densities(2)
-            k = volume_fraction * (1.d0 - volume_fraction) * (densities(1) * squared_c1 - densities(2) * squared_c2) &
+            k = volume_fraction * (1.d0 - volume_fraction) * (densities(2) * squared_c2 - densities(1) * squared_c1) &
               / (volume_fraction * densities(2) * squared_c2 + (1.d0 - volume_fraction) * densities(1) * squared_c1)
         end if
     end function compute_k
