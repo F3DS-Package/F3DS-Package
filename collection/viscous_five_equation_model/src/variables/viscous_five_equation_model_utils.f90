@@ -92,6 +92,7 @@ module viscous_five_equation_model_utils_module
         integer(int_kind ), intent(in)  :: num_primitives
         real   (real_kind)              :: primitive_variables   (num_primitives)
 
+        real(real_kind), parameter :: volume_fraction_limmit = 1.0d-6
         real(real_kind) :: rho, ie
 
         associate(                                    &
@@ -104,11 +105,11 @@ module viscous_five_equation_model_utils_module
                 z1      => conservative_variables(7)  &
             )
             rho = rho1_z1 + rho2_z2
-            if(z1 < machine_epsilon)then
+            if(z1 < volume_fraction_limmit)then
                 primitive_variables(1) = 0.d0
                 primitive_variables(2) = rho2_z2
                 primitive_variables(7) = 0.d0
-            else if(z1 > 1.d0 - machine_epsilon)then
+            else if(z1 > 1.d0 - volume_fraction_limmit)then
                 primitive_variables(1) = rho1_z1
                 primitive_variables(2) = 0.d0
                 primitive_variables(7) = 1.d0
@@ -125,7 +126,7 @@ module viscous_five_equation_model_utils_module
                 primitive_variables(3) = rho_u / rho
                 primitive_variables(4) = rho_v / rho
                 primitive_variables(5) = rho_w / rho
-                primitive_variables(6) = an_eos%compute_pressure(ie, rho, z1)
+                primitive_variables(6) = an_eos%compute_pressure(ie, rho, primitive_variables(7))
             endif
         end associate
     end function conservative_to_primitive
