@@ -20,6 +20,7 @@ module viscous_five_equation_model_utils_module
     public :: normarize_gradient_volume_fraction
     public :: rotate_gradient_value
     public :: unrotate_gradient_value
+    public :: compute_smoothed_volume_fraction
     public :: curvature_preprocessing
 
     contains
@@ -53,8 +54,8 @@ module viscous_five_equation_model_utils_module
         call a_cellsystem%write_vector(a_result_writer, "Velocity"       , primitive_variables_set(3:5, :))
         call a_cellsystem%write_scolar(a_result_writer, "Pressure"       , primitive_variables_set(6  , :))
         call a_cellsystem%write_scolar(a_result_writer, "Volume fraction", primitive_variables_set(7  , :))
-        call a_cellsystem%write_vector(a_result_writer, "Interface normal vector" , surface_tension_variables_set(1:3, :))
-        call a_cellsystem%write_scolar(a_result_writer, "Curvature"               , surface_tension_variables_set(  4, :))
+        call a_cellsystem%write_vector(a_result_writer, "Interface normal vector" , surface_tension_variables_set(2:4, :))
+        call a_cellsystem%write_scolar(a_result_writer, "Curvature"               , surface_tension_variables_set(  5, :))
         call a_cellsystem%close_file  (a_result_writer)
     end subroutine write_result
 
@@ -195,25 +196,45 @@ module viscous_five_equation_model_utils_module
         p(8  ) = primitives(8)
     end function unrotate_primitive
 
-    pure function normarize_gradient_volume_fraction(surface_tension_variables, gradient_primitive_variables, primitive_variables, num_surface_tension_variables) result(dst_surface_tension_variables)
-        real   (real_kind ), intent(in) :: surface_tension_variables(:), gradient_primitive_variables(:), primitive_variables(:)
+    pure function compute_smoothed_volume_fraction(surface_tension_variables, primitive_variables, num_surface_tension_variables) result(dst_surface_tension_variables)
+        real   (real_kind ), intent(in) :: surface_tension_variables(:), primitive_variables(:)
         integer(int_kind  ), intent(in) :: num_surface_tension_variables
         real   (real_kind )             :: dst_surface_tension_variables(num_surface_tension_variables)
-        real   (real_kind )             :: smoothed_grad_volume_fraction(3)
+
+        real   (real_kind )             :: heavest_volume_fraction
         real   (real_kind ), parameter  :: alpha = 0.1d0
 
-        associate(                                                        &
-            volume_fraction      => primitive_variables(7)              , &
-            grad_volume_fraction => gradient_primitive_variables(19:21)   &
+        associate(                                     &
+            rho1            => primitive_variables(1), &
+            rho2            => primitive_variables(2), &
+            volume_fraction => primitive_variables(7)  &
         )
-            if((machine_epsilon < volume_fraction) .and. (volume_fraction < 1.d0 - machine_epsilon))then
-                smoothed_grad_volume_fraction(1:3) = (grad_volume_fraction * volume_fraction) &
-                                                   / (((volume_fraction * (1.d0 - volume_fraction))**(1.d0 - alpha)) * ((volume_fraction**alpha) + (1.d0 - volume_fraction)**alpha)**2.d0)
-                dst_surface_tension_variables(1:3) = smoothed_grad_volume_fraction(1:3) / vector_magnitude(smoothed_grad_volume_fraction(1:3))
+            ! Select a heavest fluid.
+            heavest_volume_fraction = 0.5d0 * (1.d0 + sign(1.d0,  rho1 - rho2)) * volume_fraction + 0.5d0 * (1.d0 + sign(1.d0,  rho2 - rho1)) * (1.d0 - volume_fraction)
+            ! See [Garrick 2017, JCP]
+            dst_surface_tension_variables(1) = (heavest_volume_fraction**alpha) &
+                                             / ((heavest_volume_fraction**alpha) + (1.d0 - heavest_volume_fraction)**alpha)
+        end associate
+    end function compute_smoothed_volume_fraction
+
+    pure function normarize_gradient_volume_fraction(surface_tension_variables, num_surface_tension_variables) result(dst_surface_tension_variables)
+        real   (real_kind ), intent(in) :: surface_tension_variables(:)
+        integer(int_kind  ), intent(in) :: num_surface_tension_variables
+        real   (real_kind )             :: dst_surface_tension_variables(num_surface_tension_variables)
+
+        real   (real_kind ), parameter  :: alpha = 0.1d0
+
+        associate(                                                                    &
+            mag                  => vector_magnitude(surface_tension_variables(2:4)), &
+            grad_volume_fraction => surface_tension_variables(2:4)                    &
+        )
+            dst_surface_tension_variables(1) = surface_tension_variables(1)
+            if(mag > machine_epsilon)then
+                ! Towerd a heavest fluid direction.
+                dst_surface_tension_variables(2:4) = grad_volume_fraction / mag
             else
-                dst_surface_tension_variables(1:3) = 0.d0
+                dst_surface_tension_variables(2:4) = 0.d0
             endif
-            dst_surface_tension_variables(4) = surface_tension_variables(4)
         end associate
     end function normarize_gradient_volume_fraction
 
@@ -264,12 +285,10 @@ module viscous_five_equation_model_utils_module
             rho1  => primitives(1)               , &
             rho2  => primitives(2)               , &
             z     => primitives(7)               , &
-            kappa => surface_tension_variables(4)  &
+            kappa => surface_tension_variables(5)  &
         )
             if((interface_threshold < z) .and. (z < 1.d0 - interface_threshold))then
-                !dst_primitives(8) = max(-carvature_limit, min(kappa, carvature_limit))
-                ! If {@code rho1} is a lightest fluid, kappa is positive curvature.
-                dst_primitives(8) = sign(1.d0,  rho2 - rho1) * kappa
+                dst_primitives(8) = kappa
             else
                 dst_primitives(8) = 0.d0
             endif

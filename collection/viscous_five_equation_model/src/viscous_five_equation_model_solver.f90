@@ -47,7 +47,7 @@ program viscous_five_equation_model_solver
     integer(int_kind), parameter :: num_conservative_variables       = 7
     integer(int_kind), parameter :: num_primitive_variables          = 8
     integer(int_kind), parameter :: num_gradient_primitive_variables = 24
-    integer(int_kind), parameter :: num_surface_tension_variables    = 4
+    integer(int_kind), parameter :: num_surface_tension_variables    = 5
 
     ! Elm. 1) following variables are saved
     ! conservative_variables_set(1  , :)   = Z1*rho1   : Z1*density of fluid1
@@ -90,8 +90,9 @@ program viscous_five_equation_model_solver
     real(real_kind), allocatable :: residual_set(:,:)
 
     ! Elm. 1) following variables are saved
-    ! surface_tension_variables_set(1:3, :) = normalized gradient volume fraction
-    ! surface_tension_variables_set(4  , :) = curvature
+    ! surface_tension_variables_set(1  , :) = smoothed volume fraction
+    ! surface_tension_variables_set(2:4, :) = normalized gradient volume fraction
+    ! surface_tension_variables_set(5  , :) = curvature
     ! Elm. 2) 1 : {@code num_cells}, cell index
     real(real_kind), allocatable :: surface_tension_variables_set(:,:)
 
@@ -190,18 +191,20 @@ program viscous_five_equation_model_solver
             call a_cellsystem%compute_gradient(a_parallelizer, a_gradient_calculator, primitive_variables_set(:,:), gradient_primitive_variables_set(:,:), num_primitive_variables)
 
             ! Compute normarize gradient volume fraction
-            call a_cellsystem%processes_variables_set(a_parallelizer, surface_tension_variables_set, gradient_primitive_variables_set, primitive_variables_set, num_surface_tension_variables, normarize_gradient_volume_fraction)
+            call a_cellsystem%processes_variables_set(a_parallelizer, surface_tension_variables_set, primitive_variables_set, num_surface_tension_variables, compute_smoothed_volume_fraction)
+            call a_cellsystem%compute_gradient(a_parallelizer, a_gradient_calculator, surface_tension_variables_set(1,:), surface_tension_variables_set(2:4,:))
+            call a_cellsystem%processes_variables_set(a_parallelizer, surface_tension_variables_set, num_surface_tension_variables, normarize_gradient_volume_fraction)
 
             ! Apply BC for normalized volume flaction
-            call a_cellsystem%apply_empty_condition    (a_parallelizer, surface_tension_variables_set(1:3, :), 3, rotate_gradient_value, unrotate_gradient_value, bc_for_normarized_gradient_volume_fraction)
-            call a_cellsystem%apply_outflow_condition  (a_parallelizer, surface_tension_variables_set(1:3, :), 3, rotate_gradient_value, unrotate_gradient_value, bc_for_normarized_gradient_volume_fraction)
-            call a_cellsystem%apply_wall_condition     (a_parallelizer, surface_tension_variables_set(1:3, :), 3, rotate_gradient_value, unrotate_gradient_value, bc_for_normarized_gradient_volume_fraction)
-            call a_cellsystem%apply_symmetric_condition(a_parallelizer, surface_tension_variables_set(1:3, :), 3, rotate_gradient_value, unrotate_gradient_value, bc_for_normarized_gradient_volume_fraction)
+            call a_cellsystem%apply_empty_condition    (a_parallelizer, surface_tension_variables_set(2:4, :), 3, rotate_gradient_value, unrotate_gradient_value, bc_for_normarized_gradient_volume_fraction)
+            call a_cellsystem%apply_outflow_condition  (a_parallelizer, surface_tension_variables_set(2:4, :), 3, rotate_gradient_value, unrotate_gradient_value, bc_for_normarized_gradient_volume_fraction)
+            call a_cellsystem%apply_wall_condition     (a_parallelizer, surface_tension_variables_set(2:4, :), 3, rotate_gradient_value, unrotate_gradient_value, bc_for_normarized_gradient_volume_fraction)
+            call a_cellsystem%apply_symmetric_condition(a_parallelizer, surface_tension_variables_set(2:4, :), 3, rotate_gradient_value, unrotate_gradient_value, bc_for_normarized_gradient_volume_fraction)
 
-            ! Compute curvature
-            call a_cellsystem%compute_divergence(a_parallelizer, a_divergence_calculator, surface_tension_variables_set(1:3, :), surface_tension_variables_set(4, :))
+            ! Compute negative curvature
+            call a_cellsystem%compute_divergence(a_parallelizer, a_divergence_calculator, surface_tension_variables_set(2:4, :), surface_tension_variables_set(5, :))
 
-            ! Preprocess for curvature
+            ! Curvature is copied to {@code primitive_variables_set}
             call a_cellsystem%processes_variables_set(a_parallelizer, primitive_variables_set, surface_tension_variables_set, num_primitive_variables, curvature_preprocessing)
 
             call a_cellsystem%apply_empty_condition    (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, empty_bc    )

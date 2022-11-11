@@ -231,7 +231,8 @@ module class_viscous_five_equation_model
             lhc_pressure   = p
             lhc_soundspeed = an_eos%compute_soundspeed(p, lhc_density, z1)
             lhc_main_velocity = u
-            lhc_pressure_jump = self%mixture_surface_tension(z1) * curv * (1.d0 - z1)
+            lhc_alpha_heavy   = 0.5d0 * (1.d0 + sign(1.d0, rho1 - rho2)) * z1 + 0.5d0 * (1.d0 + sign(1.d0, rho2 - rho1)) * (1.d0 - z1)
+            lhc_pressure_jump = self%mixture_surface_tension(z1) * curv * lhc_alpha_heavy
         end associate
         associate(                                             &
                 rho1    => local_coordinate_primitives_rhc(1), &
@@ -247,7 +248,8 @@ module class_viscous_five_equation_model
             rhc_pressure   = p
             rhc_soundspeed = an_eos%compute_soundspeed(p, rhc_density, z1)
             rhc_main_velocity = u
-            rhc_pressure_jump = self%mixture_surface_tension(z1) * curv * (1.d0 - z1)
+            rhc_alpha_heavy   = 0.5d0 * (1.d0 + sign(1.d0,  rho1 - rho2)) * z1 + 0.5d0 * (1.d0 + sign(1.d0,  rho2 - rho1)) * (1.d0 - z1)
+            rhc_pressure_jump = self%mixture_surface_tension(z1) * curv * rhc_alpha_heavy
         end associate
 
         ! # compute flux

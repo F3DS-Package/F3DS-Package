@@ -49,6 +49,7 @@ module viscous_five_equation_model_boundary_condition_module
         real   (real_kind), intent(in) :: inner_gradient_values(:)
         integer(int_kind ), intent(in) :: num_gradient_values
         real   (real_kind)             :: ghost_gradient_values(num_gradient_values)
-        ghost_gradient_values(1:3) = inner_gradient_values(1:3)
+        ghost_gradient_values(1  ) = -1.d0 * inner_gradient_values(1  )
+        ghost_gradient_values(2:3) =         inner_gradient_values(2:3)
     end function bc_for_normarized_gradient_volume_fraction
 end module viscous_five_equation_model_boundary_condition_module
