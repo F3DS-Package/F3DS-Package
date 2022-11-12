@@ -1143,7 +1143,7 @@ module class_cellsystem
 
         num_divergence_variables = num_variables/3
 
-!$omp parallel do private(thread_number, local_index, face_index, rhc_index, lhc_index, var_index)
+!$omp parallel do private(thread_number, local_index, face_index, rhc_index, lhc_index, var_index, face_variables)
         do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
             do local_index = 1, a_parallelizer%get_number_of_face_indexes(1, thread_number), 1
                 face_index = a_parallelizer%get_face_index(1, thread_number, local_index)
@@ -1206,8 +1206,6 @@ module class_cellsystem
                 rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
 
                 face_variables(:) = a_interpolator%interpolate_face_variables(variable_set(:,:), self%face_to_cell_indexes(:, face_index), self%cell_centor_positions(:,:), self%face_positions(:,face_index), self%num_local_cells, 3)
-
-                !face_variables(1:3) = 0.5d0 * (variable_set(1:3, lhc_index) + variable_set(1:3, rhc_index))
 
                 divergence_variable_set(lhc_index) = divergence_variable_set(lhc_index)               &
                                                    + (1.d0 / self%cell_volumes(lhc_index)) * vector_multiply(face_variables(1:3), self%face_normal_vectors(1:3, face_index) * self%face_areas(face_index))

@@ -19,7 +19,7 @@
             "Specific heat ratio" : 1.4,
             "Reference pressure"  : 0.0,
             "Surface tension"     : 0.0,
-            "Dynamic viscosity"   : 1.0
+            "Dynamic viscosity"   : 0.0
         }
     },
     "Grid" :
