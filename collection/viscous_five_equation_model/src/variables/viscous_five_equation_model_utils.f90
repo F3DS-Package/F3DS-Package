@@ -288,7 +288,7 @@ module viscous_five_equation_model_utils_module
             kappa => surface_tension_variables(5)  &
         )
             if((interface_threshold < z) .and. (z < 1.d0 - interface_threshold))then
-                dst_primitives(8) = kappa
+                dst_primitives(8) = max(min(kappa, carvature_limit), -carvature_limit)
             else
                 dst_primitives(8) = 0.d0
             endif

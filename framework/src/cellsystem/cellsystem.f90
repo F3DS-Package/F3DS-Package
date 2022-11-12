@@ -15,7 +15,7 @@ module class_cellsystem
     use abstract_reconstructor
     use abstract_riemann_solver
     use abstract_gradient_calculator
-    use abstract_divergence_calculator
+    use abstract_interpolator
     use abstract_termination_criterion
     use abstract_time_increment_controller
     use abstract_initial_condition_parser
@@ -148,7 +148,7 @@ module class_cellsystem
         procedure, public, pass(self) :: variables_1darray_initialize
         procedure, public, pass(self) :: termination_criterion_initialize
         procedure, public, pass(self) :: time_increment_controller_initialize
-        procedure, public, pass(self) :: divergence_calculator_initialize
+        procedure, public, pass(self) :: interpolator_initialize
         procedure, public, pass(self) :: line_plotter_initialize
         procedure, public, pass(self) :: control_volume_profiler_initialize
         procedure, public, pass(self) :: model_initialize
@@ -164,7 +164,7 @@ module class_cellsystem
                                                         variables_1darray_initialize         , &
                                                         termination_criterion_initialize     , &
                                                         time_increment_controller_initialize , &
-                                                        divergence_calculator_initialize     , &
+                                                        interpolator_initialize     , &
                                                         line_plotter_initialize              , &
                                                         control_volume_profiler_initialize   , &
                                                         model_initialize                     , &
@@ -1105,28 +1105,28 @@ module class_cellsystem
     end subroutine compute_gradient_1darray
 
     ! ### Divergence Calculator ###
-    subroutine divergence_calculator_initialize(self, a_divergence_calculator, config, num_conservative_variables, num_primitive_variables)
-        class  (cellsystem           ), intent(inout) :: self
-        class  (divergence_calculator), intent(inout) :: a_divergence_calculator
-        class  (configuration        ), intent(inout) :: config
-        integer(int_kind             ), intent(in   ) :: num_conservative_variables
-        integer(int_kind             ), intent(in   ) :: num_primitive_variables
+    subroutine interpolator_initialize(self, a_interpolator, config, num_conservative_variables, num_primitive_variables)
+        class  (cellsystem   ), intent(inout) :: self
+        class  (interpolator ), intent(inout) :: a_interpolator
+        class  (configuration), intent(inout) :: config
+        integer(int_kind     ), intent(in   ) :: num_conservative_variables
+        integer(int_kind     ), intent(in   ) :: num_primitive_variables
 #ifdef _DEBUG
-        call write_debuginfo("In divergence_calculator_initialize(), cellsystem.")
+        call write_debuginfo("In interpolator_initialize(), cellsystem.")
 #endif
-        call a_divergence_calculator%initialize(config)
-    end subroutine divergence_calculator_initialize
+        call a_interpolator%initialize(config)
+    end subroutine interpolator_initialize
 
-    subroutine compute_divergence_2darray(self, a_parallelizer, a_divergence_calculator, variables_set, divergence_variables_set, num_variables)
-        class  (cellsystem           ), intent(inout) :: self
-        class  (parallelizer         ), intent(in   ) :: a_parallelizer
-        class  (divergence_calculator), intent(inout) :: a_divergence_calculator
-        real   (real_kind            ), intent(in   ) :: variables_set           (:,:)
-        real   (real_kind            ), intent(inout) :: divergence_variables_set(:,:)
-        integer(int_kind             ), intent(in   ) :: num_variables
+    subroutine compute_divergence_2darray(self, a_parallelizer, a_interpolator, variables_set, divergence_variables_set, num_variables)
+        class  (cellsystem  ), intent(inout) :: self
+        class  (parallelizer), intent(in   ) :: a_parallelizer
+        class  (interpolator), intent(inout) :: a_interpolator
+        real   (real_kind   ), intent(in   ) :: variables_set           (:,:)
+        real   (real_kind   ), intent(inout) :: divergence_variables_set(:,:)
+        integer(int_kind    ), intent(in   ) :: num_variables
 
         integer(int_kind ) :: face_index, cell_index, rhc_index, lhc_index, var_index, num_divergence_variables
-        real   (real_kind) :: residual
+        real   (real_kind) :: face_variables(3)
         integer(int_kind ) :: thread_number, local_index
 
 #ifdef _DEBUG
@@ -1156,34 +1156,34 @@ module class_cellsystem
                         vec_start_index => 3*(var_index-1)+1, &
                         vec_end_index   => 3*(var_index-1)+3  &
                     )
-                        residual = a_divergence_calculator%compute_residual(                               &
-                           variables_set                      (vec_start_index:vec_end_index, lhc_index ), &
-                           variables_set                      (vec_start_index:vec_end_index, rhc_index ), &
-                           self%cell_centor_positions         (1:3                          , lhc_index ), &
-                           self%cell_centor_positions         (1:3                          , rhc_index ), &
-                           self%face_normal_vectors           (1:3                          , face_index), &
+                        face_variables(:) = a_interpolator%interpolate_face_variables(                     &
+                           variables_set                      (vec_start_index:vec_end_index, :         ), &
+                           self%face_to_cell_indexes          (:                            , face_index), &
+                           self%cell_centor_positions         (1:3                          , :         ), &
                            self%face_positions                (1:3                          , face_index), &
-                           self%face_areas                                                   (face_index)  &
+                           self%num_local_cells                                                          , &
+                           3                                                                               &
                         )
-                        divergence_variables_set(var_index, rhc_index) = divergence_variables_set(var_index, rhc_index) &
-                                                            - (1.d0 / self%cell_volumes(rhc_index)) * residual
                         divergence_variables_set(var_index, lhc_index) = divergence_variables_set(var_index, lhc_index) &
-                                                            + (1.d0 / self%cell_volumes(lhc_index)) * residual
+                                                            + (1.d0 / self%cell_volumes(lhc_index)) * vector_multiply(face_variables, self%face_normal_vectors(:, face_index) * self%face_areas(face_index))
+                        divergence_variables_set(var_index, rhc_index) = divergence_variables_set(var_index, rhc_index) &
+                                                            - (1.d0 / self%cell_volumes(rhc_index)) * vector_multiply(face_variables, self%face_normal_vectors(:, face_index) * self%face_areas(face_index))
                     end associate
                 end do
             end do
         end do
     end subroutine compute_divergence_2darray
 
-    subroutine compute_divergence_1darray(self, a_parallelizer, a_divergence_calculator, variable_set, divergence_variable_set)
-        class(cellsystem           ), intent(inout) :: self
-        class(parallelizer         ), intent(in   ) :: a_parallelizer
-        class(divergence_calculator), intent(inout) :: a_divergence_calculator
-        real (real_kind            ), intent(in   ) :: variable_set              (:,:)
-        real (real_kind            ), intent(inout) :: divergence_variable_set   (:)
+    subroutine compute_divergence_1darray(self, a_parallelizer, a_interpolator, variable_set, divergence_variable_set)
+        class(cellsystem   ), intent(inout) :: self
+        class(parallelizer ), intent(in   ) :: a_parallelizer
+        class(interpolator ), intent(inout) :: a_interpolator
+        real (real_kind    ), intent(in   ) :: variable_set              (:,:)
+        real (real_kind    ), intent(inout) :: divergence_variable_set   (:)
 
-        integer(int_kind) :: face_index, cell_index, rhc_index, lhc_index
-        integer(int_kind) :: thread_number, local_index
+        integer(int_kind ) :: face_index, cell_index, rhc_index, lhc_index
+        integer(int_kind ) :: thread_number, local_index
+        real   (real_kind) :: face_variables(3)
 
 #ifdef _DEBUG
         call write_debuginfo("In compute_divergence_1darray(), cellsystem.")
@@ -1197,7 +1197,7 @@ module class_cellsystem
             end do
         end do
 
-!$omp parallel do private(thread_number, local_index, face_index, rhc_index, lhc_index)
+!$omp parallel do private(thread_number, local_index, face_index, rhc_index, lhc_index, face_variables)
         do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
             do local_index = 1, a_parallelizer%get_number_of_face_indexes(1, thread_number), 1
                 face_index = a_parallelizer%get_face_index(1, thread_number, local_index)
@@ -1205,22 +1205,14 @@ module class_cellsystem
                 lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
                 rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
 
-                associate(                                                   &
-                    residual => a_divergence_calculator%compute_residual(    &
-                        variable_set                       (1:3,lhc_index ), &
-                        variable_set                       (1:3,rhc_index ), &
-                        self%cell_centor_positions         (1:3,lhc_index ), &
-                        self%cell_centor_positions         (1:3,rhc_index ), &
-                        self%face_normal_vectors           (1:3,face_index), &
-                        self%face_positions                (1:3,face_index), &
-                        self%face_areas                        (face_index)  &
-                    )                                                        &
-                )
-                    divergence_variable_set(rhc_index)   = divergence_variable_set(rhc_index)               &
-                                                         - (1.d0 / self%cell_volumes(rhc_index)) * residual
-                    divergence_variable_set(lhc_index)   = divergence_variable_set(lhc_index)               &
-                                                         + (1.d0 / self%cell_volumes(lhc_index)) * residual
-                end associate
+                face_variables(:) = a_interpolator%interpolate_face_variables(variable_set(:,:), self%face_to_cell_indexes(:, face_index), self%cell_centor_positions(:,:), self%face_positions(:,face_index), self%num_local_cells, 3)
+
+                !face_variables(1:3) = 0.5d0 * (variable_set(1:3, lhc_index) + variable_set(1:3, rhc_index))
+
+                divergence_variable_set(lhc_index) = divergence_variable_set(lhc_index)               &
+                                                   + (1.d0 / self%cell_volumes(lhc_index)) * vector_multiply(face_variables(1:3), self%face_normal_vectors(1:3, face_index) * self%face_areas(face_index))
+                divergence_variable_set(rhc_index) = divergence_variable_set(rhc_index)               &
+                                                   - (1.d0 / self%cell_volumes(rhc_index)) * vector_multiply(face_variables(1:3), self%face_normal_vectors(1:3, face_index) * self%face_areas(face_index))
             end do
         end do
     end subroutine compute_divergence_1darray

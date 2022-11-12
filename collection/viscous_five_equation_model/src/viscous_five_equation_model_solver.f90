@@ -10,8 +10,8 @@ program viscous_five_equation_model_solver
     use class_stiffened_gas_eos
     ! Gradient
     use class_green_gauss
-    ! Divergence
-    use class_gauss_divergence
+    ! Face interpolation
+    use class_midpoint_interpolator
     ! Face gradient
     use class_corrected_midpoint_face_gradient_interpolator
     ! Time stepping
@@ -107,7 +107,7 @@ program viscous_five_equation_model_solver
     type(stiffened_gas_eos                            ) :: an_eos
     type(hllc                                         ) :: a_riemann_solver
     type(green_gauss                                  ) :: a_gradient_calculator
-    type(gauss_divergence                             ) :: a_divergence_calculator
+    type(midpoint_interpolator                        ) :: a_interpolator
     type(corrected_midpoint_face_gradient_interpolator) :: a_face_gradient_interpolator
     type(vtk_result_writer                            ) :: a_result_writer
     type(end_time_criterion                           ) :: a_termination_criterion
@@ -147,7 +147,7 @@ program viscous_five_equation_model_solver
     call a_cellsystem%initialize(a_time_stepping             , a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(a_reconstructor             , a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(a_gradient_calculator       , a_configuration, num_conservative_variables, num_primitive_variables)
-    call a_cellsystem%initialize(a_divergence_calculator     , a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_interpolator              , a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(a_result_writer             , a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(a_termination_criterion     , a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(a_time_increment_controller , a_configuration, num_conservative_variables, num_primitive_variables)
@@ -202,7 +202,7 @@ program viscous_five_equation_model_solver
             call a_cellsystem%apply_symmetric_condition(a_parallelizer, surface_tension_variables_set(2:4, :), 3, rotate_gradient_value, unrotate_gradient_value, bc_for_normarized_gradient_volume_fraction)
 
             ! Compute negative curvature
-            call a_cellsystem%compute_divergence(a_parallelizer, a_divergence_calculator, surface_tension_variables_set(2:4, :), surface_tension_variables_set(5, :))
+            call a_cellsystem%compute_divergence(a_parallelizer, a_interpolator, surface_tension_variables_set(2:4, :), surface_tension_variables_set(5, :))
 
             ! Curvature is copied to {@code primitive_variables_set}
             call a_cellsystem%processes_variables_set(a_parallelizer, primitive_variables_set, surface_tension_variables_set, num_primitive_variables, curvature_preprocessing)

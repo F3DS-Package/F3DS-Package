@@ -10,8 +10,6 @@ program five_equation_model_solver
     use class_stiffened_gas_eos
     ! Gradient
     use class_green_gauss
-    ! Divergence
-    use class_gauss_divergence
     ! Face gradient
     use class_corrected_midpoint_face_gradient_interpolator
     ! Time stepping
