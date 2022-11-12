@@ -201,10 +201,10 @@ program viscous_five_equation_model_solver
             call a_cellsystem%apply_wall_condition     (a_parallelizer, surface_tension_variables_set(2:4, :), 3, rotate_gradient_value, unrotate_gradient_value, bc_for_normarized_gradient_volume_fraction)
             call a_cellsystem%apply_symmetric_condition(a_parallelizer, surface_tension_variables_set(2:4, :), 3, rotate_gradient_value, unrotate_gradient_value, bc_for_normarized_gradient_volume_fraction)
 
-            ! Compute negative curvature
+            ! Compute a heavest fluid curvature
             call a_cellsystem%compute_divergence(a_parallelizer, a_interpolator, surface_tension_variables_set(2:4, :), surface_tension_variables_set(5, :))
 
-            ! Curvature is copied to {@code primitive_variables_set}
+            ! Curvature is copied to {@code primitive_variables_set}. Curvature is limmited in [-2,2]!
             call a_cellsystem%processes_variables_set(a_parallelizer, primitive_variables_set, surface_tension_variables_set, num_primitive_variables, curvature_preprocessing)
 
             call a_cellsystem%apply_empty_condition    (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, empty_bc    )
