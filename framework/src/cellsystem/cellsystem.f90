@@ -164,7 +164,7 @@ module class_cellsystem
                                                         variables_1darray_initialize         , &
                                                         termination_criterion_initialize     , &
                                                         time_increment_controller_initialize , &
-                                                        interpolator_initialize     , &
+                                                        interpolator_initialize              , &
                                                         line_plotter_initialize              , &
                                                         control_volume_profiler_initialize   , &
                                                         model_initialize                     , &
@@ -195,6 +195,7 @@ module class_cellsystem
         procedure, public, pass(self) :: processes_variables_set_two_array
         generic  , public             :: processes_variables_set => processes_variables_set_single_array, &
                                                                     processes_variables_set_two_array
+        procedure, public, pass(self) :: smooth_variables
 
         ! ### Time increment control ###
         procedure, public, pass(self) :: update_time_increment_functional_api
@@ -216,7 +217,6 @@ module class_cellsystem
         procedure, public, pass(self) :: compute_gradient_2darray
         generic  , public             :: compute_gradient => compute_gradient_1darray, &
                                                              compute_gradient_2darray
-
 
         ! ### Divergence Calculator ###
         procedure, public, pass(self) :: compute_divergence_1darray
@@ -955,6 +955,71 @@ module class_cellsystem
             end do
         end do
     end subroutine processes_variables_set_two_array
+
+    subroutine smooth_variables(self, a_parallelizer, variables_set, weight_function)
+        class  (cellsystem  ), intent(inout) :: self
+        class  (parallelizer), intent(in   ) :: a_parallelizer
+        real   (real_kind   ), intent(inout) :: variables_set(:,:)
+        interface
+            pure function weight_function(own_cell_position, neighbor_cell_position, own_variables, neighbor_variables) result(weight)
+                use typedef_module
+                real   (real_kind ), intent(in) :: own_cell_position     (3)
+                real   (real_kind ), intent(in) :: neighbor_cell_position(3)
+                real   (real_kind ), intent(in) :: own_variables         (:)
+                real   (real_kind ), intent(in) :: neighbor_variables    (:)
+                real   (real_kind )             :: weight
+            end function weight_function
+        end interface
+
+        integer(int_kind ) :: i, thread_number, local_index, face_index, cell_index, rhc_index, lhc_index
+        real   (real_kind) :: smoothed_variables_set(size(variables_set(:,1)), size(variables_set(1,:))), total_weight_set(size(variables_set(1,:)))
+        real   (real_kind) :: lhc_w, rhc_w
+
+#ifdef _DEBUG
+        call write_debuginfo("In smooth_variables(), cellsystem.")
+#endif
+
+!$omp parallel do private(thread_number, local_index, cell_index)
+        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
+            do local_index = 1, a_parallelizer%get_number_of_cell_indexes(1, thread_number), 1
+                cell_index = a_parallelizer%get_cell_index(1, thread_number, local_index)
+                smoothed_variables_set(:,cell_index) = 0.d0
+                total_weight_set        (cell_index) = 0.d0
+            end do
+        end do
+
+!$omp parallel do private(thread_number, local_index, face_index, rhc_index, lhc_index, lhc_w, rhc_w)
+        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
+            do local_index = 1, a_parallelizer%get_number_of_face_indexes(1, thread_number), 1
+                face_index = a_parallelizer%get_face_index(1, thread_number, local_index)
+
+                lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
+                rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
+
+                associate(                           &
+                    x => self%cell_centor_positions, &
+                    v => variables_set               &
+                )
+                    lhc_w = weight_function(x(:,lhc_index), x(:,rhc_index), v(:,lhc_index), v(:,rhc_index))
+                    rhc_w = weight_function(x(:,rhc_index), x(:,lhc_index), v(:,rhc_index), v(:,lhc_index))
+
+                    smoothed_variables_set(:, lhc_index) = smoothed_variables_set(:, lhc_index) + lhc_w * v(:, lhc_index)
+                    smoothed_variables_set(:, rhc_index) = smoothed_variables_set(:, rhc_index) + rhc_w * v(:, rhc_index)
+
+                    total_weight_set(lhc_index) = total_weight_set(lhc_index) + lhc_w
+                    total_weight_set(rhc_index) = total_weight_set(rhc_index) + rhc_w
+                end associate
+            end do
+        end do
+
+!$omp parallel do private(thread_number, local_index, cell_index)
+        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
+            do local_index = 1, a_parallelizer%get_number_of_cell_indexes(1, thread_number), 1
+                cell_index = a_parallelizer%get_cell_index(1, thread_number, local_index)
+                variables_set(:,cell_index) = smoothed_variables_set(:,cell_index) / total_weight_set(cell_index)
+            end do
+        end do
+    end subroutine smooth_variables
 
     ! ### Gradient Calculator ###
     subroutine gradient_calculator_initialize(self, a_gradient_calculator, config, num_conservative_variables, num_primitive_variables)

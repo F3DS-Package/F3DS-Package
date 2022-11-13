@@ -193,13 +193,16 @@ program viscous_five_equation_model_solver
             ! Compute normarize gradient volume fraction
             call a_cellsystem%processes_variables_set(a_parallelizer, surface_tension_variables_set, primitive_variables_set, num_surface_tension_variables, compute_smoothed_volume_fraction)
             call a_cellsystem%compute_gradient(a_parallelizer, a_gradient_calculator, surface_tension_variables_set(1,:), surface_tension_variables_set(2:4,:))
-            call a_cellsystem%processes_variables_set(a_parallelizer, surface_tension_variables_set, num_surface_tension_variables, normarize_gradient_volume_fraction)
+            call a_cellsystem%processes_variables_set(a_parallelizer, surface_tension_variables_set, num_surface_tension_variables, normalize_gradient_volume_fraction)
 
             ! Apply BC for normalized volume flaction
             call a_cellsystem%apply_empty_condition    (a_parallelizer, surface_tension_variables_set(2:4, :), 3, rotate_gradient_value, unrotate_gradient_value, bc_for_normarized_gradient_volume_fraction)
             call a_cellsystem%apply_outflow_condition  (a_parallelizer, surface_tension_variables_set(2:4, :), 3, rotate_gradient_value, unrotate_gradient_value, bc_for_normarized_gradient_volume_fraction)
             call a_cellsystem%apply_wall_condition     (a_parallelizer, surface_tension_variables_set(2:4, :), 3, rotate_gradient_value, unrotate_gradient_value, bc_for_normarized_gradient_volume_fraction)
             call a_cellsystem%apply_symmetric_condition(a_parallelizer, surface_tension_variables_set(2:4, :), 3, rotate_gradient_value, unrotate_gradient_value, bc_for_normarized_gradient_volume_fraction)
+
+            ! Smoothing normalized volume flaction
+            call a_cellsystem%smooth_variables(a_parallelizer, surface_tension_variables_set(2:4, :), interface_normal_smoothing_weight)
 
             ! Compute a heavest fluid curvature
             call a_cellsystem%compute_divergence(a_parallelizer, a_interpolator, surface_tension_variables_set(2:4, :), surface_tension_variables_set(5, :))

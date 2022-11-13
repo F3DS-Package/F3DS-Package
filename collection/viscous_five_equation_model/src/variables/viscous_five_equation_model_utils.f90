@@ -17,11 +17,12 @@ module viscous_five_equation_model_utils_module
     public :: spectral_radius_function
     public :: rotate_primitive
     public :: unrotate_primitive
-    public :: normarize_gradient_volume_fraction
+    public :: normalize_gradient_volume_fraction
     public :: rotate_gradient_value
     public :: unrotate_gradient_value
     public :: compute_smoothed_volume_fraction
     public :: curvature_preprocessing
+    public :: interface_normal_smoothing_weight
 
     contains
 
@@ -217,7 +218,7 @@ module viscous_five_equation_model_utils_module
         end associate
     end function compute_smoothed_volume_fraction
 
-    pure function normarize_gradient_volume_fraction(surface_tension_variables, num_surface_tension_variables) result(dst_surface_tension_variables)
+    pure function normalize_gradient_volume_fraction(surface_tension_variables, num_surface_tension_variables) result(dst_surface_tension_variables)
         real   (real_kind ), intent(in) :: surface_tension_variables(:)
         integer(int_kind  ), intent(in) :: num_surface_tension_variables
         real   (real_kind )             :: dst_surface_tension_variables(num_surface_tension_variables)
@@ -236,7 +237,7 @@ module viscous_five_equation_model_utils_module
                 dst_surface_tension_variables(2:4) = 0.d0
             endif
         end associate
-    end function normarize_gradient_volume_fraction
+    end function normalize_gradient_volume_fraction
 
     pure function rotate_gradient_value( &
         gradient_value                 , &
@@ -294,4 +295,18 @@ module viscous_five_equation_model_utils_module
             endif
         end associate
     end function curvature_preprocessing
+
+    pure function interface_normal_smoothing_weight(own_cell_position, neighbor_cell_position, own_variables, neighbor_variables) result(weight)
+        real(real_kind ), intent(in) :: own_cell_position     (3)
+        real(real_kind ), intent(in) :: neighbor_cell_position(3)
+        real(real_kind ), intent(in) :: own_variables         (:)
+        real(real_kind ), intent(in) :: neighbor_variables    (:)
+        real(real_kind )             :: weight
+
+        real(real_kind), parameter :: smoothing_power = 2.d0 ! range is {@code smoothing_power} > 0.
+
+        associate(alpha => neighbor_variables(7))
+            weight = (alpha * (1.d0 - alpha))**smoothing_power
+        end associate
+    end function interface_normal_smoothing_weight
 end module viscous_five_equation_model_utils_module
