@@ -224,16 +224,15 @@ module viscous_five_equation_model_utils_module
         integer(int_kind  ), intent(in) :: num_surface_tension_variables
         real   (real_kind )             :: dst_surface_tension_variables(num_surface_tension_variables)
 
-        real   (real_kind ), parameter  :: alpha = 0.1d0
-
-        associate(                                                                    &
-            mag                  => vector_magnitude(surface_tension_variables(2:4)), &
-            grad_volume_fraction => surface_tension_variables(2:4)                    &
+        associate(                                                          &
+            mag        => vector_magnitude(surface_tension_variables(2:4)), &
+            alpha      => surface_tension_variables(1)                    , &
+            grad_alpha => surface_tension_variables(2:4)                    &
         )
             dst_surface_tension_variables(1) = surface_tension_variables(1)
-            if(mag > machine_epsilon)then
+            if((machine_epsilon < mag) .and. (machine_epsilon < alpha) .and. (alpha < 1.d0 - machine_epsilon))then
                 ! Towerd a heavest fluid direction.
-                dst_surface_tension_variables(2:4) = grad_volume_fraction / mag
+                dst_surface_tension_variables(2:4) = grad_alpha / mag
             else
                 dst_surface_tension_variables(2:4) = 0.d0
             endif
@@ -279,7 +278,7 @@ module viscous_five_equation_model_utils_module
         integer(int_kind  ), intent(in) :: num_variables
         real   (real_kind )             :: dst_primitives(num_variables)
 
-        real(real_kind), parameter :: interface_threshold = 1e-3
+        real(real_kind), parameter :: interface_threshold = 1e-2
         real(real_kind), parameter :: carvature_limit = 2.d0
 
         dst_primitives(1:7) = primitives(1:7)
@@ -290,7 +289,7 @@ module viscous_five_equation_model_utils_module
             kappa => surface_tension_variables(5)  &
         )
             if((interface_threshold < z) .and. (z < 1.d0 - interface_threshold))then
-                dst_primitives(8) = max(min(-kappa, carvature_limit), -carvature_limit)
+                dst_primitives(8) = -kappa!max(min(-kappa, carvature_limit), -carvature_limit)
             else
                 dst_primitives(8) = 0.d0
             endif
