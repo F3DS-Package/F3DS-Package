@@ -1001,7 +1001,11 @@ module class_cellsystem
                     v => variables_set               &
                 )
                     lhc_w = weight_function(x(:,lhc_index), x(:,rhc_index), v(:,lhc_index), v(:,rhc_index))
-                    rhc_w = weight_function(x(:,rhc_index), x(:,lhc_index), v(:,rhc_index), v(:,lhc_index))
+                    if(self%is_real_cell(rhc_index))then
+                        rhc_w = weight_function(x(:,rhc_index), x(:,lhc_index), v(:,rhc_index), v(:,lhc_index))
+                    else
+                        rhc_w = 0.d0
+                    endif
 
                     smoothed_variables_set(:, lhc_index) = smoothed_variables_set(:, lhc_index) + lhc_w * v(:, lhc_index)
                     smoothed_variables_set(:, rhc_index) = smoothed_variables_set(:, rhc_index) + rhc_w * v(:, rhc_index)
@@ -1016,7 +1020,11 @@ module class_cellsystem
         do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
             do local_index = 1, a_parallelizer%get_number_of_cell_indexes(1, thread_number), 1
                 cell_index = a_parallelizer%get_cell_index(1, thread_number, local_index)
-                variables_set(:,cell_index) = smoothed_variables_set(:,cell_index) / total_weight_set(cell_index)
+                if(total_weight_set(cell_index) > 0.d0)then
+                    variables_set(:,cell_index) = smoothed_variables_set(:,cell_index) / total_weight_set(cell_index)
+                else
+                    variables_set(:,cell_index) = 0.d0
+                end if
             end do
         end do
     end subroutine smooth_variables

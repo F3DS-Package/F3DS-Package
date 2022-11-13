@@ -213,8 +213,9 @@ module viscous_five_equation_model_utils_module
             ! Select a heavest fluid.
             heavest_volume_fraction = 0.5d0 * (1.d0 + sign(1.d0,  rho1 - rho2)) * volume_fraction + 0.5d0 * (1.d0 + sign(1.d0,  rho2 - rho1)) * (1.d0 - volume_fraction)
             ! See [Garrick 2017, JCP]
-            dst_surface_tension_variables(1) = (heavest_volume_fraction**alpha) &
-                                             / ((heavest_volume_fraction**alpha) + (1.d0 - heavest_volume_fraction)**alpha)
+            !dst_surface_tension_variables(1) = (heavest_volume_fraction**alpha) &
+            !                                 / ((heavest_volume_fraction**alpha) + (1.d0 - heavest_volume_fraction)**alpha)
+            dst_surface_tension_variables(1) = heavest_volume_fraction
         end associate
     end function compute_smoothed_volume_fraction
 
@@ -305,7 +306,7 @@ module viscous_five_equation_model_utils_module
 
         real(real_kind), parameter :: smoothing_power = 2.d0 ! range is {@code smoothing_power} > 0.
 
-        associate(alpha => neighbor_variables(7))
+        associate(alpha => neighbor_variables(1)) !{@code neighbor_variables} is {@code surface_tension_variables}
             weight = (alpha * (1.d0 - alpha))**smoothing_power
         end associate
     end function interface_normal_smoothing_weight
