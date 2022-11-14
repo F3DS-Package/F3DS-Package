@@ -104,6 +104,7 @@ module class_control_volume_profiler
 
         if(time >= self%next_output_time_)then
             open(newunit = unit_number, file="result/"//self%output_filename_, status = 'old', position='append')
+            integrals(:) = 0.d0
             do i = 1, self%n_output_cells_, 1
                 integrals(:) = integrals(:) + values_set(:,self%cell_ids_(i)) * cell_volumes(self%cell_ids_(i))
             end do
