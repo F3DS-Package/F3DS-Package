@@ -124,6 +124,9 @@ program five_equation_model_solver
     call a_cellsystem%read_initial_condition(an_initial_condition_parser, a_configuration, conservative_variables_set)
     call a_cellsystem%conservative_to_primitive_variables_all(a_parallelizer, an_eos, conservative_variables_set, primitive_variables_set, num_primitive_variables, conservative_to_primitive)
 
+    ! initialize five-equation model parameters
+    call initialize_model(a_configuration)
+
     ! Timestepping loop
     do while ( .not. a_cellsystem%satisfies_termination_criterion(a_termination_criterion) )
         call a_cellsystem%update_time_increment(a_time_increment_controller, an_eos, primitive_variables_set, spectral_radius)

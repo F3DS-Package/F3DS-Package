@@ -14,10 +14,23 @@ module five_equation_model_module
 
     private
 
+    ! for Kdiv(u) term
+    logical :: ignore_kdivu_
+
     public :: compute_residual_element
     public :: spectral_radius
+    public :: initialize_model
 
     contains
+
+    subroutine initialize_model(a_configuration)
+        class  (configuration), intent(inout) :: a_configuration
+
+        logical           :: found
+
+        call a_configuration%get_bool      ("Model.Ignore kdivu", ignore_kdivu_, found, .false.)
+        if(.not. found) call write_warring("'Model.Ignore kdivu' is not found in configuration you set. Apply this term.")
+    end subroutine initialize_model
 
     pure function compute_mixture_density(primitive_variables) result(density)
         real (real_kind), intent(in) :: primitive_variables(:)
@@ -272,8 +285,13 @@ module five_equation_model_module
             rhc_z1      => primitive_variables_rhc(7)    &
         )
 
-            lhc_k = an_eos%compute_k(lhc_p, lhc_rhos, lhc_z1)
-            rhc_k = an_eos%compute_k(rhc_p, rhc_rhos, rhc_z1)
+            if(ignore_kdivu_)then
+                lhc_k = 0.d0
+                rhc_k = 0.d0
+            else
+                lhc_k = an_eos%compute_k(lhc_p, lhc_rhos, lhc_z1)
+                rhc_k = an_eos%compute_k(rhc_p, rhc_rhos, rhc_z1)
+            end if
 
             residual_element(7, 1) = residual_element(7, 1) &
                                    + (lhc_z1 + lhc_k) * (1.d0 / lhc_cell_volume) * numerical_velocity * face_area
