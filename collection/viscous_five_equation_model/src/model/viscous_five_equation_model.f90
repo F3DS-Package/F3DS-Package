@@ -25,6 +25,7 @@ module viscous_five_equation_model_module
     logical                         :: ignore_kdivu_
 
     ! for surface tension term
+    logical                         :: ignore_surface_tension_
     real   (real_kind), allocatable :: surface_tension_(:)
 
     ! for gravity term
@@ -45,8 +46,18 @@ module viscous_five_equation_model_module
     public :: normalize_gradient_volume_fraction
     public :: curvature_smoothing_weight
     public :: curvature_preprocessing
+    public :: apply_surface_tension
 
     contains
+
+    function apply_surface_tension() result(ret)
+        logical :: ret
+        if(ignore_surface_tension_)then
+            ret = .false.
+        else
+            ret = .true.
+        end if
+    end function apply_surface_tension
 
     function mixture_surface_tension(z1) result(sigma)
         real   (real_kind), intent(in) :: z1
@@ -106,6 +117,9 @@ module viscous_five_equation_model_module
             call a_configuration%get_real      ("Phase.Phase property "//to_str(i)//".Dynamic viscosity", dynamic_viscosity_(i), found, 0.d0)
             if(.not. found) call write_warring("'Phase.Phase property "//to_str(i)//".Dynamic viscosity' is not found in the configuration you set. Set to 0.")
         end do
+
+        call a_configuration%get_bool      ("Model.Ignore surface tension", ignore_surface_tension_, found, .false.)
+        if(.not. found) call write_warring("'Model.Ignore surface tension' is not found in configuration you set. Apply this term.")
 
         call a_configuration%get_bool      ("Model.Ignore kdivu", ignore_kdivu_, found, .false.)
         if(.not. found) call write_warring("'Model.Ignore kdivu' is not found in configuration you set. Apply this term.")
