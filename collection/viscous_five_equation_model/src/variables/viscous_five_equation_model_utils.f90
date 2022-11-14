@@ -51,7 +51,7 @@ module viscous_five_equation_model_utils_module
         call a_cellsystem%write_scolar(a_result_writer, "Pressure"       , primitive_variables_set(6  , :))
         call a_cellsystem%write_scolar(a_result_writer, "Volume fraction", primitive_variables_set(7  , :))
         call a_cellsystem%write_vector(a_result_writer, "Interface normal vector" , surface_tension_variables_set(2:4, :))
-        call a_cellsystem%write_scolar(a_result_writer, "Curvature"               , surface_tension_variables_set(  5, :))
+        call a_cellsystem%write_scolar(a_result_writer, "Negative curvature"      , surface_tension_variables_set(  5, :))
         call a_cellsystem%close_file  (a_result_writer)
     end subroutine write_result
 
