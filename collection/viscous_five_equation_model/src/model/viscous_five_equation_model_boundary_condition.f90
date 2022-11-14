@@ -1,6 +1,7 @@
 module viscous_five_equation_model_boundary_condition_module
     use typedef_module
     use vector_module
+    use math_constant_module
 
     implicit none
 
@@ -57,8 +58,11 @@ module viscous_five_equation_model_boundary_condition_module
         real   (real_kind), intent(in) :: inner_gradient_values(:)
         integer(int_kind ), intent(in) :: num_gradient_values
         real   (real_kind)             :: ghost_gradient_values(num_gradient_values)
-        real   (real_kind), parameter  :: wall_normal(1:3) = [real(real_kind) :: -1.d0, 0.0d0, 0.0d0]
-        ! contact angle is 90 deg
-        ghost_gradient_values(1:3) = inner_gradient_values - (vector_multiply(wall_normal, inner_gradient_values) / vector_multiply(wall_normal, wall_normal)) * wall_normal
+        real   (real_kind), parameter  :: contact_angle = (1.d0 / 6.d0) * pi ! 30 deg
+        real   (real_kind), parameter  :: wall_normal  (1:3) = [real(real_kind) :: -1.d0, 0.0d0, 0.0d0]
+        real   (real_kind)             :: wall_tangetal(1:3)
+
+        wall_tangetal(1:3) = inner_gradient_values - (vector_multiply(wall_normal, inner_gradient_values) / vector_multiply(wall_normal, wall_normal)) * wall_normal
+        ghost_gradient_values(1:3) = wall_normal(1:3) * cos(contact_angle) + wall_tangetal(1:3) * sin(contact_angle)
     end function bc_for_normarized_gradient_volume_fraction_wall
 end module viscous_five_equation_model_boundary_condition_module

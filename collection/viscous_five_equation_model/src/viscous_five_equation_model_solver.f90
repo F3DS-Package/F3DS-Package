@@ -40,7 +40,7 @@ program viscous_five_equation_model_solver
     ! Model
     use viscous_five_equation_model_utils_module
     use viscous_five_equation_model_boundary_condition_module
-    use class_viscous_five_equation_model
+    use viscous_five_equation_model_module
 
     implicit none
 
@@ -95,9 +95,6 @@ program viscous_five_equation_model_solver
     ! surface_tension_variables_set(5  , :) = curvature
     ! Elm. 2) 1 : {@code num_cells}, cell index
     real(real_kind), allocatable :: surface_tension_variables_set(:,:)
-
-    ! model
-    type(viscous_five_equation_model) :: a_model
 
     ! F3DS Flamework
     type(cellsystem                                   ) :: a_cellsystem
@@ -154,16 +151,17 @@ program viscous_five_equation_model_solver
     call a_cellsystem%initialize(a_line_plotter              , a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(a_control_volume_profiler   , a_configuration, num_conservative_variables, num_primitive_variables)
     call a_cellsystem%initialize(a_face_gradient_interpolator, a_configuration, num_conservative_variables, num_primitive_variables)
-    ! Initialize model
-    call a_cellsystem%initialize(a_model, a_configuration, num_conservative_variables, num_primitive_variables)
 
     ! Set initial condition
     call a_cellsystem%read_initial_condition(an_initial_condition_parser, a_configuration, conservative_variables_set)
     call a_cellsystem%conservative_to_primitive_variables_all(a_parallelizer, an_eos, conservative_variables_set, primitive_variables_set, num_primitive_variables, conservative_to_primitive)
 
+    ! Initialize model
+    call initialize_model(a_configuration, primitive_variables_set, a_cellsystem%get_number_of_cells())
+
     ! Timestepping loop
     do while ( .not. a_cellsystem%satisfies_termination_criterion(a_termination_criterion) )
-        call a_cellsystem%update_time_increment(a_time_increment_controller, an_eos, primitive_variables_set, a_model)
+        call a_cellsystem%update_time_increment(a_time_increment_controller, an_eos, primitive_variables_set, spectral_radius)
 
         if ( a_cellsystem%is_writable(a_result_writer) ) then
             call write_result(a_cellsystem, a_result_writer, primitive_variables_set, surface_tension_variables_set)
@@ -204,8 +202,6 @@ program viscous_five_equation_model_solver
             ! Compute a heavest fluid curvature
             call a_cellsystem%compute_divergence(a_parallelizer, a_interpolator, surface_tension_variables_set(2:4, :), surface_tension_variables_set(5, :))
 
-            call a_cellsystem%smooth_variables(a_parallelizer, surface_tension_variables_set, interface_normal_smoothing_weight)
-
             ! Curvature is copied to {@code primitive_variables_set}. Curvature is limmited in [-2,2]!
             call a_cellsystem%processes_variables_set(a_parallelizer, primitive_variables_set, surface_tension_variables_set, num_primitive_variables, curvature_preprocessing)
 
@@ -226,10 +222,10 @@ program viscous_five_equation_model_solver
                 num_conservative_variables      , &
                 num_primitive_variables         , &
                 primitive_to_conservative       , &
-                a_model                           &
+                compute_residual_element          &
             )
 
-            call a_cellsystem%compute_source_term(a_parallelizer, primitive_variables_set, residual_set, num_conservative_variables, a_model)
+            call a_cellsystem%compute_source_term(a_parallelizer, primitive_variables_set, residual_set, num_conservative_variables, compute_source_term)
 
             call a_cellsystem%compute_next_state(a_parallelizer, a_time_stepping, an_eos, state_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, conservative_to_primitive)
         end do

@@ -16,12 +16,8 @@ module viscous_five_equation_model_utils_module
     public :: primitive_to_conservative
     public :: rotate_primitive
     public :: unrotate_primitive
-    public :: normalize_gradient_volume_fraction
     public :: rotate_gradient_value
     public :: unrotate_gradient_value
-    public :: compute_smoothed_volume_fraction
-    public :: curvature_preprocessing
-    public :: interface_normal_smoothing_weight
 
     contains
 
@@ -176,48 +172,6 @@ module viscous_five_equation_model_utils_module
         p(8  ) = primitives(8)
     end function unrotate_primitive
 
-    pure function compute_smoothed_volume_fraction(surface_tension_variables, primitive_variables, num_surface_tension_variables) result(dst_surface_tension_variables)
-        real   (real_kind ), intent(in) :: surface_tension_variables(:), primitive_variables(:)
-        integer(int_kind  ), intent(in) :: num_surface_tension_variables
-        real   (real_kind )             :: dst_surface_tension_variables(num_surface_tension_variables)
-
-        real   (real_kind )             :: heavest_volume_fraction
-        real   (real_kind ), parameter  :: alpha = 0.1d0
-
-        associate(                                     &
-            rho1            => primitive_variables(1), &
-            rho2            => primitive_variables(2), &
-            volume_fraction => primitive_variables(7)  &
-        )
-            ! Select a heavest fluid.
-            heavest_volume_fraction = 0.5d0 * (1.d0 + sign(1.d0,  rho1 - rho2)) * volume_fraction + 0.5d0 * (1.d0 + sign(1.d0,  rho2 - rho1)) * (1.d0 - volume_fraction)
-            ! See [Garrick 2017, JCP]
-            !dst_surface_tension_variables(1) = (heavest_volume_fraction**alpha) &
-            !                                 / ((heavest_volume_fraction**alpha) + (1.d0 - heavest_volume_fraction)**alpha)
-            dst_surface_tension_variables(1) = heavest_volume_fraction
-        end associate
-    end function compute_smoothed_volume_fraction
-
-    pure function normalize_gradient_volume_fraction(surface_tension_variables, num_surface_tension_variables) result(dst_surface_tension_variables)
-        real   (real_kind ), intent(in) :: surface_tension_variables(:)
-        integer(int_kind  ), intent(in) :: num_surface_tension_variables
-        real   (real_kind )             :: dst_surface_tension_variables(num_surface_tension_variables)
-
-        associate(                                                          &
-            mag        => vector_magnitude(surface_tension_variables(2:4)), &
-            alpha      => surface_tension_variables(1)                    , &
-            grad_alpha => surface_tension_variables(2:4)                    &
-        )
-            dst_surface_tension_variables(1) = surface_tension_variables(1)
-            if((machine_epsilon < mag) .and. (machine_epsilon < alpha) .and. (alpha < 1.d0 - machine_epsilon))then
-                ! Towerd a heavest fluid direction.
-                dst_surface_tension_variables(2:4) = grad_alpha / mag
-            else
-                dst_surface_tension_variables(2:4) = 0.d0
-            endif
-        end associate
-    end function normalize_gradient_volume_fraction
-
     pure function rotate_gradient_value( &
         gradient_value                 , &
         face_normal_vector             , &
@@ -251,41 +205,4 @@ module viscous_five_equation_model_utils_module
 
         p(1:3) = vector_unrotate(gradient_value(1:3), face_normal_vector, face_tangential1_vector, face_tangential2_vector)
     end function unrotate_gradient_value
-
-    pure function curvature_preprocessing(primitives, surface_tension_variables, num_variables) result(dst_primitives)
-        real   (real_kind ), intent(in) :: surface_tension_variables(:), primitives(:)
-        integer(int_kind  ), intent(in) :: num_variables
-        real   (real_kind )             :: dst_primitives(num_variables)
-
-        real(real_kind), parameter :: interface_threshold = 1e-2
-        real(real_kind), parameter :: carvature_limit = 2.d0
-
-        dst_primitives(1:7) = primitives(1:7)
-        associate(                                 &
-            rho1  => primitives(1)               , &
-            rho2  => primitives(2)               , &
-            z     => primitives(7)               , &
-            kappa => surface_tension_variables(5)  &
-        )
-            if((interface_threshold < z) .and. (z < 1.d0 - interface_threshold))then
-                dst_primitives(8) = -kappa!max(min(-kappa, carvature_limit), -carvature_limit)
-            else
-                dst_primitives(8) = 0.d0
-            endif
-        end associate
-    end function curvature_preprocessing
-
-    pure function interface_normal_smoothing_weight(own_cell_position, neighbor_cell_position, own_variables, neighbor_variables) result(weight)
-        real(real_kind ), intent(in) :: own_cell_position     (3)
-        real(real_kind ), intent(in) :: neighbor_cell_position(3)
-        real(real_kind ), intent(in) :: own_variables         (:)
-        real(real_kind ), intent(in) :: neighbor_variables    (:)
-        real(real_kind )             :: weight
-
-        real(real_kind), parameter :: smoothing_power = 2.d0 ! range is {@code smoothing_power} > 0.
-
-        associate(alpha => neighbor_variables(1)) !{@code neighbor_variables} is {@code surface_tension_variables}
-            weight = (alpha * (1.d0 - alpha))**smoothing_power
-        end associate
-    end function interface_normal_smoothing_weight
 end module viscous_five_equation_model_utils_module

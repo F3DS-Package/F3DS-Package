@@ -1,4 +1,4 @@
-module class_viscous_five_equation_model
+module viscous_five_equation_model_module
     use vector_module
     use typedef_module
     use stdio_module
@@ -10,61 +10,55 @@ module class_viscous_five_equation_model
     use viscous_five_equation_model_utils_module
     use matrix_module
     use vector_module
+    use math_constant_module
 
     implicit none
 
     private
 
-    type, public, extends(model) :: viscous_five_equation_model
-        private
+    integer(int_kind )              :: num_phase_
 
-        integer(int_kind )              :: num_phase_
+    ! for Kdiv(u) term
+    logical                         :: ignore_kdivu_
 
-        ! for Kdiv(u) term
-        logical                         :: ignore_kdivu_
+    ! for surface tension term
+    real   (real_kind), allocatable :: surface_tension_(:)
 
-        ! for surface tension term
-        real   (real_kind), allocatable :: surface_tension_(:)
+    ! for gravity term
+    real   (real_kind)              :: gravitational_acceleration_(3)
 
-        ! for gravity term
-        real   (real_kind)              :: gravitational_acceleration_(3)
+    ! for viscosity term (include thermal conduction)
+    real   (real_kind), allocatable :: dynamic_viscosity_(:)
 
-        ! for viscosity term (include thermal conduction)
-        real   (real_kind), allocatable :: dynamic_viscosity_(:)
+    ! Average density is used to select a heaviest fluid.
+    real   (real_kind), allocatable :: average_densities_(:)
 
-        contains
 
-        procedure, public, pass(self) :: initialize
-        procedure, public, pass(self) :: compute_residual_element
-        procedure, public, pass(self) :: compute_source_term
-        procedure, public, pass(self) :: spectral_radius
-
-        procedure :: mixture_surface_tension
-        procedure :: mixture_dynamic_viscosity
-        procedure :: compute_mixture_density
-    end type viscous_five_equation_model
-
+    public :: initialize_model
+    public :: compute_residual_element
+    public :: compute_source_term
+    public :: spectral_radius
+    public :: compute_smoothed_volume_fraction
+    public :: normalize_gradient_volume_fraction
+    public :: curvature_preprocessing
 
     contains
 
-    pure function mixture_surface_tension(self, z1) result(sigma)
-        class  (viscous_five_equation_model), intent(in) :: self
-        real   (real_kind                  ), intent(in) :: z1
-        real   (real_kind                  )             :: sigma
-        sigma = z1 * self%surface_tension_(1) + (1.d0 - z1) * self%surface_tension_(2)
+    function mixture_surface_tension(z1) result(sigma)
+        real   (real_kind), intent(in) :: z1
+        real   (real_kind)             :: sigma
+        sigma = z1 * surface_tension_(1) + (1.d0 - z1) * surface_tension_(2)
     end function
 
-    pure function mixture_dynamic_viscosity(self, z1) result(mu)
-        class  (viscous_five_equation_model), intent(in) :: self
-        real   (real_kind                  ), intent(in) :: z1
-        real   (real_kind                  )             :: mu
-        mu = z1 * self%dynamic_viscosity_(1) + (1.d0 - z1) * self%dynamic_viscosity_(2)
+    function mixture_dynamic_viscosity(z1) result(mu)
+        real   (real_kind), intent(in) :: z1
+        real   (real_kind)             :: mu
+        mu = z1 * dynamic_viscosity_(1) + (1.d0 - z1) * dynamic_viscosity_(2)
     end function
 
-    pure function compute_mixture_density(self, primitive_variables) result(density)
-        class(viscous_five_equation_model), intent(in) :: self
-        real (real_kind                  ), intent(in) :: primitive_variables(:)
-        real (real_kind                  )             :: density
+    function compute_mixture_density(primitive_variables) result(density)
+        real (real_kind), intent(in) :: primitive_variables(:)
+        real (real_kind)             :: density
         associate(                            &
             rho1   => primitive_variables(1), &
             rho2   => primitive_variables(2), &
@@ -74,54 +68,86 @@ module class_viscous_five_equation_model
         end associate
     end function
 
-    subroutine initialize(self, a_configuration)
-        class  (viscous_five_equation_model), intent(inout) :: self
-        class  (configuration              ), intent(inout) :: a_configuration
+    function get_heavest_volume_fraction(alpha1) result(alpha_heavy)
+        real   (real_kind), intent(in) :: alpha1
+        real   (real_kind)             :: alpha_heavy
+        alpha_heavy = 0.5d0 * (1.d0 + sign(1.d0, average_densities_(1) - average_densities_(2))) * alpha1 + 0.5d0 * (1.d0 + sign(1.d0, average_densities_(2) - average_densities_(1))) * (1.d0 - alpha1)
+    end function get_heavest_volume_fraction
+
+    subroutine initialize_model(a_configuration, primitive_variables_set, num_cells)
+        class  (configuration), intent(inout) :: a_configuration
+        real   (real_kind    ), intent(in   ) :: primitive_variables_set(:,:)
+        integer(int_kind     ), intent(in   ) :: num_cells
 
         logical           :: found
         logical           :: ignore_gravity = .false.
         integer(int_kind) :: i
 
-        call a_configuration%get_int    ("Phase.Number of phase", self%num_phase_, found)
+        real   (real_kind), allocatable :: num_sums(:)
+
+        call a_configuration%get_int    ("Phase.Number of phase", num_phase_, found)
         if(.not. found) call call_error("'Phase.Number of phase' is not found in configuration you set. Please check your configuration file.")
 
-        allocate(self%surface_tension_  (self%num_phase_))
-        allocate(self%dynamic_viscosity_(self%num_phase_))
+        if(.not. (num_phase_ == 2)) call call_error("This solver approve ONLY two phase flow.")
 
-        do i = 1, self%num_phase_, 1
-            call a_configuration%get_real      ("Phase.Phase property "//to_str(i)//".Surface tension", self%surface_tension_(i), found, 0.d0)
+        allocate(surface_tension_  (num_phase_))
+        allocate(dynamic_viscosity_(num_phase_))
+        allocate(average_densities_(num_phase_))
+        allocate(num_sums          (num_phase_))
+
+        do i = 1, num_phase_, 1
+            call a_configuration%get_real      ("Phase.Phase property "//to_str(i)//".Surface tension", surface_tension_(i), found, 0.d0)
             if(.not. found) call write_warring("'Phase.Phase property "//to_str(i)//".Surface tension' is not found in the configuration you set. Set to 0.")
 
-            call a_configuration%get_real      ("Phase.Phase property "//to_str(i)//".Dynamic viscosity", self%dynamic_viscosity_(i), found, 0.d0)
+            call a_configuration%get_real      ("Phase.Phase property "//to_str(i)//".Dynamic viscosity", dynamic_viscosity_(i), found, 0.d0)
             if(.not. found) call write_warring("'Phase.Phase property "//to_str(i)//".Dynamic viscosity' is not found in the configuration you set. Set to 0.")
         end do
 
-        call a_configuration%get_bool      ("Model.Ignore kdivu", self%ignore_kdivu_, found, .false.)
+        call a_configuration%get_bool      ("Model.Ignore kdivu", ignore_kdivu_, found, .false.)
         if(.not. found) call write_warring("'Model.Ignore kdivu' is not found in configuration you set. Apply this term.")
 
-        call a_configuration%get_real("Model.Gravitational acceleration.x", self%gravitational_acceleration_(1), found, 0.d0)
+        call a_configuration%get_real("Model.Gravitational acceleration.x", gravitational_acceleration_(1), found, 0.d0)
         if(.not. found) then
             call write_warring("'Model.Gravitational acceleration.x' is not found in configuration you set. Ignore gravity term.")
             ignore_gravity=.true.
         endif
-
-        call a_configuration%get_real("Model.Gravitational acceleration.y", self%gravitational_acceleration_(2), found, 0.d0)
+        call a_configuration%get_real("Model.Gravitational acceleration.y", gravitational_acceleration_(2), found, 0.d0)
         if(.not. found) then
             call write_warring("'Model.Gravitational acceleration.y' is not found in configuration you set. Ignore gravity term.")
             ignore_gravity=.true.
         endif
-
-        call a_configuration%get_real("Model.Gravitational acceleration.z", self%gravitational_acceleration_(3), found, 0.d0)
+        call a_configuration%get_real("Model.Gravitational acceleration.z", gravitational_acceleration_(3), found, 0.d0)
         if(.not. found) then
             call write_warring("'Model.Gravitational acceleration.z' is not found in configuration you set. Ignore gravity term.")
             ignore_gravity=.true.
         endif
+        if (ignore_gravity) gravitational_acceleration_(:) = 0.d0
 
-        if (ignore_gravity) self%gravitational_acceleration_(:) = 0.d0
-    end subroutine initialize
+        average_densities_(:) = 0.d0
+        num_sums          (:) = 0.d0
+        do i = 1, num_cells, 1
+            associate(                                            &
+                density1         => primitive_variables_set(1,i), &
+                density2         => primitive_variables_set(2,i), &
+                volume_fraction1 => primitive_variables_set(7,i)  &
+            )
+                if(volume_fraction1 > 1.d0 - machine_epsilon)then
+                    average_densities_(1) = average_densities_(1) + density1
+                    num_sums          (1) = num_sums(1) + 1.d0
+                else if (volume_fraction1 < machine_epsilon)then
+                    average_densities_(2) = average_densities_(2) + density2
+                    num_sums          (2) = num_sums(2) + 1.d0
+                end if
+            end associate
+        end do
+        do i = 1, num_phase_, 1
+            if(num_sums(i) > 0.d0)then
+                average_densities_(i) = average_densities_(i) / num_sums(i)
+            end if
+        end do
+    end subroutine initialize_model
 
-    pure function compute_residual_element(       &
-        self                                    , &
+    function compute_residual_element(            &
         an_eos                                  , &
         an_riemann_solver                       , &
         primitive_variables_lhc                 , &
@@ -137,8 +163,6 @@ module class_viscous_five_equation_model
         face_tangential2_vector                 , &
         num_conservative_values                 , &
         num_primitive_values                      ) result(residual_element)
-
-        class  (viscous_five_equation_model), intent(in) :: self
 
         class  (eos           ), intent(in) :: an_eos
         class  (riemann_solver), intent(in) :: an_riemann_solver
@@ -231,8 +255,8 @@ module class_viscous_five_equation_model
             lhc_pressure   = p
             lhc_soundspeed = an_eos%compute_soundspeed(p, lhc_density, z1)
             lhc_main_velocity = u
-            lhc_alpha_heavy   = 0.5d0 * (1.d0 + sign(1.d0, rho1 - rho2)) * z1 + 0.5d0 * (1.d0 + sign(1.d0, rho2 - rho1)) * (1.d0 - z1)
-            lhc_pressure_jump = self%mixture_surface_tension(z1) * curv * lhc_alpha_heavy
+            lhc_alpha_heavy   = get_heavest_volume_fraction(z1)
+            lhc_pressure_jump = mixture_surface_tension(z1) * curv * lhc_alpha_heavy
         end associate
         associate(                                             &
                 rho1    => local_coordinate_primitives_rhc(1), &
@@ -248,8 +272,8 @@ module class_viscous_five_equation_model
             rhc_pressure   = p
             rhc_soundspeed = an_eos%compute_soundspeed(p, rhc_density, z1)
             rhc_main_velocity = u
-            rhc_alpha_heavy   = 0.5d0 * (1.d0 + sign(1.d0,  rho1 - rho2)) * z1 + 0.5d0 * (1.d0 + sign(1.d0,  rho2 - rho1)) * (1.d0 - z1)
-            rhc_pressure_jump = self%mixture_surface_tension(z1) * curv * rhc_alpha_heavy
+            rhc_alpha_heavy   = get_heavest_volume_fraction(z1)
+            rhc_pressure_jump = mixture_surface_tension(z1) * curv * rhc_alpha_heavy
         end associate
 
         ! # compute flux
@@ -377,7 +401,7 @@ module class_viscous_five_equation_model
             rhc_p       => primitive_variables_rhc(6)  , &
             rhc_z1      => primitive_variables_rhc(7)    &
         )
-            if(self%ignore_kdivu_)then
+            if(ignore_kdivu_)then
                 lhc_k = 0.d0
                 rhc_k = 0.d0
             else
@@ -401,18 +425,18 @@ module class_viscous_five_equation_model
             rhc_z1    => primitive_variables_rhc(7),             &
             rhc_curv  => primitive_variables_rhc(8)              &
         )
-            interface_alpha_heavy = 0.5d0 * (1.d0 + sign(1.d0,  lhc_rho1 - lhc_rho2)) * lhc_z1 + 0.5d0 * (1.d0 + sign(1.d0,  lhc_rho2 - lhc_rho1)) * (1.d0 - lhc_z1)
-            lhc_alpha_heavy       = 0.5d0 * (1.d0 + sign(1.d0,  lhc_rho1 - lhc_rho2)) * lhc_z1 + 0.5d0 * (1.d0 + sign(1.d0,  lhc_rho2 - lhc_rho1)) * (1.d0 - lhc_z1)
-            rhc_alpha_heavy       = 0.5d0 * (1.d0 + sign(1.d0,  rhc_rho1 - rhc_rho2)) * rhc_z1 + 0.5d0 * (1.d0 + sign(1.d0,  rhc_rho2 - rhc_rho1)) * (1.d0 - rhc_z1)
+            interface_alpha_heavy = get_heavest_volume_fraction(lhc_z1)
+            lhc_alpha_heavy       = get_heavest_volume_fraction(lhc_z1)
+            rhc_alpha_heavy       = get_heavest_volume_fraction(rhc_z1)
 
             residual_element(3:5, 1) = residual_element(3:5, 1) &
-                                   + self%mixture_surface_tension(lhc_z1) * lhc_curv * (1.d0 / lhc_cell_volume) * interface_alpha_heavy * face_area * face_normal_vector(1:3)
+                                   + mixture_surface_tension(lhc_z1) * lhc_curv * (1.d0 / lhc_cell_volume) * interface_alpha_heavy * face_area * face_normal_vector(1:3)
             residual_element(3:5, 2) = residual_element(3:5, 2) &
-                                   - self%mixture_surface_tension(rhc_z1) * rhc_curv * (1.d0 / rhc_cell_volume) * interface_alpha_heavy * face_area * face_normal_vector(1:3)
+                                   - mixture_surface_tension(rhc_z1) * rhc_curv * (1.d0 / rhc_cell_volume) * interface_alpha_heavy * face_area * face_normal_vector(1:3)
             residual_element(6, 1) = residual_element(6, 1) &
-                                   + self%mixture_surface_tension(lhc_z1) * lhc_curv * (1.d0 / lhc_cell_volume) * (interface_alpha_heavy * numerical_velocity - lhc_alpha_heavy * numerical_velocity) * face_area
+                                   + mixture_surface_tension(lhc_z1) * lhc_curv * (1.d0 / lhc_cell_volume) * (interface_alpha_heavy * numerical_velocity - lhc_alpha_heavy * numerical_velocity) * face_area
             residual_element(6, 2) = residual_element(6, 2) &
-                                   - self%mixture_surface_tension(rhc_z1) * rhc_curv * (1.d0 / rhc_cell_volume) * (interface_alpha_heavy * numerical_velocity - rhc_alpha_heavy * numerical_velocity) * face_area
+                                   - mixture_surface_tension(rhc_z1) * rhc_curv * (1.d0 / rhc_cell_volume) * (interface_alpha_heavy * numerical_velocity - rhc_alpha_heavy * numerical_velocity) * face_area
         end associate
 
         ! # viscosity term (Stokes hypothesis)
@@ -427,7 +451,7 @@ module class_viscous_five_equation_model
             dwdy => face_gradient_primitive_variables(14)                                                                , &
             dwdz => face_gradient_primitive_variables(15)                                                                , &
             u    =>                                0.5d0 * (primitive_variables_lhc(3:5) + primitive_variables_rhc(3:5)) , &
-            mu   => self%mixture_dynamic_viscosity(0.5d0 * (primitive_variables_lhc(7  ) + primitive_variables_rhc(7  ))), &
+            mu   => mixture_dynamic_viscosity(0.5d0 * (primitive_variables_lhc(7  ) + primitive_variables_rhc(7  ))), &
             n    => face_normal_vector                                                                                     &
         )
             tau (1,1) = 2.d0 * mu * dudx - (2.d0 / 3.d0) * mu * (dudx + dvdy + dwdz)
@@ -460,15 +484,14 @@ module class_viscous_five_equation_model
         end associate
     end function compute_residual_element
 
-    pure function compute_source_term(self, variables, num_conservative_values) result(source)
-        class  (viscous_five_equation_model), intent(in) :: self
-        real   (real_kind                  ), intent(in) :: variables(:)
-        integer(int_kind                   ), intent(in) :: num_conservative_values
-        real   (real_kind                  )             :: source(num_conservative_values)
+    function compute_source_term(variables, num_conservative_values) result(source)
+        real   (real_kind), intent(in) :: variables(:)
+        integer(int_kind ), intent(in) :: num_conservative_values
+        real   (real_kind)             :: source(num_conservative_values)
 
         associate(                                               &
-            density  => self%compute_mixture_density(variables), &
-            g        => self%gravitational_acceleration_(:)    , &
+            density  => compute_mixture_density(variables), &
+            g        => gravitational_acceleration_(:)    , &
             velocity => variables(3:5)                           &
         )
             source(1:2) = 0.d0
@@ -478,20 +501,83 @@ module class_viscous_five_equation_model
         end associate
     end function compute_source_term
 
-    pure function spectral_radius(self, an_eos, primitive_variables, length) result(r)
-        class(viscous_five_equation_model), intent(in) :: self
-        class(eos                        ), intent(in) :: an_eos
-        real (real_kind                  ), intent(in) :: primitive_variables(:)
-        real (real_kind                  ), intent(in) :: length
-        real (real_kind                  ) :: r
+    function spectral_radius(an_eos, primitive_variables, length) result(r)
+        class(eos      ), intent(in) :: an_eos
+        real (real_kind), intent(in) :: primitive_variables(:)
+        real (real_kind), intent(in) :: length
+        real (real_kind) :: r
 
         associate(                                                         &
-            density  => self%compute_mixture_density(primitive_variables), &
+            density  => compute_mixture_density(primitive_variables), &
             velocity => primitive_variables(3:5)                         , &
             pressure => primitive_variables(6)                           , &
             alpha1   => primitive_variables(7)                             &
         )
-            r = an_eos%compute_soundspeed(pressure, density, alpha1) + vector_magnitude(velocity) + self%mixture_dynamic_viscosity(alpha1) / (density * length)
+            r = an_eos%compute_soundspeed(pressure, density, alpha1) + vector_magnitude(velocity) + mixture_dynamic_viscosity(alpha1) / (density * length)
         end associate
     end function spectral_radius
-end module class_viscous_five_equation_model
+
+    function compute_smoothed_volume_fraction(surface_tension_variables, primitive_variables, num_surface_tension_variables) result(dst_surface_tension_variables)
+        real   (real_kind ), intent(in) :: surface_tension_variables(:), primitive_variables(:)
+        integer(int_kind  ), intent(in) :: num_surface_tension_variables
+        real   (real_kind )             :: dst_surface_tension_variables(num_surface_tension_variables)
+
+        real   (real_kind )             :: heavest_volume_fraction
+        real   (real_kind ), parameter  :: alpha = 0.1d0
+
+        associate(                                     &
+            rho1            => primitive_variables(1), &
+            rho2            => primitive_variables(2), &
+            volume_fraction => primitive_variables(7)  &
+        )
+            ! Select a heavest fluid.
+            heavest_volume_fraction = get_heavest_volume_fraction(volume_fraction)
+            ! See [Garrick 2017, JCP]
+            dst_surface_tension_variables(1) = (heavest_volume_fraction**alpha) &
+                                             / ((heavest_volume_fraction**alpha) + (1.d0 - heavest_volume_fraction)**alpha)
+        end associate
+    end function compute_smoothed_volume_fraction
+
+    pure function normalize_gradient_volume_fraction(surface_tension_variables, num_surface_tension_variables) result(dst_surface_tension_variables)
+        real   (real_kind ), intent(in) :: surface_tension_variables(:)
+        integer(int_kind  ), intent(in) :: num_surface_tension_variables
+        real   (real_kind )             :: dst_surface_tension_variables(num_surface_tension_variables)
+
+        associate(                                                          &
+            mag        => vector_magnitude(surface_tension_variables(2:4)), &
+            alpha      => surface_tension_variables(1)                    , &
+            grad_alpha => surface_tension_variables(2:4)                    &
+        )
+            dst_surface_tension_variables(1) = surface_tension_variables(1)
+            if((machine_epsilon < mag) .and. (machine_epsilon < alpha) .and. (alpha < 1.d0 - machine_epsilon))then
+                ! Towerd a heavest fluid direction.
+                dst_surface_tension_variables(2:4) = grad_alpha / mag
+            else
+                dst_surface_tension_variables(2:4) = 0.d0
+            endif
+        end associate
+    end function normalize_gradient_volume_fraction
+
+    pure function curvature_preprocessing(primitives, surface_tension_variables, num_variables) result(dst_primitives)
+        real   (real_kind ), intent(in) :: surface_tension_variables(:), primitives(:)
+        integer(int_kind  ), intent(in) :: num_variables
+        real   (real_kind )             :: dst_primitives(num_variables)
+
+        real(real_kind), parameter :: interface_threshold = 1e-2
+        real(real_kind), parameter :: carvature_limit = 2.d0
+
+        dst_primitives(1:7) = primitives(1:7)
+        associate(                                 &
+            rho1  => primitives(1)               , &
+            rho2  => primitives(2)               , &
+            z     => primitives(7)               , &
+            kappa => surface_tension_variables(5)  &
+        )
+            if((interface_threshold < z) .and. (z < 1.d0 - interface_threshold))then
+                dst_primitives(8) = -kappa!max(min(-kappa, carvature_limit), -carvature_limit)
+            else
+                dst_primitives(8) = 0.d0
+            endif
+        end associate
+    end function curvature_preprocessing
+end module viscous_five_equation_model_module
