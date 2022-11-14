@@ -32,6 +32,7 @@ module viscous_five_equation_model_module
     real   (real_kind)              :: gravitational_acceleration_(3)
 
     ! for viscosity term (include thermal conduction)
+    logical                         :: ignore_viscosity_
     real   (real_kind), allocatable :: dynamic_viscosity_(:)
 
     ! Average density is used to select a heaviest fluid.
@@ -58,6 +59,15 @@ module viscous_five_equation_model_module
             ret = .true.
         end if
     end function apply_surface_tension
+
+    function apply_viscosity() result(ret)
+        logical :: ret
+        if(ignore_viscosity_)then
+            ret = .false.
+        else
+            ret = .true.
+        end if
+    end function apply_viscosity
 
     function mixture_surface_tension(z1) result(sigma)
         real   (real_kind), intent(in) :: z1
@@ -121,6 +131,9 @@ module viscous_five_equation_model_module
         call a_configuration%get_bool      ("Model.Ignore surface tension", ignore_surface_tension_, found, .false.)
         if(.not. found) call write_warring("'Model.Ignore surface tension' is not found in configuration you set. Apply this term.")
 
+        call a_configuration%get_bool      ("Model.Ignore viscosity", ignore_viscosity_, found, .false.)
+        if(.not. found) call write_warring("'Model.Ignore viscosity' is not found in configuration you set. Apply this term.")
+
         call a_configuration%get_bool      ("Model.Ignore kdivu", ignore_kdivu_, found, .false.)
         if(.not. found) call write_warring("'Model.Ignore kdivu' is not found in configuration you set. Apply this term.")
 
@@ -141,6 +154,7 @@ module viscous_five_equation_model_module
         endif
         if (ignore_gravity) gravitational_acceleration_(:) = 0.d0
 
+        ! compute {@code average_densities_}
         average_densities_(:) = 0.d0
         num_sums          (:) = 0.d0
         do i = 1, num_cells, 1
@@ -163,6 +177,14 @@ module viscous_five_equation_model_module
                 average_densities_(i) = average_densities_(i) / num_sums(i)
             end if
         end do
+
+        !sanity check
+        if(ignore_surface_tension_)then
+            surface_tension_(:) = 0.d0
+        end if
+        if(ignore_viscosity_)then
+            dynamic_viscosity_(:) = 0.d0
+        end if
     end subroutine initialize_model
 
     function compute_residual_element(            &
@@ -435,73 +457,73 @@ module viscous_five_equation_model_module
         end associate
 
         ! # surface tension term
-        associate(                                               &
-            lhc_rho1  => primitive_variables_lhc(1),             &
-            lhc_rho2  => primitive_variables_lhc(2),             &
-            lhc_z1    => primitive_variables_lhc(7),             &
-            lhc_curv  => primitive_variables_lhc(8),             &
-            rhc_rho1  => primitive_variables_rhc(1),             &
-            rhc_rho2  => primitive_variables_rhc(2),             &
-            rhc_z1    => primitive_variables_rhc(7),             &
-            rhc_curv  => primitive_variables_rhc(8)              &
-        )
-            interface_alpha_heavy = get_heavest_volume_fraction(lhc_z1)
-            lhc_alpha_heavy       = get_heavest_volume_fraction(lhc_z1)
-            rhc_alpha_heavy       = get_heavest_volume_fraction(rhc_z1)
-
-            residual_element(3:5, 1) = residual_element(3:5, 1) &
-                                   + mixture_surface_tension(lhc_z1) * lhc_curv * (1.d0 / lhc_cell_volume) * interface_alpha_heavy * face_area * face_normal_vector(1:3)
-            residual_element(3:5, 2) = residual_element(3:5, 2) &
-                                   - mixture_surface_tension(rhc_z1) * rhc_curv * (1.d0 / rhc_cell_volume) * interface_alpha_heavy * face_area * face_normal_vector(1:3)
-            residual_element(6, 1) = residual_element(6, 1) &
-                                   + mixture_surface_tension(lhc_z1) * lhc_curv * (1.d0 / lhc_cell_volume) * (interface_alpha_heavy * numerical_velocity - lhc_alpha_heavy * numerical_velocity) * face_area
-            residual_element(6, 2) = residual_element(6, 2) &
-                                   - mixture_surface_tension(rhc_z1) * rhc_curv * (1.d0 / rhc_cell_volume) * (interface_alpha_heavy * numerical_velocity - rhc_alpha_heavy * numerical_velocity) * face_area
-        end associate
+        if(apply_surface_tension())then
+            associate(                                               &
+                lhc_rho1  => primitive_variables_lhc(1),             &
+                lhc_rho2  => primitive_variables_lhc(2),             &
+                lhc_z1    => primitive_variables_lhc(7),             &
+                lhc_curv  => primitive_variables_lhc(8),             &
+                rhc_rho1  => primitive_variables_rhc(1),             &
+                rhc_rho2  => primitive_variables_rhc(2),             &
+                rhc_z1    => primitive_variables_rhc(7),             &
+                rhc_curv  => primitive_variables_rhc(8)              &
+            )
+                interface_alpha_heavy = get_heavest_volume_fraction(lhc_z1)
+                lhc_alpha_heavy       = get_heavest_volume_fraction(lhc_z1)
+                rhc_alpha_heavy       = get_heavest_volume_fraction(rhc_z1)
+                residual_element(3:5, 1) = residual_element(3:5, 1) &
+                                       + mixture_surface_tension(lhc_z1) * lhc_curv * (1.d0 / lhc_cell_volume) * interface_alpha_heavy * face_area * face_normal_vector(1:3)
+                residual_element(3:5, 2) = residual_element(3:5, 2) &
+                                       - mixture_surface_tension(rhc_z1) * rhc_curv * (1.d0 / rhc_cell_volume) * interface_alpha_heavy * face_area * face_normal_vector(1:3)
+                residual_element(6, 1) = residual_element(6, 1) &
+                                       + mixture_surface_tension(lhc_z1) * lhc_curv * (1.d0 / lhc_cell_volume) * (interface_alpha_heavy * numerical_velocity - lhc_alpha_heavy * numerical_velocity) * face_area
+                residual_element(6, 2) = residual_element(6, 2) &
+                                       - mixture_surface_tension(rhc_z1) * rhc_curv * (1.d0 / rhc_cell_volume) * (interface_alpha_heavy * numerical_velocity - rhc_alpha_heavy * numerical_velocity) * face_area
+            end associate
+        end if
 
         ! # viscosity term (Stokes hypothesis)
-        associate(                                                                                                         &
-            dudx => face_gradient_primitive_variables(7 )                                                                , &
-            dudy => face_gradient_primitive_variables(8 )                                                                , &
-            dudz => face_gradient_primitive_variables(9 )                                                                , &
-            dvdx => face_gradient_primitive_variables(10)                                                                , &
-            dvdy => face_gradient_primitive_variables(11)                                                                , &
-            dvdz => face_gradient_primitive_variables(12)                                                                , &
-            dwdx => face_gradient_primitive_variables(13)                                                                , &
-            dwdy => face_gradient_primitive_variables(14)                                                                , &
-            dwdz => face_gradient_primitive_variables(15)                                                                , &
-            u    =>                                0.5d0 * (primitive_variables_lhc(3:5) + primitive_variables_rhc(3:5)) , &
-            mu   => mixture_dynamic_viscosity(0.5d0 * (primitive_variables_lhc(7  ) + primitive_variables_rhc(7  ))), &
-            n    => face_normal_vector                                                                                     &
-        )
-            tau (1,1) = 2.d0 * mu * dudx - (2.d0 / 3.d0) * mu * (dudx + dvdy + dwdz)
-            tau (2,2) = 2.d0 * mu * dvdy - (2.d0 / 3.d0) * mu * (dudx + dvdy + dwdz)
-            tau (3,3) = 2.d0 * mu * dwdz - (2.d0 / 3.d0) * mu * (dudx + dvdy + dwdz)
-            tau (1,2) = mu * (dudy + dvdx)
-            tau (1,3) = mu * (dudz + dwdx)
-            tau (2,3) = mu * (dwdy + dvdz)
-            tau (2,1) = tau(1,2)
-            tau (3,1) = tau(1,3)
-            tau (3,2) = tau(2,3)
-            beta(1)   = vector_multiply(tau(1,:), u) ! not inculde heat diffusion !
-            beta(2)   = vector_multiply(tau(2,:), u)
-            beta(3)   = vector_multiply(tau(3,:), u)
-
-            viscosity_flux(1:2) = 0.d0
-            viscosity_flux(3:5) = matrix_multiply(tau , n)
-            viscosity_flux(6  ) = vector_multiply(beta, n)
-            viscosity_flux(7  ) = 0.d0
-
-            viscosity_flux(3:5) = vector_unrotate( &
-                viscosity_flux(3:5)              , &
-                face_normal_vector               , &
-                face_tangential1_vector          , &
-                face_tangential2_vector            &
+        if(apply_viscosity())then
+            associate(                                                                                                         &
+                dudx => face_gradient_primitive_variables(7 )                                                                , &
+                dudy => face_gradient_primitive_variables(8 )                                                                , &
+                dudz => face_gradient_primitive_variables(9 )                                                                , &
+                dvdx => face_gradient_primitive_variables(10)                                                                , &
+                dvdy => face_gradient_primitive_variables(11)                                                                , &
+                dvdz => face_gradient_primitive_variables(12)                                                                , &
+                dwdx => face_gradient_primitive_variables(13)                                                                , &
+                dwdy => face_gradient_primitive_variables(14)                                                                , &
+                dwdz => face_gradient_primitive_variables(15)                                                                , &
+                u    =>                                0.5d0 * (primitive_variables_lhc(3:5) + primitive_variables_rhc(3:5)) , &
+                mu   => mixture_dynamic_viscosity(0.5d0 * (primitive_variables_lhc(7  ) + primitive_variables_rhc(7  ))), &
+                n    => face_normal_vector                                                                                     &
             )
-
-            residual_element(1:7, 1) = residual_element(1:7, 1) + (1.d0 / lhc_cell_volume) * viscosity_flux(1:7) * face_area
-            residual_element(1:7, 2) = residual_element(1:7, 2) - (1.d0 / rhc_cell_volume) * viscosity_flux(1:7) * face_area
-        end associate
+                tau (1,1) = 2.d0 * mu * dudx - (2.d0 / 3.d0) * mu * (dudx + dvdy + dwdz)
+                tau (2,2) = 2.d0 * mu * dvdy - (2.d0 / 3.d0) * mu * (dudx + dvdy + dwdz)
+                tau (3,3) = 2.d0 * mu * dwdz - (2.d0 / 3.d0) * mu * (dudx + dvdy + dwdz)
+                tau (1,2) = mu * (dudy + dvdx)
+                tau (1,3) = mu * (dudz + dwdx)
+                tau (2,3) = mu * (dwdy + dvdz)
+                tau (2,1) = tau(1,2)
+                tau (3,1) = tau(1,3)
+                tau (3,2) = tau(2,3)
+                beta(1)   = vector_multiply(tau(1,:), u) ! not inculde heat diffusion !
+                beta(2)   = vector_multiply(tau(2,:), u)
+                beta(3)   = vector_multiply(tau(3,:), u)
+                viscosity_flux(1:2) = 0.d0
+                viscosity_flux(3:5) = matrix_multiply(tau , n)
+                viscosity_flux(6  ) = vector_multiply(beta, n)
+                viscosity_flux(7  ) = 0.d0
+                viscosity_flux(3:5) = vector_unrotate( &
+                    viscosity_flux(3:5)              , &
+                    face_normal_vector               , &
+                    face_tangential1_vector          , &
+                    face_tangential2_vector            &
+                )
+                residual_element(1:7, 1) = residual_element(1:7, 1) + (1.d0 / lhc_cell_volume) * viscosity_flux(1:7) * face_area
+                residual_element(1:7, 2) = residual_element(1:7, 2) - (1.d0 / rhc_cell_volume) * viscosity_flux(1:7) * face_area
+            end associate
+        end if
     end function compute_residual_element
 
     function compute_source_term(variables, num_conservative_values) result(source)
