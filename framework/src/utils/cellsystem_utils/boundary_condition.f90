@@ -64,7 +64,7 @@ module boundary_condition_module
                 real   (real_kind     )              :: unrotate_primitive_variables(num_primitive_variables)
             end function compute_unrotate_primitive_variables_function
 
-            pure function boundary_condition_function(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
+            function boundary_condition_function(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
                 use typedef_module
                 real   (real_kind), intent(in) :: inner_primitive_variables(:)
                 integer(int_kind ), intent(in) :: num_primitive_variables
@@ -152,7 +152,7 @@ module boundary_condition_module
                 real   (real_kind     )              :: unrotate_primitive_variables(num_primitive_variables)
             end function compute_unrotate_primitive_variables_function
 
-            pure function boundary_condition_function(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
+            function boundary_condition_function(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
                 use typedef_module
                 real   (real_kind), intent(in) :: inner_primitive_variables(:)
                 integer(int_kind ), intent(in) :: num_primitive_variables

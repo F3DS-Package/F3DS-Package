@@ -400,7 +400,7 @@ module class_cellsystem
         real   (real_kind                ), intent(in   ) :: variables_set(:,:)
 
         interface
-            pure function spectral_radius_function(an_eos, variables, length) result(r)
+            function spectral_radius_function(an_eos, variables, length) result(r)
                 use abstract_eos
                 use typedef_module
                 class  (eos      ), intent(in) :: an_eos
@@ -542,7 +542,7 @@ module class_cellsystem
                 real   (real_kind     )              :: unrotate_primitive_variables(num_primitive_variables)
             end function compute_unrotate_primitive_variables_function
 
-            pure function boundary_condition_function(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
+            function boundary_condition_function(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
                 use typedef_module
                 real   (real_kind), intent(in) :: inner_primitive_variables(:)
                 integer(int_kind ), intent(in) :: num_primitive_variables
@@ -618,7 +618,7 @@ module class_cellsystem
                 real   (real_kind     )              :: unrotate_primitive_variables(num_primitive_variables)
             end function compute_unrotate_primitive_variables_function
 
-            pure function boundary_condition_function(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
+            function boundary_condition_function(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
                 use typedef_module
                 real   (real_kind), intent(in) :: inner_primitive_variables(:)
                 integer(int_kind ), intent(in) :: num_primitive_variables
@@ -694,7 +694,7 @@ module class_cellsystem
                 real   (real_kind     )              :: unrotate_primitive_variables(num_primitive_variables)
             end function compute_unrotate_primitive_variables_function
 
-            pure function boundary_condition_function(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
+            function boundary_condition_function(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
                 use typedef_module
                 real   (real_kind), intent(in) :: inner_primitive_variables(:)
                 integer(int_kind ), intent(in) :: num_primitive_variables
@@ -770,7 +770,7 @@ module class_cellsystem
                 real   (real_kind     )              :: unrotate_primitive_variables(num_primitive_variables)
             end function compute_unrotate_primitive_variables_function
 
-            pure function boundary_condition_function(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
+            function boundary_condition_function(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
                 use typedef_module
                 real   (real_kind), intent(in) :: inner_primitive_variables(:)
                 integer(int_kind ), intent(in) :: num_primitive_variables
@@ -933,7 +933,7 @@ module class_cellsystem
         real   (real_kind   ), intent(inout) :: primary_variables_set(:,:), secondary_variables_set(:,:)
         integer(int_kind    ), intent(in   ) :: num_variables
         interface
-            pure function processing_function(primary_variables, secondary_variables, num_variables) result(destination_variables)
+            function processing_function(primary_variables, secondary_variables, num_variables) result(destination_variables)
                 use typedef_module
                 real   (real_kind ), intent(in) :: primary_variables(:), secondary_variables(:)
                 integer(int_kind  ), intent(in) :: num_variables
@@ -961,7 +961,7 @@ module class_cellsystem
         class  (parallelizer), intent(in   ) :: a_parallelizer
         real   (real_kind   ), intent(inout) :: variables_set(:,:)
         interface
-            pure function weight_function(own_cell_position, neighbor_cell_position, own_variables, neighbor_variables) result(weight)
+            function weight_function(own_cell_position, neighbor_cell_position, own_variables, neighbor_variables) result(weight)
                 use typedef_module
                 real   (real_kind ), intent(in) :: own_cell_position     (3)
                 real   (real_kind ), intent(in) :: neighbor_cell_position(3)
@@ -1295,7 +1295,7 @@ module class_cellsystem
                 real   (real_kind)             :: conservative_values(num_conservative_values)
             end function primitive_to_conservative_function
 
-            pure function residual_element_function(      &
+            function residual_element_function(           &
                 an_eos                                  , &
                 an_riemann_solver                       , &
                 primitive_variables_lhc                 , &
