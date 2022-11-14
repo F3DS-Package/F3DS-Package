@@ -6,7 +6,7 @@ module five_equation_model_boundary_condition_module
 
     private
 
-    public :: outflow_bc, wall_bc, symmetric_bc, empty_bc
+    public :: outflow_bc, nonslip_wall_bc, slip_and_symmetric_bc, empty_bc
 
     contains
 
@@ -17,23 +17,23 @@ module five_equation_model_boundary_condition_module
         ghost_primitive_variables(:) = inner_primitive_variables(:)
     end function outflow_bc
 
-    pure function wall_bc(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
+    pure function nonslip_wall_bc(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
         real   (real_kind), intent(in) :: inner_primitive_variables(:)
         integer(int_kind ), intent(in) :: num_primitive_variables
         real   (real_kind)             :: ghost_primitive_variables(num_primitive_variables)
         ghost_primitive_variables(1:2) =         inner_primitive_variables(1:2)
         ghost_primitive_variables(3  ) = -1.d0 * inner_primitive_variables(3)  ! slipwall
         ghost_primitive_variables(4:7) =         inner_primitive_variables(4:7)
-    end function wall_bc
+    end function nonslip_wall_bc
 
-    pure function symmetric_bc(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
+    pure function slip_and_symmetric_bc(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
         real   (real_kind), intent(in) :: inner_primitive_variables(:)
         integer(int_kind ), intent(in) :: num_primitive_variables
         real   (real_kind)             :: ghost_primitive_variables(num_primitive_variables)
         ghost_primitive_variables(1:2) =         inner_primitive_variables(1:2)
         ghost_primitive_variables(3  ) = -1.d0 * inner_primitive_variables(3)
         ghost_primitive_variables(4:7) =         inner_primitive_variables(4:7)
-    end function symmetric_bc
+    end function slip_and_symmetric_bc
 
     pure function empty_bc(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
         real   (real_kind), intent(in) :: inner_primitive_variables(:)

@@ -16,6 +16,9 @@ module viscous_five_equation_model_module
 
     private
 
+    real(real_kind), parameter :: interface_threshold_ = 1e-2
+    real(real_kind), parameter :: carvature_limit_     = 2.d0
+
     integer(int_kind )              :: num_phase_
 
     ! for Kdiv(u) term
@@ -40,6 +43,7 @@ module viscous_five_equation_model_module
     public :: spectral_radius
     public :: compute_smoothed_volume_fraction
     public :: normalize_gradient_volume_fraction
+    public :: curvature_smoothing_weight
     public :: curvature_preprocessing
 
     contains
@@ -203,7 +207,7 @@ module viscous_five_equation_model_module
         real(real_kind) :: rhc_k, lhc_k
 
         ! ## surface tension
-        real(real_kind) :: interface_alpha_heavy, rhc_alpha_heavy, lhc_alpha_heavy
+        real(real_kind) :: interface_alpha_heavy, rhc_alpha_heavy, lhc_alpha_heavy, interface_curvature
 
         ! ## viscosity variables
         real(real_kind) :: tau (3,3)
@@ -240,6 +244,8 @@ module viscous_five_equation_model_module
             num_conservative_values                                    &
         )
 
+        interface_curvature = 0.5d0 * (primitive_variables_lhc(8) + primitive_variables_rhc(8))
+
         ! # compute EoS, main velosity, and fluxs
         associate(                                                 &
                 rho1    => local_coordinate_primitives_lhc(1),     &
@@ -256,7 +262,7 @@ module viscous_five_equation_model_module
             lhc_soundspeed = an_eos%compute_soundspeed(p, lhc_density, z1)
             lhc_main_velocity = u
             lhc_alpha_heavy   = get_heavest_volume_fraction(z1)
-            lhc_pressure_jump = mixture_surface_tension(z1) * curv * lhc_alpha_heavy
+            lhc_pressure_jump = mixture_surface_tension(z1) * interface_curvature * lhc_alpha_heavy
         end associate
         associate(                                             &
                 rho1    => local_coordinate_primitives_rhc(1), &
@@ -273,7 +279,7 @@ module viscous_five_equation_model_module
             rhc_soundspeed = an_eos%compute_soundspeed(p, rhc_density, z1)
             rhc_main_velocity = u
             rhc_alpha_heavy   = get_heavest_volume_fraction(z1)
-            rhc_pressure_jump = mixture_surface_tension(z1) * curv * rhc_alpha_heavy
+            rhc_pressure_jump = mixture_surface_tension(z1) * interface_curvature * rhc_alpha_heavy
         end associate
 
         ! # compute flux
@@ -533,8 +539,9 @@ module viscous_five_equation_model_module
             ! Select a heavest fluid.
             heavest_volume_fraction = get_heavest_volume_fraction(volume_fraction)
             ! See [Garrick 2017, JCP]
-            dst_surface_tension_variables(1) = (heavest_volume_fraction**alpha) &
-                                             / ((heavest_volume_fraction**alpha) + (1.d0 - heavest_volume_fraction)**alpha)
+            !dst_surface_tension_variables(1) = (heavest_volume_fraction**alpha) &
+            !                                 / ((heavest_volume_fraction**alpha) + (1.d0 - heavest_volume_fraction)**alpha)
+            dst_surface_tension_variables(1) = heavest_volume_fraction
         end associate
     end function compute_smoothed_volume_fraction
 
@@ -558,13 +565,28 @@ module viscous_five_equation_model_module
         end associate
     end function normalize_gradient_volume_fraction
 
+    pure function curvature_smoothing_weight(own_cell_position, neighbor_cell_position, own_variables, neighbor_variables) result(weight)
+        real(real_kind ), intent(in) :: own_cell_position     (3)
+        real(real_kind ), intent(in) :: neighbor_cell_position(3)
+        real(real_kind ), intent(in) :: own_variables         (:)
+        real(real_kind ), intent(in) :: neighbor_variables    (:)
+        real(real_kind )             :: weight
+
+        real(real_kind), parameter :: smoothing_power = 2.d0 ! range is {@code smoothing_power} > 0.
+
+        associate(alpha => neighbor_variables(5))
+            if((interface_threshold_ < alpha) .and. (alpha < 1.d0 - interface_threshold_))then
+                weight = (alpha * (1.d0 - alpha))**smoothing_power
+            else
+                weight = 0.d0
+            end if
+        end associate
+    end function curvature_smoothing_weight
+
     pure function curvature_preprocessing(primitives, surface_tension_variables, num_variables) result(dst_primitives)
         real   (real_kind ), intent(in) :: surface_tension_variables(:), primitives(:)
         integer(int_kind  ), intent(in) :: num_variables
         real   (real_kind )             :: dst_primitives(num_variables)
-
-        real(real_kind), parameter :: interface_threshold = 1e-2
-        real(real_kind), parameter :: carvature_limit = 2.d0
 
         dst_primitives(1:7) = primitives(1:7)
         associate(                                 &
@@ -573,8 +595,8 @@ module viscous_five_equation_model_module
             z     => primitives(7)               , &
             kappa => surface_tension_variables(5)  &
         )
-            if((interface_threshold < z) .and. (z < 1.d0 - interface_threshold))then
-                dst_primitives(8) = -kappa!max(min(-kappa, carvature_limit), -carvature_limit)
+            if((interface_threshold_ < z) .and. (z < 1.d0 - interface_threshold_))then
+                dst_primitives(8) = -kappa!max(min(-kappa, carvature_limit_), -carvature_limit_)
             else
                 dst_primitives(8) = 0.d0
             endif

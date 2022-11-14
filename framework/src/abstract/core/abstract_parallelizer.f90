@@ -18,7 +18,7 @@ module abstract_parallelizer
 
     abstract interface
         subroutine initialize_interface(self, config, num_cells, num_faces, &
-                                        num_outflow_faces, num_wall_faces, num_symmetric_faces, num_empty_faces)
+                                        num_outflow_faces, num_nonslip_wall_faces, num_slip_and_symmetric_faces, num_empty_faces)
             use abstract_configuration
             use typedef_module
             import parallelizer
@@ -28,8 +28,8 @@ module abstract_parallelizer
             integer(int_kind     ), intent(in   ) :: num_cells
             integer(int_kind     ), intent(in   ) :: num_faces
             integer(int_kind     ), intent(in   ) :: num_outflow_faces
-            integer(int_kind     ), intent(in   ) :: num_wall_faces
-            integer(int_kind     ), intent(in   ) :: num_symmetric_faces
+            integer(int_kind     ), intent(in   ) :: num_nonslip_wall_faces
+            integer(int_kind     ), intent(in   ) :: num_slip_and_symmetric_faces
             integer(int_kind     ), intent(in   ) :: num_empty_faces
         end subroutine initialize_interface
 

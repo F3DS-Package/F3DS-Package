@@ -64,8 +64,8 @@ module class_cellsystem
 
         ! Number of boundary faces
         integer(int_kind) :: num_outflow_faces
-        integer(int_kind) :: num_wall_faces
-        integer(int_kind) :: num_symmetric_faces
+        integer(int_kind) :: num_nonslip_wall_faces
+        integer(int_kind) :: num_slip_and_symmetric_faces
         integer(int_kind) :: num_empty_faces
 
         ! ### Faces ###
@@ -128,10 +128,10 @@ module class_cellsystem
 
         ! Elements are stored boundary face index.
         ! Elm. 1) 1 : num_{boundary condition}_faces
-        integer(int_kind), allocatable :: outflow_face_indexes  (:)
-        integer(int_kind), allocatable :: wall_face_indexes (:)
-        integer(int_kind), allocatable :: symmetric_face_indexes(:)
-        integer(int_kind), allocatable :: empty_face_indexes    (:)
+        integer(int_kind), allocatable :: outflow_face_indexes           (:)
+        integer(int_kind), allocatable :: nonslip_wall_face_indexes      (:)
+        integer(int_kind), allocatable :: slip_and_symmetric_face_indexes(:)
+        integer(int_kind), allocatable :: empty_face_indexes             (:)
 
         ! ### Status ###
         logical :: read_cellsystem = .false.
@@ -208,8 +208,8 @@ module class_cellsystem
 
         ! ### Boundary Condition ###
         procedure, public, pass(self) :: apply_outflow_condition
-        procedure, public, pass(self) :: apply_wall_condition
-        procedure, public, pass(self) :: apply_symmetric_condition
+        procedure, public, pass(self) :: apply_nonslip_wall_condition
+        procedure, public, pass(self) :: apply_slip_and_symmetric_condition
         procedure, public, pass(self) :: apply_empty_condition
 
         ! ### Gradient Calculator ###
@@ -256,8 +256,8 @@ module class_cellsystem
         procedure, public, pass(self) :: get_number_of_points
         procedure, public, pass(self) :: get_number_of_cells
         procedure, public, pass(self) :: get_number_of_outflow_faces
-        procedure, public, pass(self) :: get_number_of_wall_faces
-        procedure, public, pass(self) :: get_number_of_symmetric_faces
+        procedure, public, pass(self) :: get_number_of_nonslip_wall_faces
+        procedure, public, pass(self) :: get_number_of_slip_and_symmetric_faces
         procedure, public, pass(self) :: get_number_of_empty_faces
         procedure, public, pass(self) :: get_number_of_steps
         procedure, public, pass(self) :: get_time
@@ -295,7 +295,7 @@ module class_cellsystem
 #ifdef _DEBUG
         call write_debuginfo("In parallelizer_initialize(), cellsystem.")
 #endif
-        call a_parallelizer%initialize(config, self%num_cells, self%num_faces, self%num_outflow_faces, self%num_wall_faces, self%num_symmetric_faces, self%num_empty_faces)
+        call a_parallelizer%initialize(config, self%num_cells, self%num_faces, self%num_outflow_faces, self%num_nonslip_wall_faces, self%num_slip_and_symmetric_faces, self%num_empty_faces)
     end subroutine
 
     ! ### Face gradient interpolator ###
@@ -582,7 +582,7 @@ module class_cellsystem
         end do
     end subroutine apply_outflow_condition
 
-    subroutine apply_wall_condition(self, a_parallelizer, primitive_variables_set, num_primitive_variables, &
+    subroutine apply_nonslip_wall_condition(self, a_parallelizer, primitive_variables_set, num_primitive_variables, &
         compute_rotate_primitive_variables_function, compute_unrotate_primitive_variables_function, boundary_condition_function)
         class  (cellsystem  ), intent(inout) :: self
         class  (parallelizer), intent(in   ) :: a_parallelizer
@@ -633,15 +633,15 @@ module class_cellsystem
         integer :: i, face_index, thread_number, local_index
 
 #ifdef _DEBUG
-        call write_debuginfo("In apply_wall_condition(), cellsystem.")
+        call write_debuginfo("In apply_nonslip_wall_condition(), cellsystem.")
 #endif
 
 !$omp parallel do private(i, face_index, thread_number, local_index)
         do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_boundary_face_indexes(1, thread_number, wall_face_type), 1
-                i = a_parallelizer%get_boundary_face_index(1, thread_number, local_index, wall_face_type)
+            do local_index = 1, a_parallelizer%get_number_of_boundary_face_indexes(1, thread_number, nonslip_wall_face_type), 1
+                i = a_parallelizer%get_boundary_face_index(1, thread_number, local_index, nonslip_wall_face_type)
 
-                face_index = self%wall_face_indexes(i)
+                face_index = self%nonslip_wall_face_indexes(i)
                 call apply_boundary_condition_common_impl(         &
                     primitive_variables_set                      , &
                     self%face_normal_vectors     (:,face_index)  , &
@@ -656,9 +656,9 @@ module class_cellsystem
                 )
             end do
         end do
-    end subroutine apply_wall_condition
+    end subroutine apply_nonslip_wall_condition
 
-    subroutine apply_symmetric_condition(self, a_parallelizer, primitive_variables_set, num_primitive_variables, &
+    subroutine apply_slip_and_symmetric_condition(self, a_parallelizer, primitive_variables_set, num_primitive_variables, &
         compute_rotate_primitive_variables_function, compute_unrotate_primitive_variables_function, boundary_condition_function)
         class  (cellsystem  ), intent(inout) :: self
         class  (parallelizer), intent(in   ) :: a_parallelizer
@@ -709,15 +709,15 @@ module class_cellsystem
         integer :: i, face_index, thread_number, local_index
 
 #ifdef _DEBUG
-        call write_debuginfo("In apply_symmetric_condition(), cellsystem.")
+        call write_debuginfo("In apply_slip_and_symmetric_condition(), cellsystem.")
 #endif
 
 !$omp parallel do private(i, face_index, thread_number, local_index)
         do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_boundary_face_indexes(1, thread_number, symmetric_face_type), 1
-                i = a_parallelizer%get_boundary_face_index(1, thread_number, local_index, symmetric_face_type)
+            do local_index = 1, a_parallelizer%get_number_of_boundary_face_indexes(1, thread_number, slip_and_symmetric_face_type), 1
+                i = a_parallelizer%get_boundary_face_index(1, thread_number, local_index, slip_and_symmetric_face_type)
 
-                face_index = self%symmetric_face_indexes(i)
+                face_index = self%slip_and_symmetric_face_indexes(i)
                 call apply_boundary_condition_common_impl(          &
                     primitive_variables_set                       , &
                     self%face_normal_vectors     (:,face_index)   , &
@@ -732,7 +732,7 @@ module class_cellsystem
                 )
             end do
         end do
-    end subroutine apply_symmetric_condition
+    end subroutine apply_slip_and_symmetric_condition
 
     subroutine apply_empty_condition(self, a_parallelizer, primitive_variables_set, num_primitive_variables, &
         compute_rotate_primitive_variables_function, compute_unrotate_primitive_variables_function, boundary_condition_function)
@@ -1896,8 +1896,8 @@ module class_cellsystem
         call self%initialise_faces              (parser%get_number_of_faces (), parser%get_number_of_ghost_cells())
         call self%initialise_cells              (parser%get_number_of_points(), parser%get_number_of_cells      ())
         call self%initialise_boundary_references(parser%get_number_of_boundary_faces(outflow_face_type  ), &
-                                                 parser%get_number_of_boundary_faces(wall_face_type), &
-                                                 parser%get_number_of_boundary_faces(symmetric_face_type), &
+                                                 parser%get_number_of_boundary_faces(nonslip_wall_face_type), &
+                                                 parser%get_number_of_boundary_faces(slip_and_symmetric_face_type), &
                                                  parser%get_number_of_boundary_faces(empty_face_type    )    )
 
         ! get grid data
@@ -1916,7 +1916,7 @@ module class_cellsystem
         call write_debuginfo("Read following mesh.")
         print *, "Number of cells          : ", self%num_cells
         print *, "Number of faces          : ", self%num_faces
-        print *, "Number of symmetric faces: ", self%num_symmetric_faces
+        print *, "Number of symmetric faces: ", self%num_slip_and_symmetric_faces
         print *, "Number of empty faces    : ", self%num_empty_faces
 #endif
 
@@ -1963,17 +1963,17 @@ module class_cellsystem
         n = self%num_outflow_faces
     end function get_number_of_outflow_faces
 
-    pure function get_number_of_wall_faces(self) result(n)
+    pure function get_number_of_nonslip_wall_faces(self) result(n)
         class(cellsystem), intent(in) :: self
         integer(int_kind) :: n
-        n = self%num_wall_faces
-    end function get_number_of_wall_faces
+        n = self%num_nonslip_wall_faces
+    end function get_number_of_nonslip_wall_faces
 
-    pure function get_number_of_symmetric_faces(self) result(n)
+    pure function get_number_of_slip_and_symmetric_faces(self) result(n)
         class(cellsystem), intent(in) :: self
         integer(int_kind) :: n
-        n = self%num_symmetric_faces
-    end function get_number_of_symmetric_faces
+        n = self%num_slip_and_symmetric_faces
+    end function get_number_of_slip_and_symmetric_faces
 
     pure function get_number_of_empty_faces(self) result(n)
         class(cellsystem), intent(in) :: self
@@ -2015,27 +2015,27 @@ module class_cellsystem
         class  (cellsystem     ), intent(inout) :: self
         integer(boundary_face_type_kind), intent(in   ) :: face_types(:)
 
-        integer(int_kind) :: index, outflow_index, wall_index, symmetric_index, empty_index
+        integer(int_kind) :: index, outflow_index, nonslip_wall_index, slip_and_symmetric_index, empty_index
 
 #ifdef _DEBUG
         call write_debuginfo("In assign_boundary(), cellsystem.")
 #endif
 
-        outflow_index   = 0
-        wall_index       = 0
-        symmetric_index = 0
-        empty_index     = 0
+        outflow_index            = 0
+        nonslip_wall_index       = 0
+        slip_and_symmetric_index = 0
+        empty_index              = 0
 
         do index = 1, self%num_faces, 1
             if (face_types(index) == outflow_face_type) then
                 outflow_index = outflow_index + 1
                 self%outflow_face_indexes(outflow_index) = index
-            else if (face_types(index) == wall_face_type) then
-                wall_index = wall_index + 1
-                self%wall_face_indexes(wall_index) = index
-            else if (face_types(index) == symmetric_face_type) then
-                symmetric_index = symmetric_index + 1
-                self%symmetric_face_indexes(symmetric_index) = index
+            else if (face_types(index) == nonslip_wall_face_type) then
+                nonslip_wall_index = nonslip_wall_index + 1
+                self%nonslip_wall_face_indexes(nonslip_wall_index) = index
+            else if (face_types(index) == slip_and_symmetric_face_type) then
+                slip_and_symmetric_index = slip_and_symmetric_index + 1
+                self%slip_and_symmetric_face_indexes(slip_and_symmetric_index) = index
             else if (face_types(index) == empty_face_type) then
                 empty_index = empty_index + 1
                 self%empty_face_indexes(empty_index) = index
@@ -2146,10 +2146,10 @@ module class_cellsystem
         allocate(self%cell_types(self%num_cells))
     end subroutine initialise_cells
 
-    subroutine initialise_boundary_references(self, num_outflow_faces, num_wall_faces, num_symetric_faces, num_empty_faces)
+    subroutine initialise_boundary_references(self, num_outflow_faces, num_nonslip_wall_faces, num_symetric_faces, num_empty_faces)
         class(cellsystem), intent(inout) :: self
         integer(int_kind), intent(in) :: num_outflow_faces
-        integer(int_kind), intent(in) :: num_wall_faces
+        integer(int_kind), intent(in) :: num_nonslip_wall_faces
         integer(int_kind), intent(in) :: num_symetric_faces
         integer(int_kind), intent(in) :: num_empty_faces
 
@@ -2162,15 +2162,15 @@ module class_cellsystem
         end if
         self%num_outflow_faces = num_outflow_faces
 
-        if(num_wall_faces < 0)then
+        if(num_nonslip_wall_faces < 0)then
             call call_error("Number of wall BC faces must be set over zero.")
         end if
-        self%num_wall_faces = num_wall_faces
+        self%num_nonslip_wall_faces = num_nonslip_wall_faces
 
         if(num_symetric_faces < 0)then
             call call_error("Number of symetric BC faces must be set over zero.")
         end if
-        self%num_symmetric_faces = num_symetric_faces
+        self%num_slip_and_symmetric_faces = num_symetric_faces
 
         if(num_empty_faces < 0)then
             call call_error("Number of empty BC faces must be set over zero.")
@@ -2182,15 +2182,15 @@ module class_cellsystem
         end if
         allocate(self%outflow_face_indexes(self%num_outflow_faces))
 
-        if(allocated(self%wall_face_indexes))then
-            call call_error("Array wall_face_indexes is already allocated. But you call the initialiser for boundary_reference.")
+        if(allocated(self%nonslip_wall_face_indexes))then
+            call call_error("Array nonslip_wall_face_indexes is already allocated. But you call the initialiser for boundary_reference.")
         end if
-        allocate(self%wall_face_indexes(self%num_wall_faces))
+        allocate(self%nonslip_wall_face_indexes(self%num_nonslip_wall_faces))
 
-        if(allocated(self%symmetric_face_indexes))then
-            call call_error("Array symmetric_face_indexes is already allocated. But you call the initialiser for boundary_reference.")
+        if(allocated(self%slip_and_symmetric_face_indexes))then
+            call call_error("Array slip_and_symmetric_face_indexes is already allocated. But you call the initialiser for boundary_reference.")
         end if
-        allocate(self%symmetric_face_indexes(self%num_symmetric_faces))
+        allocate(self%slip_and_symmetric_face_indexes(self%num_slip_and_symmetric_faces))
 
         if(allocated(self%empty_face_indexes))then
             call call_error("Array empty_face_indexes is already allocated. But you call the initialiser for boundary_reference.")
@@ -2292,15 +2292,15 @@ module class_cellsystem
         end if
         deallocate(self%outflow_face_indexes)
 
-        if(.not. allocated(self%wall_face_indexes))then
-            call call_error("Array wall_face_indexes is not allocated. But you call the finalizer for boundary_reference module.")
+        if(.not. allocated(self%nonslip_wall_face_indexes))then
+            call call_error("Array nonslip_wall_face_indexes is not allocated. But you call the finalizer for boundary_reference module.")
         end if
-        deallocate(self%wall_face_indexes)
+        deallocate(self%nonslip_wall_face_indexes)
 
-        if(.not. allocated(self%symmetric_face_indexes))then
-            call call_error("Array symmetric_face_indexes is not allocated. But you call the finalizer for boundary_reference module.")
+        if(.not. allocated(self%slip_and_symmetric_face_indexes))then
+            call call_error("Array slip_and_symmetric_face_indexes is not allocated. But you call the finalizer for boundary_reference module.")
         end if
-        deallocate(self%symmetric_face_indexes)
+        deallocate(self%slip_and_symmetric_face_indexes)
 
         if(.not. allocated(self%empty_face_indexes))then
             call call_error("Array empty_face_indexes is not allocated. But you call the finalizer for boundary_reference module.")
@@ -2309,8 +2309,8 @@ module class_cellsystem
 
         self%num_local_cells     = 0
         self%num_outflow_faces   = 0
-        self%num_wall_faces  = 0
-        self%num_symmetric_faces = 0
+        self%num_nonslip_wall_faces  = 0
+        self%num_slip_and_symmetric_faces = 0
     end subroutine finalize_boundary_references
 
     pure function compute_boundary_gradient(self, lhc_variables, rhc_variables, lhc_position, rhc_position, num_variables) result(gradient_variables)

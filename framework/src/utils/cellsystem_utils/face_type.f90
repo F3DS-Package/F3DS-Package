@@ -6,8 +6,8 @@ module face_type_module
     enum, bind(c)
         enumerator :: boundary_face_type = 0
         enumerator :: outflow_face_type
-        enumerator :: symmetric_face_type
-        enumerator :: wall_face_type
+        enumerator :: slip_and_symmetric_face_type
+        enumerator :: nonslip_wall_face_type
         enumerator :: empty_face_type
         enumerator :: unknown_face_type
     end enum
@@ -26,9 +26,11 @@ contains
         if (string == "outflow") then
             type = outflow_face_type
         else if (string == "symmetric") then
-            type = symmetric_face_type
-        else if (string == "wall") then
-            type = wall_face_type
+            type = slip_and_symmetric_face_type
+        else if (string == "slip wall") then
+            type = slip_and_symmetric_face_type
+        else if (string == "non-slip wall") then
+            type = nonslip_wall_face_type
         else if (string == "empty") then
             type = empty_face_type
         else

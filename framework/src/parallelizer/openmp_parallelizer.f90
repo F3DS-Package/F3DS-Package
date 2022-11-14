@@ -80,14 +80,14 @@ module class_openmp_parallelizer
     end subroutine make_index_list
 
     subroutine initialize(self, config, num_cells, num_faces, &
-                          num_outflow_faces, num_wall_faces, num_symmetric_faces, num_empty_faces)
+                          num_outflow_faces, num_nonslip_wall_faces, num_slip_and_symmetric_faces, num_empty_faces)
         class  (openmp_parallelizer), intent(inout) :: self
         class  (configuration      ), intent(inout) :: config
         integer(int_kind           ), intent(in   ) :: num_cells
         integer(int_kind           ), intent(in   ) :: num_faces
         integer(int_kind           ), intent(in   ) :: num_outflow_faces
-        integer(int_kind           ), intent(in   ) :: num_wall_faces
-        integer(int_kind           ), intent(in   ) :: num_symmetric_faces
+        integer(int_kind           ), intent(in   ) :: num_nonslip_wall_faces
+        integer(int_kind           ), intent(in   ) :: num_slip_and_symmetric_faces
         integer(int_kind           ), intent(in   ) :: num_empty_faces
 
         logical           :: found
@@ -109,10 +109,10 @@ module class_openmp_parallelizer
 
         allocate(self%num_boundary_face_indexes(number_of_boundary_face_type, self%num_threads))
         allocate(self%start_boundary_face_index(number_of_boundary_face_type, self%num_threads))
-        call self%make_index_list(self%num_boundary_face_indexes(outflow_face_type  , :), self%start_boundary_face_index(outflow_face_type  , :), num_outflow_faces  )
-        call self%make_index_list(self%num_boundary_face_indexes(symmetric_face_type, :), self%start_boundary_face_index(symmetric_face_type, :), num_symmetric_faces)
-        call self%make_index_list(self%num_boundary_face_indexes(wall_face_type     , :), self%start_boundary_face_index(wall_face_type     , :), num_wall_faces     )
-        call self%make_index_list(self%num_boundary_face_indexes(empty_face_type    , :), self%start_boundary_face_index(empty_face_type    , :), num_empty_faces    )
+        call self%make_index_list(self%num_boundary_face_indexes(outflow_face_type           , :), self%start_boundary_face_index(outflow_face_type           , :), num_outflow_faces           )
+        call self%make_index_list(self%num_boundary_face_indexes(slip_and_symmetric_face_type, :), self%start_boundary_face_index(slip_and_symmetric_face_type, :), num_slip_and_symmetric_faces)
+        call self%make_index_list(self%num_boundary_face_indexes(nonslip_wall_face_type      , :), self%start_boundary_face_index(nonslip_wall_face_type      , :), num_nonslip_wall_faces      )
+        call self%make_index_list(self%num_boundary_face_indexes(empty_face_type             , :), self%start_boundary_face_index(empty_face_type             , :), num_empty_faces             )
 
     end subroutine initialize
 

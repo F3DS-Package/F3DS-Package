@@ -147,8 +147,8 @@ program five_equation_model_solver
         do state_num = 1, a_cellsystem%get_number_of_states(a_time_stepping), 1
             call a_cellsystem%apply_empty_condition    (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, empty_bc    )
             call a_cellsystem%apply_outflow_condition  (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, outflow_bc  )
-            call a_cellsystem%apply_wall_condition     (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, wall_bc     )
-            call a_cellsystem%apply_symmetric_condition(a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, symmetric_bc)
+            call a_cellsystem%apply_nonslip_wall_condition     (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, nonslip_wall_bc     )
+            call a_cellsystem%apply_slip_and_symmetric_condition(a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, slip_and_symmetric_bc)
 
             call a_cellsystem%compute_residual(   &
                 a_parallelizer                  , &
