@@ -26,6 +26,8 @@ module viscous_five_equation_model_module
     ! for surface tension term
     logical                         :: ignore_surface_tension_
     real   (real_kind), allocatable :: surface_tension_(:)
+    logical                         :: ignore_garrick_modification_
+    real   (real_kind)              :: garrick_modification_coef_
 
     ! for gravity term
     real   (real_kind)              :: gravitational_acceleration_(3)
@@ -50,7 +52,13 @@ module viscous_five_equation_model_module
 
     contains
 
-    function apply_surface_tension() result(ret)
+    pure function compute_pressure_jump(alpha1, alpha_heavy, interface_curvature) result(dp)
+        real(real_kind), intent(in) :: alpha1, alpha_heavy, interface_curvature
+        real(real_kind)             :: dp
+        dp = mixture_surface_tension(alpha1) * interface_curvature * alpha_heavy * garrick_modification_coef_
+    end function
+
+    pure function apply_surface_tension() result(ret)
         logical :: ret
         if(ignore_surface_tension_)then
             ret = .false.
@@ -59,7 +67,7 @@ module viscous_five_equation_model_module
         end if
     end function apply_surface_tension
 
-    function apply_viscosity() result(ret)
+    pure function apply_viscosity() result(ret)
         logical :: ret
         if(ignore_viscosity_)then
             ret = .false.
@@ -68,19 +76,19 @@ module viscous_five_equation_model_module
         end if
     end function apply_viscosity
 
-    function mixture_surface_tension(z1) result(sigma)
+    pure function mixture_surface_tension(z1) result(sigma)
         real   (real_kind), intent(in) :: z1
         real   (real_kind)             :: sigma
         sigma = z1 * surface_tension_(1) + (1.d0 - z1) * surface_tension_(2)
     end function
 
-    function mixture_dynamic_viscosity(z1) result(mu)
+    pure function mixture_dynamic_viscosity(z1) result(mu)
         real   (real_kind), intent(in) :: z1
         real   (real_kind)             :: mu
         mu = z1 * dynamic_viscosity_(1) + (1.d0 - z1) * dynamic_viscosity_(2)
     end function
 
-    function compute_mixture_density(primitive_variables) result(density)
+    pure function compute_mixture_density(primitive_variables) result(density)
         real (real_kind), intent(in) :: primitive_variables(:)
         real (real_kind)             :: density
         associate(                            &
@@ -129,6 +137,14 @@ module viscous_five_equation_model_module
 
         call a_configuration%get_bool      ("Model.Ignore surface tension", ignore_surface_tension_, found, .false.)
         if(.not. found) call write_warring("'Model.Ignore surface tension' is not found in configuration you set. Apply this term.")
+
+        call a_configuration%get_bool      ("Model.Ignore Garrick's modification", ignore_garrick_modification_, found, .false.)
+        if(.not. found) call write_warring("'Model.Ignore Garrick's modification' is not found in configuration you set. Apply this modification.")
+        if(ignore_garrick_modification_)then
+            garrick_modification_coef_ = 0.d0
+        else
+            garrick_modification_coef_ = 1.d0
+        endif
 
         call a_configuration%get_bool      ("Model.Ignore viscosity", ignore_viscosity_, found, .false.)
         if(.not. found) call write_warring("'Model.Ignore viscosity' is not found in configuration you set. Apply this term.")
@@ -297,7 +313,7 @@ module viscous_five_equation_model_module
             lhc_soundspeed = an_eos%compute_soundspeed(p, lhc_density, z1)
             lhc_main_velocity = u
             lhc_alpha_heavy   = get_heavest_volume_fraction(z1)
-            lhc_pressure_jump = mixture_surface_tension(z1) * interface_curvature * lhc_alpha_heavy
+            lhc_pressure_jump = compute_pressure_jump(z1, lhc_alpha_heavy, interface_curvature)
         end associate
         associate(                                             &
                 rho1    => local_coordinate_primitives_rhc(1), &
@@ -314,7 +330,7 @@ module viscous_five_equation_model_module
             rhc_soundspeed = an_eos%compute_soundspeed(p, rhc_density, z1)
             rhc_main_velocity = u
             rhc_alpha_heavy   = get_heavest_volume_fraction(z1)
-            rhc_pressure_jump = mixture_surface_tension(z1) * interface_curvature * rhc_alpha_heavy
+            rhc_pressure_jump = compute_pressure_jump(z1, rhc_alpha_heavy, interface_curvature)
         end associate
 
         ! # compute flux
