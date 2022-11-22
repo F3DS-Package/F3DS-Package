@@ -36,11 +36,10 @@ module five_equation_model_module
         real (real_kind), intent(in) :: primitive_variables(:)
         real (real_kind)             :: density
         associate(                            &
-            rho1   => primitive_variables(1), &
-            rho2   => primitive_variables(2), &
-            alpha1 => primitive_variables(7)  &
+            rho1a1 => primitive_variables(1), &
+            rho2a2 => primitive_variables(2)  &
         )
-            density = alpha1 * rho1 + (1.d0 - alpha1) * rho2
+            density = rho1a1 + rho2a2
         end associate
     end function
 
@@ -97,6 +96,7 @@ module five_equation_model_module
 
         ! ## kapila Kdiv(u)
         real(real_kind) :: rhc_k, lhc_k
+        real(real_kind) :: lhc_rhos(2), rhc_rhos(2)
 
 
         ! # compute primitive-variables of face local coordinate
@@ -131,29 +131,29 @@ module five_equation_model_module
 
         ! # compute EoS, main velosity, and fluxs
         associate(                                                 &
-                rho1    => local_coordinate_primitives_lhc(1),     &
-                rho2    => local_coordinate_primitives_lhc(2),     &
+                rho1a1  => local_coordinate_primitives_lhc(1),     &
+                rho2a2  => local_coordinate_primitives_lhc(2),     &
                 u       => local_coordinate_primitives_lhc(3),     &
                 v       => local_coordinate_primitives_lhc(4),     &
                 w       => local_coordinate_primitives_lhc(5),     &
                 p       => local_coordinate_primitives_lhc(6),     &
                 z1      => local_coordinate_primitives_lhc(7)      &
             )
-            lhc_density    = rho1 * z1 + rho2 * (1.d0 - z1)
+            lhc_density    = rho1a1 + rho2a2
             lhc_pressure   = p
             lhc_soundspeed = an_eos%compute_soundspeed(p, lhc_density, z1)
             lhc_main_velocity = u
         end associate
         associate(                                             &
-                rho1    => local_coordinate_primitives_rhc(1), &
-                rho2    => local_coordinate_primitives_rhc(2), &
+                rho1a1  => local_coordinate_primitives_rhc(1), &
+                rho2a2  => local_coordinate_primitives_rhc(2), &
                 u       => local_coordinate_primitives_rhc(3), &
                 v       => local_coordinate_primitives_rhc(4), &
                 w       => local_coordinate_primitives_rhc(5), &
                 p       => local_coordinate_primitives_rhc(6), &
                 z1      => local_coordinate_primitives_rhc(7)  &
             )
-            rhc_density    = rho1 * z1 + rho2 * (1.d0 - z1)
+            rhc_density    = rho1a1 + rho2a2
             rhc_pressure   = p
             rhc_soundspeed = an_eos%compute_soundspeed(p, rhc_density, z1)
             rhc_main_velocity = u
@@ -276,19 +276,25 @@ module five_equation_model_module
         )
 
         ! # (-z1 - K) * div(u)
-        associate(                                       &
-            lhc_rhos    => primitive_variables_lhc(1:2), &
-            lhc_p       => primitive_variables_lhc(6)  , &
-            lhc_z1      => primitive_variables_lhc(7)  , &
-            rhc_rhos    => primitive_variables_rhc(1:2), &
-            rhc_p       => primitive_variables_rhc(6)  , &
-            rhc_z1      => primitive_variables_rhc(7)    &
+        associate(                                     &
+            lhc_rho1a1  => primitive_variables_lhc(1), &
+            lhc_rho2a2  => primitive_variables_lhc(2), &
+            lhc_p       => primitive_variables_lhc(6), &
+            lhc_z1      => primitive_variables_lhc(7), &
+            rhc_rho1a1  => primitive_variables_rhc(1), &
+            rhc_rho2a2  => primitive_variables_rhc(1), &
+            rhc_p       => primitive_variables_rhc(6), &
+            rhc_z1      => primitive_variables_rhc(7)  &
         )
 
             if(ignore_kdivu_)then
                 lhc_k = 0.d0
                 rhc_k = 0.d0
             else
+                lhc_rhos(1) = lhc_rho1a1 / lhc_z1
+                lhc_rhos(2) = lhc_rho2a2 / (1.d0 - lhc_z1)
+                rhc_rhos(1) = rhc_rho1a1 / rhc_z1
+                rhc_rhos(2) = rhc_rho2a2 / (1.d0 - rhc_z1)
                 lhc_k = an_eos%compute_k(lhc_p, lhc_rhos, lhc_z1)
                 rhc_k = an_eos%compute_k(rhc_p, rhc_rhos, rhc_z1)
             end if

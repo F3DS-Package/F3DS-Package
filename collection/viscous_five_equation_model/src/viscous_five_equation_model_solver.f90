@@ -59,8 +59,8 @@ program viscous_five_equation_model_solver
     real(real_kind), allocatable :: conservative_variables_set(:,:)
 
     ! Elm. 1) following variables are saved
-    ! primitive_variables_set(1  , :)   : density of fluid1
-    ! primitive_variables_set(2  , :)   : density of fluid2
+    ! primitive_variables_set(1  , :)   : α1ρ1
+    ! primitive_variables_set(2  , :)   : α2ρ2
     ! primitive_variables_set(3:5, :)   : velocity vector (u,v,w)
     ! primitive_variables_set(6  , :)   : pressre
     ! primitive_variables_set(7  , :)   : volume fraction of fluid1
@@ -69,8 +69,8 @@ program viscous_five_equation_model_solver
     real(real_kind), allocatable :: primitive_variables_set(:,:)
 
     ! Elm. 1) following variables are saved
-    ! gradient_primitive_variables_set(1 :3 , :) : dρ1/dx, dρ1/dy, dρ1/dz
-    ! gradient_primitive_variables_set(4 :6 , :) : dρ2/dx, dρ2/dy, dρ2/dz
+    ! gradient_primitive_variables_set(1 :3 , :) : dα1ρ1/dx, dα1ρ1/dy, dα1ρ1/dz
+    ! gradient_primitive_variables_set(4 :6 , :) : dα2ρ2/dx, dα2ρ2/dy, dα2ρ2/dz
     ! gradient_primitive_variables_set(7 :9 , :) : du/dx, du/dy, du/dz
     ! gradient_primitive_variables_set(10:12, :) : dv/dx, dv/dy, dv/dz
     ! gradient_primitive_variables_set(13:15, :) : dw/dx, dw/dy, dw/dz

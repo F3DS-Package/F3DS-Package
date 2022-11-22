@@ -92,11 +92,10 @@ module viscous_five_equation_model_module
         real (real_kind), intent(in) :: primitive_variables(:)
         real (real_kind)             :: density
         associate(                            &
-            rho1   => primitive_variables(1), &
-            rho2   => primitive_variables(2), &
-            alpha1 => primitive_variables(7)  &
+            rho1a1 => primitive_variables(1), &
+            rho2a2 => primitive_variables(2)  &
         )
-            density = alpha1 * rho1 + (1.d0 - alpha1) * rho2
+            density = rho1a1 + rho2a2
         end associate
     end function
 
@@ -174,15 +173,15 @@ module viscous_five_equation_model_module
         num_sums          (:) = 0.d0
         do i = 1, num_cells, 1
             associate(                                            &
-                density1         => primitive_variables_set(1,i), &
-                density2         => primitive_variables_set(2,i), &
+                rho1a1           => primitive_variables_set(1,i), &
+                rho2a2           => primitive_variables_set(2,i), &
                 volume_fraction1 => primitive_variables_set(7,i)  &
             )
                 if(volume_fraction1 > 1.d0 - machine_epsilon)then
-                    average_densities_(1) = average_densities_(1) + density1
+                    average_densities_(1) = average_densities_(1) + rho1a1 / volume_fraction1
                     num_sums          (1) = num_sums(1) + 1.d0
                 else if (volume_fraction1 < machine_epsilon)then
-                    average_densities_(2) = average_densities_(2) + density2
+                    average_densities_(2) = average_densities_(2) + rho2a2 / (1.d0 - volume_fraction1)
                     num_sums          (2) = num_sums(2) + 1.d0
                 end if
             end associate
@@ -256,6 +255,7 @@ module viscous_five_equation_model_module
 
         ! ## kapila Kdiv(u)
         real(real_kind) :: rhc_k, lhc_k
+        real(real_kind) :: lhc_rhos(2), rhc_rhos(2)
 
         ! ## surface tension
         real(real_kind) :: interface_alpha_heavy, rhc_alpha_heavy, lhc_alpha_heavy, interface_curvature
@@ -299,8 +299,8 @@ module viscous_five_equation_model_module
 
         ! # compute EoS, main velosity, and fluxs
         associate(                                                 &
-                rho1    => local_coordinate_primitives_lhc(1),     &
-                rho2    => local_coordinate_primitives_lhc(2),     &
+                rho1a1  => local_coordinate_primitives_lhc(1),     &
+                rho2a2  => local_coordinate_primitives_lhc(2),     &
                 u       => local_coordinate_primitives_lhc(3),     &
                 v       => local_coordinate_primitives_lhc(4),     &
                 w       => local_coordinate_primitives_lhc(5),     &
@@ -308,7 +308,7 @@ module viscous_five_equation_model_module
                 z1      => local_coordinate_primitives_lhc(7),     &
                 curv    => local_coordinate_primitives_lhc(8)      &
             )
-            lhc_density    = rho1 * z1 + rho2 * (1.d0 - z1)
+            lhc_density    = rho1a1 + rho2a2
             lhc_pressure   = p
             lhc_soundspeed = an_eos%compute_soundspeed(p, lhc_density, z1)
             lhc_main_velocity = u
@@ -316,8 +316,8 @@ module viscous_five_equation_model_module
             lhc_pressure_jump = compute_pressure_jump(z1, lhc_alpha_heavy, interface_curvature)
         end associate
         associate(                                             &
-                rho1    => local_coordinate_primitives_rhc(1), &
-                rho2    => local_coordinate_primitives_rhc(2), &
+                rho1a1  => local_coordinate_primitives_lhc(1),     &
+                rho2a2  => local_coordinate_primitives_lhc(2),     &
                 u       => local_coordinate_primitives_rhc(3), &
                 v       => local_coordinate_primitives_rhc(4), &
                 w       => local_coordinate_primitives_rhc(5), &
@@ -325,7 +325,7 @@ module viscous_five_equation_model_module
                 z1      => local_coordinate_primitives_rhc(7), &
                 curv    => local_coordinate_primitives_rhc(8)  &
             )
-            rhc_density    = rho1 * z1 + rho2 * (1.d0 - z1)
+            rhc_density    = rho1a1 + rho2a2
             rhc_pressure   = p
             rhc_soundspeed = an_eos%compute_soundspeed(p, rhc_density, z1)
             rhc_main_velocity = u
@@ -450,21 +450,29 @@ module viscous_five_equation_model_module
         )
 
         ! # (-z1 - K) * div(u)
-        associate(                                       &
-            lhc_rhos    => primitive_variables_lhc(1:2), &
-            lhc_p       => primitive_variables_lhc(6)  , &
-            lhc_z1      => primitive_variables_lhc(7)  , &
-            rhc_rhos    => primitive_variables_rhc(1:2), &
-            rhc_p       => primitive_variables_rhc(6)  , &
-            rhc_z1      => primitive_variables_rhc(7)    &
+        associate(                                     &
+            lhc_rho1a1  => primitive_variables_lhc(1), &
+            lhc_rho2a2  => primitive_variables_lhc(2), &
+            lhc_p       => primitive_variables_lhc(6), &
+            lhc_z1      => primitive_variables_lhc(7), &
+            rhc_rho1a1  => primitive_variables_rhc(1), &
+            rhc_rho2a2  => primitive_variables_rhc(1), &
+            rhc_p       => primitive_variables_rhc(6), &
+            rhc_z1      => primitive_variables_rhc(7)  &
         )
+
             if(ignore_kdivu_)then
                 lhc_k = 0.d0
                 rhc_k = 0.d0
             else
+                lhc_rhos(1) = lhc_rho1a1 / lhc_z1
+                lhc_rhos(2) = lhc_rho2a2 / (1.d0 - lhc_z1)
+                rhc_rhos(1) = rhc_rho1a1 / rhc_z1
+                rhc_rhos(2) = rhc_rho2a2 / (1.d0 - rhc_z1)
                 lhc_k = an_eos%compute_k(lhc_p, lhc_rhos, lhc_z1)
                 rhc_k = an_eos%compute_k(rhc_p, rhc_rhos, rhc_z1)
             end if
+
             residual_element(7, 1) = residual_element(7, 1) &
                                    + (lhc_z1 + lhc_k) * (1.d0 / lhc_cell_volume) * numerical_velocity * face_area
             residual_element(7, 2) = residual_element(7, 2) &
@@ -474,12 +482,8 @@ module viscous_five_equation_model_module
         ! # surface tension term
         if(apply_surface_tension())then
             associate(                                               &
-                lhc_rho1  => primitive_variables_lhc(1),             &
-                lhc_rho2  => primitive_variables_lhc(2),             &
                 lhc_z1    => primitive_variables_lhc(7),             &
                 lhc_curv  => primitive_variables_lhc(8),             &
-                rhc_rho1  => primitive_variables_rhc(1),             &
-                rhc_rho2  => primitive_variables_rhc(2),             &
                 rhc_z1    => primitive_variables_rhc(7),             &
                 rhc_curv  => primitive_variables_rhc(8)              &
             )
@@ -546,10 +550,10 @@ module viscous_five_equation_model_module
         integer(int_kind ), intent(in) :: num_conservative_values
         real   (real_kind)             :: source(num_conservative_values)
 
-        associate(                                               &
+        associate(                                          &
             density  => compute_mixture_density(variables), &
             g        => gravitational_acceleration_(:)    , &
-            velocity => variables(3:5)                           &
+            velocity => variables(3:5)                      &
         )
             source(1:2) = 0.d0
             source(3:5) = density * g
@@ -583,8 +587,6 @@ module viscous_five_equation_model_module
         real   (real_kind ), parameter  :: alpha = 0.1d0
 
         associate(                                     &
-            rho1            => primitive_variables(1), &
-            rho2            => primitive_variables(2), &
             volume_fraction => primitive_variables(7)  &
         )
             ! Select a heavest fluid.
@@ -637,8 +639,6 @@ module viscous_five_equation_model_module
 
         dst_primitives(1:7) = primitives(1:7)
         associate(                                 &
-            rho1  => primitives(1)               , &
-            rho2  => primitives(2)               , &
             z     => primitives(7)               , &
             kappa => surface_tension_variables(5)  &
         )
