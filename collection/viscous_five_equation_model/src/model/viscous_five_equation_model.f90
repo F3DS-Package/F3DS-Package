@@ -16,8 +16,7 @@ module viscous_five_equation_model_module
 
     private
 
-    real(real_kind), parameter :: interface_threshold_ = 1e-2
-    real(real_kind), parameter :: carvature_limit_     = 2.d0
+    real(real_kind), parameter :: interface_threshold_ = 1e-8
 
     integer(int_kind )              :: num_phase_
 
@@ -592,7 +591,7 @@ module viscous_five_equation_model_module
             grad_alpha => surface_tension_variables(2:4)                    &
         )
             dst_surface_tension_variables(1) = surface_tension_variables(1)
-            if((machine_epsilon < mag) .and. (machine_epsilon < alpha) .and. (alpha < 1.d0 - machine_epsilon))then
+            if(machine_epsilon < mag)then
                 ! Towerd a heavest fluid direction.
                 dst_surface_tension_variables(2:4) = grad_alpha / mag
             else
@@ -611,11 +610,7 @@ module viscous_five_equation_model_module
         real(real_kind), parameter :: smoothing_power = 2.d0 ! range is {@code smoothing_power} > 0.
 
         associate(alpha => neighbor_variables(5))
-            if((interface_threshold_ < alpha) .and. (alpha < 1.d0 - interface_threshold_))then
-                weight = (alpha * (1.d0 - alpha))**smoothing_power
-            else
-                weight = 0.d0
-            end if
+            weight = (alpha * (1.d0 - alpha))**smoothing_power
         end associate
     end function curvature_smoothing_weight
 
@@ -632,7 +627,7 @@ module viscous_five_equation_model_module
             kappa => surface_tension_variables(5)  &
         )
             if((interface_threshold_ < z) .and. (z < 1.d0 - interface_threshold_))then
-                dst_primitives(8) = -kappa!max(min(-kappa, carvature_limit_), -carvature_limit_)
+                dst_primitives(8) = -kappa
             else
                 dst_primitives(8) = 0.d0
             endif
