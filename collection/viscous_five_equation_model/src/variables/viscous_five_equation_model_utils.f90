@@ -70,16 +70,17 @@ module viscous_five_equation_model_utils_module
                 v       => primitive_variables(4), &
                 w       => primitive_variables(5), &
                 p       => primitive_variables(6), &
-                z1      => primitive_variables(7)  &
+                alpha   => primitive_variables(7)  &
             )
             rho = rho1a1 + rho2a2
+
             conservative_variables(1) = rho1a1
             conservative_variables(2) = rho2a2
             conservative_variables(3) = u  * rho
             conservative_variables(4) = v  * rho
             conservative_variables(5) = w  * rho
-            conservative_variables(6) = an_eos%compute_internal_energy_density(p, rho, z1) + 0.5d0 * (u**2.d0 + v**2.d0 + w**2.d0) * rho
-            conservative_variables(7) = z1
+            conservative_variables(6) = an_eos%compute_internal_energy_density(p, rho, alpha) + 0.5d0 * (u**2.d0 + v**2.d0 + w**2.d0) * rho
+            conservative_variables(7) = alpha
         end associate
     end function primitive_to_conservative
 
@@ -89,28 +90,45 @@ module viscous_five_equation_model_utils_module
         integer(int_kind ), intent(in)  :: num_primitives
         real   (real_kind)              :: primitive_variables   (num_primitives)
 
-        real(real_kind) :: rho, ie
+        real(real_kind) :: rho, ie, mod_rho1a1, mod_rho2a2, mod_alpha
 
         associate(                                    &
-                rho1_z1 => conservative_variables(1), &
-                rho2_z2 => conservative_variables(2), &
+                rho1a1  => conservative_variables(1), &
+                rho2a2  => conservative_variables(2), &
                 rho_u   => conservative_variables(3), &
                 rho_v   => conservative_variables(4), &
                 rho_w   => conservative_variables(5), &
                 e       => conservative_variables(6), &
-                z1      => conservative_variables(7)  &
+                alpha   => conservative_variables(7)  &
             )
-            rho = rho1_z1 + rho2_z2
+            if(alpha < machine_epsilon)then
+                mod_alpha  = 0.d0
+                mod_rho1a1 = 0.d0
+                mod_rho2a2 = rho2a2
+            else if(alpha > 1.d0 - machine_epsilon)then
+                mod_alpha  = 1.d0
+                mod_rho1a1 = rho1a1
+                mod_rho2a2 = 0.d0
+            else
+                mod_alpha  = alpha
+                mod_rho1a1 = rho1a1
+                mod_rho2a2 = rho2a2
+            end if
 
-            primitive_variables(1) = rho1_z1
-            primitive_variables(2) = rho2_z2
-            primitive_variables(7) = z1
-
+            rho = mod_rho1a1 + mod_rho2a2
             ie  = e / rho - 0.5d0 * (rho_u**2.d0 + rho_v**2.d0 + rho_w**2.d0) / rho**2.d0
-            primitive_variables(3) = rho_u / rho
-            primitive_variables(4) = rho_v / rho
-            primitive_variables(5) = rho_w / rho
-            primitive_variables(6) = an_eos%compute_pressure(ie, rho, primitive_variables(7))
+
+            primitive_variables(1) = mod_rho1a1
+            primitive_variables(2) = mod_rho2a2
+            if(rho < machine_epsilon)then
+                primitive_variables(3:6) = 0.d0
+            else
+                primitive_variables(3) = rho_u / rho
+                primitive_variables(4) = rho_v / rho
+                primitive_variables(5) = rho_w / rho
+                primitive_variables(6) = an_eos%compute_pressure(ie, rho, mod_alpha)
+            end if
+            primitive_variables(7) = mod_alpha
         end associate
     end function conservative_to_primitive
 
