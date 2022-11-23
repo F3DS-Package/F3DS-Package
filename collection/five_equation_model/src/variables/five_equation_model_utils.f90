@@ -33,20 +33,20 @@ module five_equation_model_utils_module
 
         do cell_index = 1, a_cellsystem%get_number_of_cells(), 1
             associate(                                          &
-                rho1a1 => primitive_variables_set(1, cell_index), &
-                rho2a2 => primitive_variables_set(2, cell_index), &
-                z      => primitive_variables_set(7, cell_index)  &
+                rho1 => primitive_variables_set(1, cell_index), &
+                rho2 => primitive_variables_set(2, cell_index), &
+                z    => primitive_variables_set(7, cell_index)  &
             )
-                density(cell_index) = rho1a1 + rho2a2
+                density(cell_index) = z * rho1 + (1.d0 - z) * rho2
             end associate
         end do
 
-        call a_cellsystem%write_scolar(a_result_writer, "Density"           , density                        )
-        call a_cellsystem%write_scolar(a_result_writer, "Smoothed Density 1", primitive_variables_set(1  , :))
-        call a_cellsystem%write_scolar(a_result_writer, "Smoothed Density 2", primitive_variables_set(2  , :))
-        call a_cellsystem%write_vector(a_result_writer, "Velocity"          , primitive_variables_set(3:5, :))
-        call a_cellsystem%write_scolar(a_result_writer, "Pressure"          , primitive_variables_set(6  , :))
-        call a_cellsystem%write_scolar(a_result_writer, "Volume fraction"   , primitive_variables_set(7  , :))
+        call a_cellsystem%write_scolar(a_result_writer, "Density"        , density                        )
+        call a_cellsystem%write_scolar(a_result_writer, "Density 1"      , primitive_variables_set(1  , :))
+        call a_cellsystem%write_scolar(a_result_writer, "Density 2"      , primitive_variables_set(2  , :))
+        call a_cellsystem%write_vector(a_result_writer, "Velocity"       , primitive_variables_set(3:5, :))
+        call a_cellsystem%write_scolar(a_result_writer, "Pressure"       , primitive_variables_set(6  , :))
+        call a_cellsystem%write_scolar(a_result_writer, "Volume fraction", primitive_variables_set(7  , :))
         call a_cellsystem%close_file  (a_result_writer)
     end subroutine write_result
 
@@ -59,17 +59,17 @@ module five_equation_model_utils_module
         real(8) :: rho
 
         associate(                                 &
-                rho1a1  => primitive_variables(1), &
-                rho2a2  => primitive_variables(2), &
+                rho1    => primitive_variables(1), &
+                rho2    => primitive_variables(2), &
                 u       => primitive_variables(3), &
                 v       => primitive_variables(4), &
                 w       => primitive_variables(5), &
                 p       => primitive_variables(6), &
                 z1      => primitive_variables(7)  &
             )
-            rho = rho1a1 + rho2a2
-            conservative_variables(1) = rho1a1
-            conservative_variables(2) = rho2a2
+            rho = rho1 * z1 + rho2 * (1.d0 - z1)
+            conservative_variables(1) = rho1 * z1
+            conservative_variables(2) = rho2 * (1.d0 - z1)
             conservative_variables(3) = u  * rho
             conservative_variables(4) = v  * rho
             conservative_variables(5) = w  * rho
@@ -84,6 +84,7 @@ module five_equation_model_utils_module
         integer(int_kind ), intent(in)  :: num_primitives
         real   (real_kind)              :: primitive_variables   (num_primitives)
 
+        real(real_kind), parameter :: volume_fraction_limmit = 1.0d-6
         real(real_kind) :: rho, ie
 
         associate(                                    &
@@ -96,16 +97,29 @@ module five_equation_model_utils_module
                 z1      => conservative_variables(7)  &
             )
             rho = rho1_z1 + rho2_z2
+            if(z1 < volume_fraction_limmit)then
+                primitive_variables(1) = 0.d0
+                primitive_variables(2) = rho2_z2
+                primitive_variables(7) = 0.d0
+            else if(z1 > 1.d0 - volume_fraction_limmit)then
+                primitive_variables(1) = rho1_z1
+                primitive_variables(2) = 0.d0
+                primitive_variables(7) = 1.d0
+            else
+                primitive_variables(1) = rho1_z1 / z1
+                primitive_variables(2) = rho2_z2 / (1.d0 - z1)
+                primitive_variables(7) = z1
+            end if
 
-            primitive_variables(1) = rho1_z1
-            primitive_variables(2) = rho2_z2
-            primitive_variables(7) = z1
-
-            ie  = e / rho - 0.5d0 * (rho_u**2.d0 + rho_v**2.d0 + rho_w**2.d0) / rho**2.d0
-            primitive_variables(3) = rho_u / rho
-            primitive_variables(4) = rho_v / rho
-            primitive_variables(5) = rho_w / rho
-            primitive_variables(6) = an_eos%compute_pressure(ie, rho, primitive_variables(7))
+            if(rho < machine_epsilon)then
+                primitive_variables(3:6) = 0.d0
+            else
+                ie  = e / rho - 0.5d0 * (rho_u**2.d0 + rho_v**2.d0 + rho_w**2.d0) / rho**2.d0
+                primitive_variables(3) = rho_u / rho
+                primitive_variables(4) = rho_v / rho
+                primitive_variables(5) = rho_w / rho
+                primitive_variables(6) = an_eos%compute_pressure(ie, rho, primitive_variables(7))
+            endif
         end associate
     end function conservative_to_primitive
 

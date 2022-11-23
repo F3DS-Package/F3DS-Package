@@ -65,7 +65,6 @@ module class_rho_thinc
         integer(int_kind )              :: lhc_index, rhc_index, llhc_index, rrhc_index
 
         real   (real_kind)              :: lhc_interface_location, lhc_sign, lhc_a, lhc_b, lhc_d, lhc_e
-        real   (real_kind)              :: lhc_rho1, lhc_rho2, lhc_alpha1
         logical                         :: lhc_is_monotonicity
 
         llhc_index = face_to_cell_index(num_local_cells-1, face_index)
@@ -86,9 +85,9 @@ module class_rho_thinc
         lhc_sign  = sign(1.d0, primitive_variables_set(7, rhc_index) - primitive_variables_set(7, llhc_index))
         lhc_is_monotonicity = (primitive_variables_set(7, rhc_index) - primitive_variables_set(7, lhc_index)) * (primitive_variables_set(7, lhc_index) - primitive_variables_set(7,llhc_index)) > 0.d0
         associate(                                          &
-            lhc_rho1a1 => primitive_variables_set(1, lhc_index), &
-            lhc_rho2a2 => primitive_variables_set(2, lhc_index), &
-            lhc_z1     => primitive_variables_set(7, lhc_index)  &
+            lhc_rho1 => primitive_variables_set(1, lhc_index), &
+            lhc_rho2 => primitive_variables_set(2, lhc_index), &
+            lhc_z1   => primitive_variables_set(7, lhc_index)  &
         )
             if (lhc_z1 < self%epsilon_) then
                 reconstructed_primitive_variables(7) = 0.d0
@@ -100,15 +99,11 @@ module class_rho_thinc
                 lhc_interface_location = 1.d0 / (2.d0 * self%specified_slope_parameter_) * log((lhc_b - 1.d0) / (lhc_a - lhc_b))
                 lhc_d = exp(2.d0 * self%specified_slope_parameter_ * lhc_interface_location)
                 lhc_e = log((lhc_a * lhc_d + 1.d0)**2.d0 / (lhc_a * (lhc_d + 1.d0)**2.d0))
-                lhc_rho1 = (4.d0 * lhc_sign * self%specified_slope_parameter_ * lhc_rho1a1) &
-                         /  (lhc_e + 2.d0 * lhc_sign * self%specified_slope_parameter_)
-                lhc_rho2 = -(4.d0 * lhc_sign * self%specified_slope_parameter_ * lhc_rho2a2) &
-                         /  (lhc_e - 2.d0 * lhc_sign * self%specified_slope_parameter_)
-                lhc_alpha1 = 0.5d0 * (1.d0 + tanh(self%specified_slope_parameter_ * (lhc_sign + lhc_interface_location)))
-
-                reconstructed_primitive_variables(1) = lhc_rho1 * lhc_alpha1
-                reconstructed_primitive_variables(2) = lhc_rho2 * (1.d0 - lhc_alpha1)
-                reconstructed_primitive_variables(7) = lhc_alpha1
+                reconstructed_primitive_variables(1) =  (4.d0 * lhc_sign * self%specified_slope_parameter_ * lhc_rho1 * lhc_z1) &
+                                                     /  (lhc_e + 2.d0 * lhc_sign * self%specified_slope_parameter_)
+                reconstructed_primitive_variables(2) = -(4.d0 * lhc_sign * self%specified_slope_parameter_ * lhc_rho2 * (1.d0 - lhc_z1)) &
+                                                     /  (lhc_e - 2.d0 * lhc_sign * self%specified_slope_parameter_)
+                reconstructed_primitive_variables(7) = 0.5d0 * (1.d0 + tanh(self%specified_slope_parameter_ * (lhc_sign + lhc_interface_location)))
             end if
         end associate
     end function reconstruct_lhc
@@ -135,7 +130,6 @@ module class_rho_thinc
 
         integer(int_kind )              :: lhc_index, rhc_index, llhc_index, rrhc_index
         real   (real_kind)              :: rhc_interface_location, rhc_sign, rhc_a, rhc_b, rhc_d, rhc_e
-        real   (real_kind)              :: rhc_rho1, rhc_rho2, rhc_alpha1
         logical                         :: rhc_is_monotonicity
 
         llhc_index = face_to_cell_index(num_local_cells-1, face_index)
@@ -156,9 +150,9 @@ module class_rho_thinc
         rhc_sign  = sign(1.d0, primitive_variables_set(7, rrhc_index) - primitive_variables_set(7, lhc_index))
         rhc_is_monotonicity = (primitive_variables_set(7, rrhc_index) - primitive_variables_set(7, rhc_index)) * (primitive_variables_set(7, rhc_index) - primitive_variables_set(7, lhc_index)) > 0.d0
         associate(                                          &
-            rhc_rho1a1 => primitive_variables_set(1, rhc_index), &
-            rhc_rho2a2 => primitive_variables_set(2, rhc_index), &
-            rhc_z1     => primitive_variables_set(7, rhc_index)  &
+            rhc_rho1 => primitive_variables_set(1, rhc_index), &
+            rhc_rho2 => primitive_variables_set(2, rhc_index), &
+            rhc_z1   => primitive_variables_set(7, rhc_index)  &
         )
             if (rhc_z1 < self%epsilon_) then
                 reconstructed_primitive_variables(7) = 0.d0
@@ -170,15 +164,11 @@ module class_rho_thinc
                 rhc_interface_location = 1.d0 / (2.d0 * self%specified_slope_parameter_) * log((rhc_b - 1.d0) / (rhc_a - rhc_b))
                 rhc_d = exp(2.d0 * self%specified_slope_parameter_ * rhc_interface_location)
                 rhc_e = log((rhc_a * rhc_d + 1.d0)**2.d0 / (rhc_a * (rhc_d + 1.d0)**2.d0))
-                rhc_rho1 =  (4.d0 * rhc_sign * self%specified_slope_parameter_ * rhc_rho1a1) &
-                         /  (rhc_e + 2.d0 * rhc_sign * self%specified_slope_parameter_)
-                rhc_rho2 = -(4.d0 * rhc_sign * self%specified_slope_parameter_ * rhc_rho2a2) &
-                         /  (rhc_e - 2.d0 * rhc_sign * self%specified_slope_parameter_)
-                rhc_alpha1 = 0.5d0 * (1.d0 + tanh(self%specified_slope_parameter_ * rhc_interface_location))
-
-                reconstructed_primitive_variables(1) = rhc_rho1 * rhc_alpha1
-                reconstructed_primitive_variables(2) = rhc_rho2 * (1.d0 - rhc_alpha1)
-                reconstructed_primitive_variables(7) = rhc_alpha1
+                reconstructed_primitive_variables(1) =  (4.d0 * rhc_sign * self%specified_slope_parameter_ * rhc_rho1 * rhc_z1) &
+                                                     /  (rhc_e + 2.d0 * rhc_sign * self%specified_slope_parameter_)
+                reconstructed_primitive_variables(2) = -(4.d0 * rhc_sign * self%specified_slope_parameter_ * rhc_rho2 * (1.d0 - rhc_z1)) &
+                                                     /  (rhc_e - 2.d0 * rhc_sign * self%specified_slope_parameter_)
+                reconstructed_primitive_variables(7) = 0.5d0 * (1.d0 + tanh(self%specified_slope_parameter_ * rhc_interface_location))
             end if
         end associate
     end function reconstruct_rhc
