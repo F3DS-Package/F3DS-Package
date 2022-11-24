@@ -100,11 +100,36 @@ module viscous_five_equation_model_module
         end associate
     end function
 
-    function get_heavest_volume_fraction(alpha1) result(alpha_heavy)
+    pure function get_heavest_volume_fraction(alpha1) result(alpha_heavy)
         real   (real_kind), intent(in) :: alpha1
         real   (real_kind)             :: alpha_heavy
         alpha_heavy = 0.5d0 * (1.d0 + sign(1.d0, average_densities_(1) - average_densities_(2))) * alpha1 + 0.5d0 * (1.d0 + sign(1.d0, average_densities_(2) - average_densities_(1))) * (1.d0 - alpha1)
     end function get_heavest_volume_fraction
+
+    pure function fix_reconstructed_primitive_variables(reconstructed_primitive_variables) result(fixed_reconstructed_primitive_variables)
+        real   (real_kind), intent(in) :: reconstructed_primitive_variables(8)
+        real   (real_kind)             :: fixed_reconstructed_primitive_variables(8)
+
+        associate(                                         &
+            rho1  => reconstructed_primitive_variables(1), &
+            rho2  => reconstructed_primitive_variables(2), &
+            u     => reconstructed_primitive_variables(3), &
+            v     => reconstructed_primitive_variables(4), &
+            w     => reconstructed_primitive_variables(5), &
+            p     => reconstructed_primitive_variables(6), &
+            alpha => reconstructed_primitive_variables(7), &
+            kappa => reconstructed_primitive_variables(8)  &
+        )
+            fixed_reconstructed_primitive_variables(1) = max(rho1, 0.d0)
+            fixed_reconstructed_primitive_variables(2) = max(rho2, 0.d0)
+            fixed_reconstructed_primitive_variables(3) = u
+            fixed_reconstructed_primitive_variables(4) = v
+            fixed_reconstructed_primitive_variables(5) = w
+            fixed_reconstructed_primitive_variables(6) = max(p, 0.d0)
+            fixed_reconstructed_primitive_variables(7) = max(0.d0, min(alpha, 1.d0))
+            fixed_reconstructed_primitive_variables(8) = kappa
+        end associate
+    end function fix_reconstructed_primitive_variables
 
     subroutine initialize_model(a_configuration, primitive_variables_set, num_cells)
         class  (configuration), intent(inout) :: a_configuration
@@ -267,16 +292,16 @@ module viscous_five_equation_model_module
 
         ! # compute primitive-variables of face local coordinate
         ! ## left-side
-        local_coordinate_primitives_lhc(:) = rotate_primitive( &
-            reconstructed_primitive_variables_lhc           , &
+        local_coordinate_primitives_lhc(:) = rotate_primitive(                            &
+            fix_reconstructed_primitive_variables(reconstructed_primitive_variables_lhc), &
             face_normal_vector                              , &
             face_tangential1_vector                         , &
             face_tangential2_vector                         , &
             num_primitive_values                              &
         )
         ! ## right-side
-        local_coordinate_primitives_rhc(:) = rotate_primitive( &
-            reconstructed_primitive_variables_rhc           , &
+        local_coordinate_primitives_rhc(:) = rotate_primitive(                            &
+            fix_reconstructed_primitive_variables(reconstructed_primitive_variables_rhc), &
             face_normal_vector                              , &
             face_tangential1_vector                         , &
             face_tangential2_vector                         , &

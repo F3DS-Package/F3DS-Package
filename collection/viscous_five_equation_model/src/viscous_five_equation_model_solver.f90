@@ -13,7 +13,7 @@ program viscous_five_equation_model_solver
     ! Face interpolation
     use class_midpoint_interpolator
     ! Face gradient
-    use class_corrected_midpoint_face_gradient_interpolator
+    use class_midpoint_face_gradient_interpolator
     ! Time stepping
     use abstract_time_stepping
     use time_stepping_generator_module
@@ -105,7 +105,7 @@ program viscous_five_equation_model_solver
     type(hllc                                         ) :: a_riemann_solver
     type(green_gauss                                  ) :: a_gradient_calculator
     type(midpoint_interpolator                        ) :: a_interpolator
-    type(corrected_midpoint_face_gradient_interpolator) :: a_face_gradient_interpolator
+    type(midpoint_face_gradient_interpolator          ) :: a_face_gradient_interpolator
     type(vtk_result_writer                            ) :: a_result_writer
     type(end_time_criterion                           ) :: a_termination_criterion
     type(openmp_parallelizer                          ) :: a_parallelizer
