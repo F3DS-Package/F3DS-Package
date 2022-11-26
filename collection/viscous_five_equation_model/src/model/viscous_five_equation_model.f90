@@ -125,7 +125,7 @@ module viscous_five_equation_model_module
             fixed_reconstructed_primitive_variables(3) = u
             fixed_reconstructed_primitive_variables(4) = v
             fixed_reconstructed_primitive_variables(5) = w
-            fixed_reconstructed_primitive_variables(6) = max(p, 0.d0)
+            fixed_reconstructed_primitive_variables(6) = p
             fixed_reconstructed_primitive_variables(7) = max(0.d0, min(alpha, 1.d0))
             fixed_reconstructed_primitive_variables(8) = kappa
         end associate

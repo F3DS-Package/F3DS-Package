@@ -44,6 +44,29 @@ module five_equation_model_module
         end associate
     end function
 
+    pure function fix_reconstructed_primitive_variables(reconstructed_primitive_variables) result(fixed_reconstructed_primitive_variables)
+        real   (real_kind), intent(in) :: reconstructed_primitive_variables(7)
+        real   (real_kind)             :: fixed_reconstructed_primitive_variables(7)
+
+        associate(                                         &
+            rho1  => reconstructed_primitive_variables(1), &
+            rho2  => reconstructed_primitive_variables(2), &
+            u     => reconstructed_primitive_variables(3), &
+            v     => reconstructed_primitive_variables(4), &
+            w     => reconstructed_primitive_variables(5), &
+            p     => reconstructed_primitive_variables(6), &
+            alpha => reconstructed_primitive_variables(7)  &
+        )
+            fixed_reconstructed_primitive_variables(1) = max(rho1, 0.d0)
+            fixed_reconstructed_primitive_variables(2) = max(rho2, 0.d0)
+            fixed_reconstructed_primitive_variables(3) = u
+            fixed_reconstructed_primitive_variables(4) = v
+            fixed_reconstructed_primitive_variables(5) = w
+            fixed_reconstructed_primitive_variables(6) = p
+            fixed_reconstructed_primitive_variables(7) = max(0.d0, min(alpha, 1.d0))
+        end associate
+    end function fix_reconstructed_primitive_variables
+
 
     pure function compute_residual_element(       &
         an_eos                                  , &
@@ -101,20 +124,20 @@ module five_equation_model_module
 
         ! # compute primitive-variables of face local coordinate
         ! ## left-side
-        local_coordinate_primitives_lhc(:) = rotate_primitive( &
-            reconstructed_primitive_variables_lhc           , &
-            face_normal_vector                              , &
-            face_tangential1_vector                         , &
-            face_tangential2_vector                         , &
-            num_primitive_values                              &
+        local_coordinate_primitives_lhc(:) = rotate_primitive(                            &
+            fix_reconstructed_primitive_variables(reconstructed_primitive_variables_lhc), &
+            face_normal_vector                                                          , &
+            face_tangential1_vector                                                     , &
+            face_tangential2_vector                                                     , &
+            num_primitive_values                                                          &
         )
         ! ## right-side
-        local_coordinate_primitives_rhc(:) = rotate_primitive( &
-            reconstructed_primitive_variables_rhc           , &
-            face_normal_vector                              , &
-            face_tangential1_vector                         , &
-            face_tangential2_vector                         , &
-            num_primitive_values                              &
+        local_coordinate_primitives_rhc(:) = rotate_primitive(                            &
+            fix_reconstructed_primitive_variables(reconstructed_primitive_variables_rhc), &
+            face_normal_vector                                                          , &
+            face_tangential1_vector                                                     , &
+            face_tangential2_vector                                                     , &
+            num_primitive_values                                                          &
         )
 
         ! # compute conservative-variables
