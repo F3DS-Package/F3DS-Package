@@ -353,7 +353,7 @@ module class_nlgrid_parser
                         centor_positions(1, n) = self%x_poss_cell_cent(self%imin, j, k) + 2.d0 * dble(i) * cell_to_face_vec(1)
                         centor_positions(2, n) = self%y_poss_cell_cent(self%imin, j, k) + 2.d0 * dble(i) * cell_to_face_vec(2)
                         centor_positions(3, n) = self%z_poss_cell_cent(self%imin, j, k) + 2.d0 * dble(i) * cell_to_face_vec(3)
-                        volumes         (n) = self%cell_vols(self%imin, j, k)
+                        volumes            (n) = self%cell_vols(self%imin, j, k)
                     else if(i > self%imax)then
                         cell_to_face_vec(1) = 0.5d0 * (self%x_poss_cell_cent(self%imax, j  , k  ) &
                                                      + self%x_poss_cell_cent(self%imax, j-1, k  ) &
@@ -373,7 +373,7 @@ module class_nlgrid_parser
                         centor_positions(1, n) = self%x_poss_cell_cent(self%imax, j, k) + 2.d0 * dble(i) * cell_to_face_vec(1)
                         centor_positions(2, n) = self%y_poss_cell_cent(self%imax, j, k) + 2.d0 * dble(i) * cell_to_face_vec(2)
                         centor_positions(3, n) = self%z_poss_cell_cent(self%imax, j, k) + 2.d0 * dble(i) * cell_to_face_vec(3)
-                        volumes         (n) = self%cell_vols(self%imax, j, k)
+                        volumes            (n) = self%cell_vols(self%imax, j, k)
                     else if(j < self%jmin)then
                         cell_to_face_vec(1) = 0.5d0 * (self%x_poss_cell_cent(i  , self%jmin-1, k  ) &
                                                      + self%x_poss_cell_cent(i-1, self%jmin-1, k  ) &
@@ -393,7 +393,7 @@ module class_nlgrid_parser
                         centor_positions(1, n) = self%x_poss_cell_cent(i, self%jmin, k) + 2.d0 * dble(j) * cell_to_face_vec(1)
                         centor_positions(2, n) = self%y_poss_cell_cent(i, self%jmin, k) + 2.d0 * dble(j) * cell_to_face_vec(2)
                         centor_positions(3, n) = self%z_poss_cell_cent(i, self%jmin, k) + 2.d0 * dble(j) * cell_to_face_vec(3)
-                        volumes         (n)    = self%cell_vols(i, self%jmin, k)
+                        volumes            (n) = self%cell_vols(i, self%jmin, k)
                     else if(j > self%jmax)then
                         cell_to_face_vec(1) = 0.5d0 * (self%x_poss_cell_cent(i  , self%jmax, k  ) &
                                                      + self%x_poss_cell_cent(i-1, self%jmax, k  ) &
@@ -413,13 +413,13 @@ module class_nlgrid_parser
                         centor_positions(1, n) = self%x_poss_cell_cent(i, self%jmax, k) + 2.d0 * dble(j) * cell_to_face_vec(1)
                         centor_positions(2, n) = self%y_poss_cell_cent(i, self%jmax, k) + 2.d0 * dble(j) * cell_to_face_vec(2)
                         centor_positions(3, n) = self%z_poss_cell_cent(i, self%jmax, k) + 2.d0 * dble(j) * cell_to_face_vec(3)
-                        volumes         (n)    = self%cell_vols(i, self%jmax, k)
+                        volumes            (n) = self%cell_vols(i, self%jmax, k)
                     else if(k < self%kmin)then
                         cell_to_face_vec(1) = 0.5d0 * (self%x_poss_cell_cent(i  , j  , self%kmin-1) &
-                                                 + self%x_poss_cell_cent(i-1, j  , self%kmin-1) &
-                                                 + self%x_poss_cell_cent(i  , j-1, self%kmin-1) &
-                                                 + self%x_poss_cell_cent(i-1, j-1, self%kmin-1))&
-                                        - self%x_poss_cell_cent(self%kmin, j, k)
+                                                     + self%x_poss_cell_cent(i-1, j  , self%kmin-1) &
+                                                     + self%x_poss_cell_cent(i  , j-1, self%kmin-1) &
+                                                     + self%x_poss_cell_cent(i-1, j-1, self%kmin-1))&
+                                            - self%x_poss_cell_cent(self%kmin, j, k)
                         cell_to_face_vec(2) = 0.5d0 * (self%y_poss_cell_cent(i  , j  , self%kmin-1) &
                                                      + self%y_poss_cell_cent(i-1, j  , self%kmin-1) &
                                                      + self%y_poss_cell_cent(i  , j-1, self%kmin-1) &
@@ -433,13 +433,13 @@ module class_nlgrid_parser
                         centor_positions(1, n) = self%x_poss_cell_cent(i, j, self%kmin) + 2.d0 * dble(k) * cell_to_face_vec(1)
                         centor_positions(2, n) = self%y_poss_cell_cent(i, j, self%kmin) + 2.d0 * dble(k) * cell_to_face_vec(2)
                         centor_positions(3, n) = self%z_poss_cell_cent(i, j, self%kmin) + 2.d0 * dble(k) * cell_to_face_vec(3)
-                        volumes         (n)    = self%cell_vols(i, j, self%kmin)
+                        volumes            (n) = self%cell_vols(i, j, self%kmin)
                     else if(k > self%kmax)then
                         cell_to_face_vec(1) = 0.5d0 * (self%x_poss_cell_cent(i  , j  , self%kmax) &
-                                                 + self%x_poss_cell_cent(i-1, j  , self%kmax) &
-                                                 + self%x_poss_cell_cent(i  , j-1, self%kmax) &
-                                                 + self%x_poss_cell_cent(i-1, j-1, self%kmax))&
-                                        - self%x_poss_cell_cent(self%kmax, j, k)
+                                                     + self%x_poss_cell_cent(i-1, j  , self%kmax) &
+                                                     + self%x_poss_cell_cent(i  , j-1, self%kmax) &
+                                                     + self%x_poss_cell_cent(i-1, j-1, self%kmax))&
+                                            - self%x_poss_cell_cent(self%kmax, j, k)
                         cell_to_face_vec(2) = 0.5d0 * (self%y_poss_cell_cent(i  , j  , self%kmax) &
                                                      + self%y_poss_cell_cent(i-1, j  , self%kmax) &
                                                      + self%y_poss_cell_cent(i  , j-1, self%kmax) &
@@ -453,13 +453,13 @@ module class_nlgrid_parser
                         centor_positions(1, n) = self%x_poss_cell_cent(i, j, self%kmax) + 2.d0 * dble(j) * cell_to_face_vec(1)
                         centor_positions(2, n) = self%y_poss_cell_cent(i, j, self%kmax) + 2.d0 * dble(j) * cell_to_face_vec(2)
                         centor_positions(3, n) = self%z_poss_cell_cent(i, j, self%kmax) + 2.d0 * dble(j) * cell_to_face_vec(3)
-                        volumes         (n)    = self%cell_vols(i, j, self%kmax)
+                        volumes            (n) = self%cell_vols(i, j, self%kmax)
                     else
                         centor_positions(1, n) = self%x_poss_cell_cent(i, j, k)
                         centor_positions(2, n) = self%y_poss_cell_cent(i, j, k)
                         centor_positions(3, n) = self%z_poss_cell_cent(i, j, k)
-                        volumes         (n)    = self%cell_vols       (i, j, k)
-                        is_real_cell    (n)    = .true.
+                        volumes            (n) = self%cell_vols       (i, j, k)
+                        is_real_cell       (n) = .true.
                     end if
                 end do
             end do
