@@ -39,8 +39,8 @@ module five_equation_model_boundary_condition_module
         real   (real_kind), intent(in) :: inner_primitive_variables(:)
         integer(int_kind ), intent(in) :: num_primitive_variables
         real   (real_kind)             :: ghost_primitive_variables(num_primitive_variables)
-        ghost_primitive_variables(1:2) =         inner_primitive_variables(1:2)
-        ghost_primitive_variables(3  ) = -1.d0 * inner_primitive_variables(3)
-        ghost_primitive_variables(4:7) =         inner_primitive_variables(4:7)
+        ghost_primitive_variables(1:2) = inner_primitive_variables(1:2)
+        ghost_primitive_variables(3  ) = inner_primitive_variables(3)
+        ghost_primitive_variables(4:7) = inner_primitive_variables(4:7)
     end function empty_bc
 end module five_equation_model_boundary_condition_module

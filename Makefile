@@ -1,4 +1,3 @@
-# Fortran Finite-volume Fluid Dynamics Solver (F3DS) Flamework & Collection
 
 # User inputs
 COMPILER = gfortran
@@ -8,7 +7,7 @@ DEBUG    = no
 GNU_RELEAS_FLAGS =-O3 -march=native -ffree-line-length-none -cpp -fopenmp
 GNU_DEBUG_FLAGS  =-O0 -g -pg -ffree-line-length-none -cpp -Wall -Wextra -Warray-temporaries -Wconversion -fimplicit-none -fbacktrace -fcheck=all -ffpe-trap=invalid,zero,overflow -finit-real=nan -D_DEBUG
 
-INTEL_RELEAS_FLAGS =-fast -fpp -std03 -O3 -ipo -inline all -ipo-jobs4 -vec-report1 -qopenmp
+INTEL_RELEAS_FLAGS =-fast -fpp -std03 -O3 -ipo -inline all -ipo-jobs4 -qopenmp -static
 INTEL_DEBUG_FLAGS  =-g -std03  -check all -fpe0 -warn -traceback -debug extended -fpp -D_DEBUG
 
 OBJDIR=objs

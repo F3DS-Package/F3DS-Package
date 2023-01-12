@@ -554,31 +554,27 @@ module class_cellsystem
             end function boundary_condition_function
         end interface
 
-        integer :: i, face_index, thread_number, local_index
+        integer :: i, face_index
 
 #ifdef _DEBUG
         call write_debuginfo("In apply_outflow_condition(), cellsystem.")
 #endif
 
-!$omp parallel do private(i, face_index, thread_number, local_index)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_boundary_face_indexes(1, thread_number, outflow_face_type), 1
-                i = a_parallelizer%get_boundary_face_index(1, thread_number, local_index, outflow_face_type)
-
-                face_index = self%outflow_face_indexes(i)
-                call apply_boundary_condition_common_impl(          &
-                    primitive_variables_set                       , &
-                    self%face_normal_vectors     (:,face_index)   , &
-                    self%face_tangential1_vectors(:,face_index)   , &
-                    self%face_tangential2_vectors(:,face_index)   , &
-                    self%face_to_cell_indexes    (:,face_index)   , &
-                    self%num_local_cells                          , &
-                    num_primitive_variables                       , &
-                    compute_rotate_primitive_variables_function   , &
-                    compute_unrotate_primitive_variables_function , &
-                    boundary_condition_function                     &
-                )
-            end do
+!$omp parallel do private(i, face_index)
+        do i = 1, self%num_outflow_faces, 1
+            face_index = self%outflow_face_indexes(i)
+            call apply_boundary_condition_common_impl(          &
+                primitive_variables_set                       , &
+                self%face_normal_vectors     (:,face_index)   , &
+                self%face_tangential1_vectors(:,face_index)   , &
+                self%face_tangential2_vectors(:,face_index)   , &
+                self%face_to_cell_indexes    (:,face_index)   , &
+                self%num_local_cells                          , &
+                num_primitive_variables                       , &
+                compute_rotate_primitive_variables_function   , &
+                compute_unrotate_primitive_variables_function , &
+                boundary_condition_function                     &
+            )
         end do
     end subroutine apply_outflow_condition
 
@@ -630,31 +626,27 @@ module class_cellsystem
             end function boundary_condition_function
         end interface
 
-        integer :: i, face_index, thread_number, local_index
+        integer :: i, face_index
 
 #ifdef _DEBUG
         call write_debuginfo("In apply_nonslip_wall_condition(), cellsystem.")
 #endif
 
-!$omp parallel do private(i, face_index, thread_number, local_index)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_boundary_face_indexes(1, thread_number, nonslip_wall_face_type), 1
-                i = a_parallelizer%get_boundary_face_index(1, thread_number, local_index, nonslip_wall_face_type)
-
-                face_index = self%nonslip_wall_face_indexes(i)
-                call apply_boundary_condition_common_impl(         &
-                    primitive_variables_set                      , &
-                    self%face_normal_vectors     (:,face_index)  , &
-                    self%face_tangential1_vectors(:,face_index)  , &
-                    self%face_tangential2_vectors(:,face_index)  , &
-                    self%face_to_cell_indexes    (:,face_index)  , &
-                    self%num_local_cells                         , &
-                    num_primitive_variables                      , &
-                    compute_rotate_primitive_variables_function  , &
-                    compute_unrotate_primitive_variables_function, &
-                    boundary_condition_function                    &
-                )
-            end do
+!$omp parallel do private(i, face_index)
+        do i = 1, self%num_nonslip_wall_faces, 1
+            face_index = self%nonslip_wall_face_indexes(i)
+            call apply_boundary_condition_common_impl(         &
+                primitive_variables_set                      , &
+                self%face_normal_vectors     (:,face_index)  , &
+                self%face_tangential1_vectors(:,face_index)  , &
+                self%face_tangential2_vectors(:,face_index)  , &
+                self%face_to_cell_indexes    (:,face_index)  , &
+                self%num_local_cells                         , &
+                num_primitive_variables                      , &
+                compute_rotate_primitive_variables_function  , &
+                compute_unrotate_primitive_variables_function, &
+                boundary_condition_function                    &
+            )
         end do
     end subroutine apply_nonslip_wall_condition
 
@@ -706,31 +698,27 @@ module class_cellsystem
             end function boundary_condition_function
         end interface
 
-        integer :: i, face_index, thread_number, local_index
+        integer :: i, face_index
 
 #ifdef _DEBUG
         call write_debuginfo("In apply_slip_and_symmetric_condition(), cellsystem.")
 #endif
 
-!$omp parallel do private(i, face_index, thread_number, local_index)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_boundary_face_indexes(1, thread_number, slip_and_symmetric_face_type), 1
-                i = a_parallelizer%get_boundary_face_index(1, thread_number, local_index, slip_and_symmetric_face_type)
-
-                face_index = self%slip_and_symmetric_face_indexes(i)
-                call apply_boundary_condition_common_impl(          &
-                    primitive_variables_set                       , &
-                    self%face_normal_vectors     (:,face_index)   , &
-                    self%face_tangential1_vectors(:,face_index)   , &
-                    self%face_tangential2_vectors(:,face_index)   , &
-                    self%face_to_cell_indexes    (:,face_index)   , &
-                    self%num_local_cells                          , &
-                    num_primitive_variables                       , &
-                    compute_rotate_primitive_variables_function   , &
-                    compute_unrotate_primitive_variables_function , &
-                    boundary_condition_function                     &
-                )
-            end do
+!$omp parallel do private(i, face_index)
+        do i = 1, self%num_slip_and_symmetric_faces, 1
+            face_index = self%slip_and_symmetric_face_indexes(i)
+            call apply_boundary_condition_common_impl(          &
+                primitive_variables_set                       , &
+                self%face_normal_vectors     (:,face_index)   , &
+                self%face_tangential1_vectors(:,face_index)   , &
+                self%face_tangential2_vectors(:,face_index)   , &
+                self%face_to_cell_indexes    (:,face_index)   , &
+                self%num_local_cells                          , &
+                num_primitive_variables                       , &
+                compute_rotate_primitive_variables_function   , &
+                compute_unrotate_primitive_variables_function , &
+                boundary_condition_function                     &
+            )
         end do
     end subroutine apply_slip_and_symmetric_condition
 
@@ -782,31 +770,27 @@ module class_cellsystem
             end function boundary_condition_function
         end interface
 
-        integer :: i, face_index, thread_number, local_index
+        integer :: i, face_index
 
 #ifdef _DEBUG
         call write_debuginfo("In apply_empty_condition(), cellsystem.")
 #endif
 
-!$omp parallel do private(i, face_index, thread_number, local_index)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_boundary_face_indexes(1, thread_number, empty_face_type), 1
-                i = a_parallelizer%get_boundary_face_index(1, thread_number, local_index, empty_face_type)
-
-                face_index = self%empty_face_indexes(i)
-                call apply_boundary_condition_empty_impl(           &
-                    primitive_variables_set                       , &
-                    self%face_normal_vectors     (:,face_index)   , &
-                    self%face_tangential1_vectors(:,face_index)   , &
-                    self%face_tangential2_vectors(:,face_index)   , &
-                    self%face_to_cell_indexes    (:,face_index)   , &
-                    self%num_local_cells                          , &
-                    num_primitive_variables                       , &
-                    compute_rotate_primitive_variables_function   , &
-                    compute_unrotate_primitive_variables_function , &
-                    boundary_condition_function                     &
-                )
-            end do
+!$omp parallel do private(i, face_index)
+        do i = 1, self%num_empty_faces, 1
+            face_index = self%empty_face_indexes(i)
+            call apply_boundary_condition_empty_impl(           &
+                primitive_variables_set                       , &
+                self%face_normal_vectors     (:,face_index)   , &
+                self%face_tangential1_vectors(:,face_index)   , &
+                self%face_tangential2_vectors(:,face_index)   , &
+                self%face_to_cell_indexes    (:,face_index)   , &
+                self%num_local_cells                          , &
+                num_primitive_variables                       , &
+                compute_rotate_primitive_variables_function   , &
+                compute_unrotate_primitive_variables_function , &
+                boundary_condition_function                     &
+            )
         end do
     end subroutine apply_empty_condition
 
@@ -887,18 +871,15 @@ module class_cellsystem
             end function conservative_to_primitive_function
         end interface
 
-        integer(int_kind) :: thread_number, local_index, i
+        integer(int_kind) :: i
 
 #ifdef _DEBUG
         call write_debuginfo("In conservative_to_primitive_variables_all(), cellsystem.")
 #endif
 
-!$omp parallel do private(thread_number, local_index, i)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_cell_indexes(1, thread_number), 1
-                i = a_parallelizer%get_cell_index(1, thread_number, local_index)
-                primitive_variables_set(:,i) = conservative_to_primitive_function(an_eos, conservative_variables_set(:,i), num_primitive_variables)
-            end do
+!$omp parallel do private(i)
+        do i = 1, self%num_cells, 1
+            primitive_variables_set(:,i) = conservative_to_primitive_function(an_eos, conservative_variables_set(:,i), num_primitive_variables)
         end do
     end subroutine conservative_to_primitive_variables_all
 
@@ -916,18 +897,15 @@ module class_cellsystem
             end function processing_function
         end interface
 
-        integer(int_kind) :: i, thread_number, local_index
+        integer(int_kind) :: i
 
 #ifdef _DEBUG
         call write_debuginfo("In processes_variables_set_single_array(), cellsystem.")
 #endif
 
-!$omp parallel do private(thread_number, local_index, i)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_cell_indexes(1, thread_number), 1
-                i = a_parallelizer%get_cell_index(1, thread_number, local_index)
-                variables_set(:,i) = processing_function(variables_set(:,i), num_variables)
-            end do
+!$omp parallel do private(i)
+        do i = 1, self%num_cells, 1
+            variables_set(:,i) = processing_function(variables_set(:,i), num_variables)
         end do
     end subroutine processes_variables_set_single_array
 
@@ -945,18 +923,15 @@ module class_cellsystem
             end function processing_function
         end interface
 
-        integer(int_kind) :: i, thread_number, local_index
+        integer(int_kind) :: i
 
 #ifdef _DEBUG
         call write_debuginfo("In processes_variables_set_two_array(), cellsystem.")
 #endif
 
-!$omp parallel do private(thread_number, local_index, i)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_cell_indexes(1, thread_number), 1
-                i = a_parallelizer%get_cell_index(1, thread_number, local_index)
-                primary_variables_set(:,i) = processing_function(primary_variables_set(:,i), secondary_variables_set(:,i), num_variables)
-            end do
+!$omp parallel do private(i)
+        do i = 1, self%num_cells, 1
+            primary_variables_set(:,i) = processing_function(primary_variables_set(:,i), secondary_variables_set(:,i), num_variables)
         end do
     end subroutine processes_variables_set_two_array
 
@@ -975,7 +950,7 @@ module class_cellsystem
             end function weight_function
         end interface
 
-        integer(int_kind ) :: i, thread_number, local_index, face_index, cell_index, rhc_index, lhc_index
+        integer(int_kind ) :: face_index, cell_index, rhc_index, lhc_index
         real   (real_kind) :: smoothed_variables_set(size(variables_set(:,1)), size(variables_set(1,:))), total_weight_set(size(variables_set(1,:)))
         real   (real_kind) :: lhc_w, rhc_w
 
@@ -983,53 +958,43 @@ module class_cellsystem
         call write_debuginfo("In smooth_variables(), cellsystem.")
 #endif
 
-!$omp parallel do private(thread_number, local_index, cell_index)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_cell_indexes(1, thread_number), 1
-                cell_index = a_parallelizer%get_cell_index(1, thread_number, local_index)
-                smoothed_variables_set(:,cell_index) = 0.d0
-                total_weight_set        (cell_index) = 0.d0
-            end do
+!$omp parallel do private(cell_index)
+        do cell_index = 1, self%num_cells, 1
+            smoothed_variables_set(:,cell_index) = 0.d0
+            total_weight_set        (cell_index) = 0.d0
         end do
 
-!$omp parallel do private(thread_number, local_index, face_index, rhc_index, lhc_index, lhc_w, rhc_w)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_face_indexes(1, thread_number), 1
-                face_index = a_parallelizer%get_face_index(1, thread_number, local_index)
+!$omp parallel do private(face_index, rhc_index, lhc_index, lhc_w, rhc_w)
+        do face_index = 1, self%num_faces, 1
+            lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
+            rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
 
-                lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
-                rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
-
-                associate(                           &
-                    x => self%cell_centor_positions, &
-                    v => variables_set               &
-                )
-                    lhc_w = weight_function(x(:,lhc_index), x(:,rhc_index), v(:,lhc_index), v(:,rhc_index))
-                    if(self%is_real_cell(rhc_index))then
-                        rhc_w = weight_function(x(:,rhc_index), x(:,lhc_index), v(:,rhc_index), v(:,lhc_index))
-                    else
-                        rhc_w = 0.d0
-                    endif
-
-                    smoothed_variables_set(:, lhc_index) = smoothed_variables_set(:, lhc_index) + lhc_w * v(:, lhc_index)
-                    smoothed_variables_set(:, rhc_index) = smoothed_variables_set(:, rhc_index) + rhc_w * v(:, rhc_index)
-
-                    total_weight_set(lhc_index) = total_weight_set(lhc_index) + lhc_w
-                    total_weight_set(rhc_index) = total_weight_set(rhc_index) + rhc_w
-                end associate
-            end do
-        end do
-
-!$omp parallel do private(thread_number, local_index, cell_index)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_cell_indexes(1, thread_number), 1
-                cell_index = a_parallelizer%get_cell_index(1, thread_number, local_index)
-                if(total_weight_set(cell_index) > 0.d0)then
-                    variables_set(:,cell_index) = smoothed_variables_set(:,cell_index) / total_weight_set(cell_index)
+            associate(                           &
+                x => self%cell_centor_positions, &
+                v => variables_set               &
+            )
+                lhc_w = weight_function(x(:,lhc_index), x(:,rhc_index), v(:,lhc_index), v(:,rhc_index))
+                if(self%is_real_cell(rhc_index))then
+                    rhc_w = weight_function(x(:,rhc_index), x(:,lhc_index), v(:,rhc_index), v(:,lhc_index))
                 else
-                    variables_set(:,cell_index) = 0.d0
-                end if
-            end do
+                    rhc_w = 0.d0
+                endif
+
+                smoothed_variables_set(:, lhc_index) = smoothed_variables_set(:, lhc_index) + lhc_w * v(:, lhc_index)
+                smoothed_variables_set(:, rhc_index) = smoothed_variables_set(:, rhc_index) + rhc_w * v(:, rhc_index)
+
+                total_weight_set(lhc_index) = total_weight_set(lhc_index) + lhc_w
+                total_weight_set(rhc_index) = total_weight_set(rhc_index) + rhc_w
+            end associate
+        end do
+
+!$omp parallel do private(cell_index)
+        do cell_index = 1, self%num_cells, 1
+            if(total_weight_set(cell_index) > 0.d0)then
+                variables_set(:,cell_index) = smoothed_variables_set(:,cell_index) / total_weight_set(cell_index)
+            else
+                variables_set(:,cell_index) = 0.d0
+            end if
         end do
     end subroutine smooth_variables
 
@@ -1055,47 +1020,39 @@ module class_cellsystem
         integer(int_kind           ), intent(in   ) :: num_variables
 
         integer(int_kind ) :: face_index, cell_index, rhc_index, lhc_index, var_index
-        integer(int_kind ) :: thread_number, local_index
 
 #ifdef _DEBUG
         call write_debuginfo("In compute_gradient_2darray(), cellsystem.")
 #endif
 
-!$omp parallel do private(thread_number, local_index, cell_index)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_cell_indexes(1, thread_number), 1
-                cell_index = a_parallelizer%get_cell_index(1, thread_number, local_index)
-                gradient_variables_set(:,cell_index) = 0.d0
-            end do
+!$omp parallel do private(cell_index)
+        do cell_index = 1, self%num_cells, 1
+            gradient_variables_set(:,cell_index) = 0.d0
         end do
 
-!$omp parallel do private(thread_number, local_index, face_index, rhc_index, lhc_index, var_index)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_face_indexes(1, thread_number), 1
-                face_index = a_parallelizer%get_face_index(1, thread_number, local_index)
-
-                lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
-                rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
-                do var_index = 1, num_variables, 1
-                    associate(                                &
-                        vec_start_index => 3*(var_index-1)+1, &
-                        vec_end_index   => 3*(var_index-1)+3, &
-                        residual        => a_gradient_calculator%compute_residual(                         &
-                                               variables_set                      (var_index, lhc_index ), &
-                                               variables_set                      (var_index, rhc_index ), &
-                                               self%cell_centor_positions         (1:3      , lhc_index ), &
-                                               self%cell_centor_positions         (1:3      , rhc_index ), &
-                                               self%face_normal_vectors           (1:3      , face_index), &
-                                               self%face_positions                (1:3      , face_index), &
-                                               self%face_areas                               (face_index)  &
-                                            )                                                              &
-                    )
-                        gradient_variables_set(vec_start_index:vec_end_index, rhc_index) = gradient_variables_set(vec_start_index:vec_end_index, rhc_index)  &
-                                                            - (1.d0 / self%cell_volumes(rhc_index)) * residual
-                        gradient_variables_set(vec_start_index:vec_end_index, lhc_index) = gradient_variables_set(vec_start_index:vec_end_index, lhc_index)  &
-                                                            + (1.d0 / self%cell_volumes(lhc_index)) * residual
-                    end associate
-                end do
+!$omp parallel do private(face_index, rhc_index, lhc_index, var_index)
+        do face_index = 1, self%num_faces, 1
+            lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
+            rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
+            do var_index = 1, num_variables, 1
+                associate(                                &
+                    vec_start_index => 3*(var_index-1)+1, &
+                    vec_end_index   => 3*(var_index-1)+3, &
+                    residual        => a_gradient_calculator%compute_residual(                         &
+                                           variables_set                      (var_index, lhc_index ), &
+                                           variables_set                      (var_index, rhc_index ), &
+                                           self%cell_centor_positions         (1:3      , lhc_index ), &
+                                           self%cell_centor_positions         (1:3      , rhc_index ), &
+                                           self%face_normal_vectors           (1:3      , face_index), &
+                                           self%face_positions                (1:3      , face_index), &
+                                           self%face_areas                               (face_index)  &
+                                        )                                                              &
+                )
+                    gradient_variables_set(vec_start_index:vec_end_index, rhc_index) = gradient_variables_set(vec_start_index:vec_end_index, rhc_index)  &
+                                                        - (1.d0 / self%cell_volumes(rhc_index)) * residual
+                    gradient_variables_set(vec_start_index:vec_end_index, lhc_index) = gradient_variables_set(vec_start_index:vec_end_index, lhc_index)  &
+                                                        + (1.d0 / self%cell_volumes(lhc_index)) * residual
+                end associate
             end do
         end do
     end subroutine compute_gradient_2darray
@@ -1108,45 +1065,37 @@ module class_cellsystem
         real (real_kind          ), intent(inout) :: gradient_variable_set   (:,:)
 
         integer(int_kind) :: face_index, cell_index, rhc_index, lhc_index
-        integer(int_kind) :: thread_number, local_index
 
 #ifdef _DEBUG
         call write_debuginfo("In compute_gradient_1darray(), cellsystem.")
 #endif
 
-!$omp parallel do private(thread_number, local_index, cell_index)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_cell_indexes(1, thread_number), 1
-                cell_index = a_parallelizer%get_cell_index(1, thread_number, local_index)
-                gradient_variable_set(:,cell_index) = 0.d0
-            end do
+!$omp parallel do private(cell_index)
+        do cell_index = 1, a_parallelizer%get_number_of_threads(1), 1
+            gradient_variable_set(:,cell_index) = 0.d0
         end do
 
-!$omp parallel do private(thread_number, local_index, face_index, rhc_index, lhc_index)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_face_indexes(1, thread_number), 1
-                face_index = a_parallelizer%get_face_index(1, thread_number, local_index)
+!$omp parallel do private(face_index, rhc_index, lhc_index)
+        do face_index = 1, self%num_faces, 1
+            lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
+            rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
 
-                lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
-                rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
-
-                associate(                                                                     &
-                    residual => a_gradient_calculator%compute_residual(                        &
-                                   variable_set                                  (lhc_index ), &
-                                   variable_set                                  (rhc_index ), &
-                                   self%cell_centor_positions         (1:3      , lhc_index ), &
-                                   self%cell_centor_positions         (1:3      , rhc_index ), &
-                                   self%face_normal_vectors           (1:3      , face_index), &
-                                   self%face_positions                (1:3      , face_index), &
-                                   self%face_areas                               (face_index)  &
-                                )                                                              &
-                )
-                    gradient_variable_set(1:3,rhc_index) = gradient_variable_set(1:3,rhc_index)                    &
-                                                     - (1.d0 / self%cell_volumes(rhc_index)) * residual
-                    gradient_variable_set(1:3,lhc_index) = gradient_variable_set(1:3,lhc_index)                    &
-                                                     + (1.d0 / self%cell_volumes(lhc_index)) * residual
-                end associate
-            end do
+            associate(                                                                     &
+                residual => a_gradient_calculator%compute_residual(                        &
+                               variable_set                                  (lhc_index ), &
+                               variable_set                                  (rhc_index ), &
+                               self%cell_centor_positions         (1:3      , lhc_index ), &
+                               self%cell_centor_positions         (1:3      , rhc_index ), &
+                               self%face_normal_vectors           (1:3      , face_index), &
+                               self%face_positions                (1:3      , face_index), &
+                               self%face_areas                               (face_index)  &
+                            )                                                              &
+            )
+                gradient_variable_set(1:3,rhc_index) = gradient_variable_set(1:3,rhc_index)                    &
+                                                 - (1.d0 / self%cell_volumes(rhc_index)) * residual
+                gradient_variable_set(1:3,lhc_index) = gradient_variable_set(1:3,lhc_index)                    &
+                                                 + (1.d0 / self%cell_volumes(lhc_index)) * residual
+            end associate
         end do
     end subroutine compute_gradient_1darray
 
@@ -1173,49 +1122,41 @@ module class_cellsystem
 
         integer(int_kind ) :: face_index, cell_index, rhc_index, lhc_index, var_index, num_divergence_variables
         real   (real_kind) :: face_variables(3)
-        integer(int_kind ) :: thread_number, local_index
 
 #ifdef _DEBUG
         call write_debuginfo("In compute_divergence_2darray(), cellsystem.")
 #endif
 
-!$omp parallel do private(thread_number, local_index, cell_index)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_cell_indexes(1, thread_number), 1
-                cell_index = a_parallelizer%get_cell_index(1, thread_number, local_index)
-                divergence_variables_set(:,cell_index) = 0.d0
-            end do
+!$omp parallel do private(cell_index)
+        do cell_index = 1, self%num_cells, 1
+            divergence_variables_set(:,cell_index) = 0.d0
         end do
 
         num_divergence_variables = num_variables/3
 
-!$omp parallel do private(thread_number, local_index, face_index, rhc_index, lhc_index, var_index, face_variables)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_face_indexes(1, thread_number), 1
-                face_index = a_parallelizer%get_face_index(1, thread_number, local_index)
+!$omp parallel do private(face_index, rhc_index, lhc_index, var_index, face_variables)
+        do face_index = 1, self%num_faces, 1
+            lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
+            rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
 
-                lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
-                rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
-
-                do var_index = 1, num_divergence_variables, 1
-                    associate(                                &
-                        vec_start_index => 3*(var_index-1)+1, &
-                        vec_end_index   => 3*(var_index-1)+3  &
+            do var_index = 1, num_divergence_variables, 1
+                associate(                                &
+                    vec_start_index => 3*(var_index-1)+1, &
+                    vec_end_index   => 3*(var_index-1)+3  &
+                )
+                    face_variables(:) = a_interpolator%interpolate_face_variables(                     &
+                       variables_set                      (vec_start_index:vec_end_index, :         ), &
+                       self%face_to_cell_indexes          (:                            , face_index), &
+                       self%cell_centor_positions         (1:3                          , :         ), &
+                       self%face_positions                (1:3                          , face_index), &
+                       self%num_local_cells                                                          , &
+                       3                                                                               &
                     )
-                        face_variables(:) = a_interpolator%interpolate_face_variables(                     &
-                           variables_set                      (vec_start_index:vec_end_index, :         ), &
-                           self%face_to_cell_indexes          (:                            , face_index), &
-                           self%cell_centor_positions         (1:3                          , :         ), &
-                           self%face_positions                (1:3                          , face_index), &
-                           self%num_local_cells                                                          , &
-                           3                                                                               &
-                        )
-                        divergence_variables_set(var_index, lhc_index) = divergence_variables_set(var_index, lhc_index) &
-                                                            + (1.d0 / self%cell_volumes(lhc_index)) * vector_multiply(face_variables, self%face_normal_vectors(:, face_index) * self%face_areas(face_index))
-                        divergence_variables_set(var_index, rhc_index) = divergence_variables_set(var_index, rhc_index) &
-                                                            - (1.d0 / self%cell_volumes(rhc_index)) * vector_multiply(face_variables, self%face_normal_vectors(:, face_index) * self%face_areas(face_index))
-                    end associate
-                end do
+                    divergence_variables_set(var_index, lhc_index) = divergence_variables_set(var_index, lhc_index) &
+                                                        + (1.d0 / self%cell_volumes(lhc_index)) * vector_multiply(face_variables, self%face_normal_vectors(:, face_index) * self%face_areas(face_index))
+                    divergence_variables_set(var_index, rhc_index) = divergence_variables_set(var_index, rhc_index) &
+                                                        - (1.d0 / self%cell_volumes(rhc_index)) * vector_multiply(face_variables, self%face_normal_vectors(:, face_index) * self%face_areas(face_index))
+                end associate
             end do
         end do
     end subroutine compute_divergence_2darray
@@ -1228,36 +1169,28 @@ module class_cellsystem
         real (real_kind    ), intent(inout) :: divergence_variable_set   (:)
 
         integer(int_kind ) :: face_index, cell_index, rhc_index, lhc_index
-        integer(int_kind ) :: thread_number, local_index
         real   (real_kind) :: face_variables(3)
 
 #ifdef _DEBUG
         call write_debuginfo("In compute_divergence_1darray(), cellsystem.")
 #endif
 
-!$omp parallel do private(thread_number, local_index, cell_index)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_cell_indexes(1, thread_number), 1
-                cell_index = a_parallelizer%get_cell_index(1, thread_number, local_index)
-                divergence_variable_set(cell_index) = 0.d0
-            end do
+!$omp parallel do private(cell_index)
+        do cell_index = 1, self%num_cells, 1
+            divergence_variable_set(cell_index) = 0.d0
         end do
 
-!$omp parallel do private(thread_number, local_index, face_index, rhc_index, lhc_index, face_variables)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_face_indexes(1, thread_number), 1
-                face_index = a_parallelizer%get_face_index(1, thread_number, local_index)
+!$omp parallel do private(face_index, rhc_index, lhc_index, face_variables)
+        do face_index = 1, self%num_faces, 1
+            lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
+            rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
 
-                lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
-                rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
+            face_variables(:) = a_interpolator%interpolate_face_variables(variable_set(:,:), self%face_to_cell_indexes(:, face_index), self%cell_centor_positions(:,:), self%face_positions(:,face_index), self%num_local_cells, 3)
 
-                face_variables(:) = a_interpolator%interpolate_face_variables(variable_set(:,:), self%face_to_cell_indexes(:, face_index), self%cell_centor_positions(:,:), self%face_positions(:,face_index), self%num_local_cells, 3)
-
-                divergence_variable_set(lhc_index) = divergence_variable_set(lhc_index)               &
-                                                   + (1.d0 / self%cell_volumes(lhc_index)) * vector_multiply(face_variables(1:3), self%face_normal_vectors(1:3, face_index) * self%face_areas(face_index))
-                divergence_variable_set(rhc_index) = divergence_variable_set(rhc_index)               &
-                                                   - (1.d0 / self%cell_volumes(rhc_index)) * vector_multiply(face_variables(1:3), self%face_normal_vectors(1:3, face_index) * self%face_areas(face_index))
-            end do
+            divergence_variable_set(lhc_index) = divergence_variable_set(lhc_index)               &
+                                               + (1.d0 / self%cell_volumes(lhc_index)) * vector_multiply(face_variables(1:3), self%face_normal_vectors(1:3, face_index) * self%face_areas(face_index))
+            divergence_variable_set(rhc_index) = divergence_variable_set(rhc_index)               &
+                                               - (1.d0 / self%cell_volumes(rhc_index)) * vector_multiply(face_variables(1:3), self%face_normal_vectors(1:3, face_index) * self%face_areas(face_index))
         end do
     end subroutine compute_divergence_1darray
 
@@ -1338,58 +1271,50 @@ module class_cellsystem
             end function residual_element_function
         end interface
 
-        integer(int_kind ) :: i,thread_number,local_index
+        integer(int_kind ) :: i
         integer(int_kind ) :: lhc_index
         integer(int_kind ) :: rhc_index
         real   (real_kind) :: reconstructed_primitive_variables_lhc   (num_primitive_variables)
         real   (real_kind) :: reconstructed_primitive_variables_rhc   (num_primitive_variables)
-        real   (real_kind) :: reconstructed_conservative_variables_lhc(num_conservative_variables)
-        real   (real_kind) :: reconstructed_conservative_variables_rhc(num_conservative_variables)
         real   (real_kind) :: residual_element                        (num_conservative_variables, 1:2)
-
-        logical :: lhc_is_dummy, rhc_is_dummy
 
 #ifdef _DEBUG
         call write_debuginfo("In compute_residual_nonviscous_functional_api(), cellsystem.")
 #endif
 
-!$omp parallel do private(i,thread_number,local_index,lhc_index,rhc_index,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,reconstructed_conservative_variables_lhc,reconstructed_conservative_variables_rhc,residual_element)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_face_indexes(1, thread_number), 1
-                i = a_parallelizer%get_face_index(1, thread_number, local_index)
+!$omp parallel do private(i,lhc_index,rhc_index,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,residual_element)
+        do i = 1, self%num_faces, 1
+            lhc_index = self%face_to_cell_indexes(self%num_local_cells+0, i)
+            rhc_index = self%face_to_cell_indexes(self%num_local_cells+1, i)
 
-                lhc_index = self%face_to_cell_indexes(self%num_local_cells+0, i)
-                rhc_index = self%face_to_cell_indexes(self%num_local_cells+1, i)
+            reconstructed_primitive_variables_lhc(:) = a_reconstructor%reconstruct_lhc(                              &
+                primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
+                i, self%num_local_cells, num_primitive_variables                                                     &
+            )
+            reconstructed_primitive_variables_rhc(:) = a_reconstructor%reconstruct_rhc(                              &
+                primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
+                i, self%num_local_cells, num_primitive_variables                                                     &
+            )
 
-                reconstructed_primitive_variables_lhc(:) = a_reconstructor%reconstruct_lhc(                              &
-                    primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
-                    i, self%num_local_cells, num_primitive_variables                                                     &
-                )
-                reconstructed_primitive_variables_rhc(:) = a_reconstructor%reconstruct_rhc(                              &
-                    primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
-                    i, self%num_local_cells, num_primitive_variables                                                     &
-                )
+            residual_element(:,:) = residual_element_function(&
+                an_eos                                      , &
+                a_riemann_solver                            , &
+                primitive_variables_set       (:,lhc_index) , &
+                primitive_variables_set       (:,rhc_index) , &
+                reconstructed_primitive_variables_lhc   (:) , &
+                reconstructed_primitive_variables_rhc   (:) , &
+                self%cell_volumes            (lhc_index)    , &
+                self%cell_volumes            (rhc_index)    , &
+                self%face_areas                  (i)        , &
+                self%face_normal_vectors     (1:3,i)        , &
+                self%face_tangential1_vectors(1:3,i)        , &
+                self%face_tangential2_vectors(1:3,i)        , &
+                num_conservative_variables                  , &
+                num_primitive_variables                       &
+            )
 
-                residual_element(:,:) = residual_element_function(&
-                    an_eos                                      , &
-                    a_riemann_solver                            , &
-                    primitive_variables_set       (:,lhc_index) , &
-                    primitive_variables_set       (:,rhc_index) , &
-                    reconstructed_primitive_variables_lhc   (:) , &
-                    reconstructed_primitive_variables_rhc   (:) , &
-                    self%cell_volumes            (lhc_index)    , &
-                    self%cell_volumes            (rhc_index)    , &
-                    self%face_areas                  (i)        , &
-                    self%face_normal_vectors     (1:3,i)        , &
-                    self%face_tangential1_vectors(1:3,i)        , &
-                    self%face_tangential2_vectors(1:3,i)        , &
-                    num_conservative_variables                  , &
-                    num_primitive_variables                       &
-                )
-
-                residual_set(:,lhc_index) = residual_set(:,lhc_index) + residual_element(:, 1)
-                residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
-            end do
+            residual_set(:,lhc_index) = residual_set(:,lhc_index) + residual_element(:, 1)
+            residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
         end do
     end subroutine compute_residual_nonviscous_functional_api
 
@@ -1460,74 +1385,67 @@ module class_cellsystem
             end function residual_element_function
         end interface
 
-        integer(int_kind ) :: i, thread_number, local_index
+        integer(int_kind ) :: i
         real   (real_kind) :: reconstructed_primitive_variables_lhc   (num_primitive_variables)
         real   (real_kind) :: reconstructed_primitive_variables_rhc   (num_primitive_variables)
         real   (real_kind) :: face_gradient_primitive_variables       (num_primitive_variables*3)
-        real   (real_kind) :: reconstructed_conservative_variables_lhc(num_conservative_variables)
-        real   (real_kind) :: reconstructed_conservative_variables_rhc(num_conservative_variables)
         real   (real_kind) :: residual_element                        (num_conservative_variables, 1:2)
 
 #ifdef _DEBUG
         call write_debuginfo("In compute_residual_viscous_functional_api(), cellsystem.")
 #endif
 
-!$omp parallel do private(i,thread_number,local_index,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,face_gradient_primitive_variables,reconstructed_conservative_variables_lhc,reconstructed_conservative_variables_rhc,residual_element)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_face_indexes(1, thread_number), 1
-                i = a_parallelizer%get_face_index(1, thread_number, local_index)
-
-                associate(                                                             &
-                    lhc_index => self%face_to_cell_indexes(self%num_local_cells+0, i), &
-                    rhc_index => self%face_to_cell_indexes(self%num_local_cells+1, i)  &
+!$omp parallel do private(i,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,face_gradient_primitive_variables,residual_element)
+        do i = 1, self%num_faces, 1
+            associate(                                                             &
+                lhc_index => self%face_to_cell_indexes(self%num_local_cells+0, i), &
+                rhc_index => self%face_to_cell_indexes(self%num_local_cells+1, i)  &
+            )
+                reconstructed_primitive_variables_lhc(:) = a_reconstructor%reconstruct_lhc(                              &
+                    primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
+                    i, self%num_local_cells, num_primitive_variables                                                     &
+                )
+                reconstructed_primitive_variables_rhc(:) = a_reconstructor%reconstruct_rhc(                              &
+                    primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
+                    i, self%num_local_cells, num_primitive_variables                                                     &
                 )
 
-                    reconstructed_primitive_variables_lhc(:) = a_reconstructor%reconstruct_lhc(                              &
-                        primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
-                        i, self%num_local_cells, num_primitive_variables                                                     &
+                if(.not. self%is_real_cell(rhc_index))then
+                    face_gradient_primitive_variables(:) = self%compute_boundary_gradient(                &
+                        primitive_variables_set   (:,lhc_index), primitive_variables_set   (:,rhc_index), &
+                        self%cell_centor_positions(:,lhc_index), self%cell_centor_positions(:,rhc_index), &
+                        num_primitive_variables                                                           &
                     )
-                    reconstructed_primitive_variables_rhc(:) = a_reconstructor%reconstruct_rhc(                              &
-                        primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
-                        i, self%num_local_cells, num_primitive_variables                                                     &
+                else ! It's boundary face!
+                    face_gradient_primitive_variables(:) = a_face_gradient_interpolator%interpolate(                  &
+                        gradient_primitive_variables_set(:,lhc_index), gradient_primitive_variables_set(:,rhc_index), &
+                        primitive_variables_set         (:,lhc_index), primitive_variables_set         (:,rhc_index), &
+                        self%cell_centor_positions      (:,lhc_index), self%cell_centor_positions      (:,rhc_index), &
+                        num_primitive_variables                                                                       &
                     )
+                end if
 
-                    if(.not. self%is_real_cell(rhc_index))then
-                        face_gradient_primitive_variables(:) = self%compute_boundary_gradient(                &
-                            primitive_variables_set   (:,lhc_index), primitive_variables_set   (:,rhc_index), &
-                            self%cell_centor_positions(:,lhc_index), self%cell_centor_positions(:,rhc_index), &
-                            num_primitive_variables                                                           &
-                        )
-                    else ! It's boundary face!
-                        face_gradient_primitive_variables(:) = a_face_gradient_interpolator%interpolate(                  &
-                            gradient_primitive_variables_set(:,lhc_index), gradient_primitive_variables_set(:,rhc_index), &
-                            primitive_variables_set         (:,lhc_index), primitive_variables_set         (:,rhc_index), &
-                            self%cell_centor_positions      (:,lhc_index), self%cell_centor_positions      (:,rhc_index), &
-                            num_primitive_variables                                                                       &
-                        )
-                    end if
+                residual_element(:,:) = residual_element_function(        &
+                    an_eos                                              , &
+                    a_riemann_solver                                    , &
+                    primitive_variables_set              (:,lhc_index)  , &
+                    primitive_variables_set              (:,rhc_index)  , &
+                    reconstructed_primitive_variables_lhc(:)            , &
+                    reconstructed_primitive_variables_rhc(:)            , &
+                    face_gradient_primitive_variables    (:)            , &
+                    self%cell_volumes                      (lhc_index)  , &
+                    self%cell_volumes                      (rhc_index)  , &
+                    self%face_areas                  (i)                , &
+                    self%face_normal_vectors     (1:3,i)                , &
+                    self%face_tangential1_vectors(1:3,i)                , &
+                    self%face_tangential2_vectors(1:3,i)                , &
+                    num_conservative_variables                          , &
+                    num_primitive_variables                               &
+                )
 
-                    residual_element(:,:) = residual_element_function(        &
-                        an_eos                                              , &
-                        a_riemann_solver                                    , &
-                        primitive_variables_set              (:,lhc_index)  , &
-                        primitive_variables_set              (:,rhc_index)  , &
-                        reconstructed_primitive_variables_lhc(:)            , &
-                        reconstructed_primitive_variables_rhc(:)            , &
-                        face_gradient_primitive_variables    (:)            , &
-                        self%cell_volumes                      (lhc_index)  , &
-                        self%cell_volumes                      (rhc_index)  , &
-                        self%face_areas                  (i)                , &
-                        self%face_normal_vectors     (1:3,i)                , &
-                        self%face_tangential1_vectors(1:3,i)                , &
-                        self%face_tangential2_vectors(1:3,i)                , &
-                        num_conservative_variables                          , &
-                        num_primitive_variables                               &
-                    )
-
-                    residual_set(:,lhc_index) = residual_set(:,lhc_index) + residual_element(:, 1)
-                    residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
-                end associate
-            end do
+                residual_set(:,lhc_index) = residual_set(:,lhc_index) + residual_element(:, 1)
+                residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
+            end associate
         end do
     end subroutine compute_residual_viscous_functional_api
 
@@ -1559,74 +1477,67 @@ module class_cellsystem
             end function primitive_to_conservative_function
         end interface
 
-        integer(int_kind ) :: i, thread_number, local_index
+        integer(int_kind ) :: i
         real   (real_kind) :: reconstructed_primitive_variables_lhc   (num_primitive_variables)
         real   (real_kind) :: reconstructed_primitive_variables_rhc   (num_primitive_variables)
         real   (real_kind) :: face_gradient_primitive_variables       (num_primitive_variables*3)
-        real   (real_kind) :: reconstructed_conservative_variables_lhc(num_conservative_variables)
-        real   (real_kind) :: reconstructed_conservative_variables_rhc(num_conservative_variables)
         real   (real_kind) :: residual_element                        (num_conservative_variables, 1:2)
 
 #ifdef _DEBUG
         call write_debuginfo("In compute_residual_viscous_objective_api(), cellsystem.")
 #endif
 
-!$omp parallel do private(i,thread_number,local_index,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,face_gradient_primitive_variables,reconstructed_conservative_variables_lhc,reconstructed_conservative_variables_rhc,residual_element)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_face_indexes(1, thread_number), 1
-                i = a_parallelizer%get_face_index(1, thread_number, local_index)
-
-                associate(                                                             &
-                    lhc_index => self%face_to_cell_indexes(self%num_local_cells+0, i), &
-                    rhc_index => self%face_to_cell_indexes(self%num_local_cells+1, i)  &
+!$omp parallel do private(i,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,face_gradient_primitive_variables,residual_element)
+        do i = 1, self%num_faces, 1
+            associate(                                                             &
+                lhc_index => self%face_to_cell_indexes(self%num_local_cells+0, i), &
+                rhc_index => self%face_to_cell_indexes(self%num_local_cells+1, i)  &
+            )
+                reconstructed_primitive_variables_lhc(:) = a_reconstructor%reconstruct_lhc(                              &
+                    primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
+                    i, self%num_local_cells, num_primitive_variables                                                     &
+                )
+                reconstructed_primitive_variables_rhc(:) = a_reconstructor%reconstruct_rhc(                              &
+                    primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
+                    i, self%num_local_cells, num_primitive_variables                                                     &
                 )
 
-                    reconstructed_primitive_variables_lhc(:) = a_reconstructor%reconstruct_lhc(                              &
-                        primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
-                        i, self%num_local_cells, num_primitive_variables                                                     &
+                if(.not. self%is_real_cell(rhc_index))then
+                    face_gradient_primitive_variables(:) = self%compute_boundary_gradient(                &
+                        primitive_variables_set   (:,lhc_index), primitive_variables_set   (:,rhc_index), &
+                        self%cell_centor_positions(:,lhc_index), self%cell_centor_positions(:,rhc_index), &
+                        num_primitive_variables                                                           &
                     )
-                    reconstructed_primitive_variables_rhc(:) = a_reconstructor%reconstruct_rhc(                              &
-                        primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
-                        i, self%num_local_cells, num_primitive_variables                                                     &
+                else
+                    face_gradient_primitive_variables(:) = a_face_gradient_interpolator%interpolate(                  &
+                        gradient_primitive_variables_set(:,lhc_index), gradient_primitive_variables_set(:,rhc_index), &
+                        primitive_variables_set         (:,lhc_index), primitive_variables_set         (:,rhc_index), &
+                        self%cell_centor_positions      (:,lhc_index), self%cell_centor_positions      (:,rhc_index), &
+                        num_primitive_variables                                                                       &
                     )
+                end if
 
-                    if(.not. self%is_real_cell(rhc_index))then
-                        face_gradient_primitive_variables(:) = self%compute_boundary_gradient(                &
-                            primitive_variables_set   (:,lhc_index), primitive_variables_set   (:,rhc_index), &
-                            self%cell_centor_positions(:,lhc_index), self%cell_centor_positions(:,rhc_index), &
-                            num_primitive_variables                                                           &
-                        )
-                    else
-                        face_gradient_primitive_variables(:) = a_face_gradient_interpolator%interpolate(                  &
-                            gradient_primitive_variables_set(:,lhc_index), gradient_primitive_variables_set(:,rhc_index), &
-                            primitive_variables_set         (:,lhc_index), primitive_variables_set         (:,rhc_index), &
-                            self%cell_centor_positions      (:,lhc_index), self%cell_centor_positions      (:,rhc_index), &
-                            num_primitive_variables                                                                       &
-                        )
-                    end if
+                residual_element(:,:) = a_model%compute_residual_element( &
+                    an_eos                                              , &
+                    a_riemann_solver                                    , &
+                    primitive_variables_set              (:,lhc_index)  , &
+                    primitive_variables_set              (:,rhc_index)  , &
+                    reconstructed_primitive_variables_lhc(:)            , &
+                    reconstructed_primitive_variables_rhc(:)            , &
+                    face_gradient_primitive_variables    (:)            , &
+                    self%cell_volumes                      (lhc_index)  , &
+                    self%cell_volumes                      (rhc_index)  , &
+                    self%face_areas                  (i)                , &
+                    self%face_normal_vectors     (1:3,i)                , &
+                    self%face_tangential1_vectors(1:3,i)                , &
+                    self%face_tangential2_vectors(1:3,i)                , &
+                    num_conservative_variables                          , &
+                    num_primitive_variables                               &
+                )
 
-                    residual_element(:,:) = a_model%compute_residual_element( &
-                        an_eos                                              , &
-                        a_riemann_solver                                    , &
-                        primitive_variables_set              (:,lhc_index)  , &
-                        primitive_variables_set              (:,rhc_index)  , &
-                        reconstructed_primitive_variables_lhc(:)            , &
-                        reconstructed_primitive_variables_rhc(:)            , &
-                        face_gradient_primitive_variables    (:)            , &
-                        self%cell_volumes                      (lhc_index)  , &
-                        self%cell_volumes                      (rhc_index)  , &
-                        self%face_areas                  (i)                , &
-                        self%face_normal_vectors     (1:3,i)                , &
-                        self%face_tangential1_vectors(1:3,i)                , &
-                        self%face_tangential2_vectors(1:3,i)                , &
-                        num_conservative_variables                          , &
-                        num_primitive_variables                               &
-                    )
-
-                    residual_set(:,lhc_index) = residual_set(:,lhc_index) + residual_element(:, 1)
-                    residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
-                end associate
-            end do
+                residual_set(:,lhc_index) = residual_set(:,lhc_index) + residual_element(:, 1)
+                residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
+            end associate
         end do
     end subroutine compute_residual_viscous_objective_api
 
@@ -1648,21 +1559,17 @@ module class_cellsystem
             end function compute_source_term_function
         end interface
 
-        integer(int_kind ) :: thread_number, local_index, i
+        integer(int_kind ) :: i
         integer(int_kind ) :: element(num_conservative_variables)
 
 #ifdef _DEBUG
         call write_debuginfo("In compute_source_term_functional_api(), cellsystem.")
 #endif
 
-!$omp parallel do private(thread_number, local_index, i, element)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_cell_indexes(1, thread_number), 1
-                i = a_parallelizer%get_cell_index(1, thread_number, local_index)
-
-                element(:) = compute_source_term_function(variables_set(:,i), num_conservative_variables)
-                residual_set(:,i) = residual_set(:,i) + element(:)
-            end do
+!$omp parallel do private(i, element)
+        do i = 1, self%num_cells, 1
+            element(:) = compute_source_term_function(variables_set(:,i), num_conservative_variables)
+            residual_set(:,i) = residual_set(:,i) + element(:)
         end do
     end subroutine compute_source_term_functional_api
 
@@ -1674,21 +1581,17 @@ module class_cellsystem
         integer(int_kind    ), intent(in   ) :: num_conservative_variables
         class  (model       ), intent(in   ) :: a_model
 
-        integer(int_kind ) :: thread_number, local_index, i
+        integer(int_kind ) :: i
         integer(int_kind ) :: element(num_conservative_variables)
 
 #ifdef _DEBUG
         call write_debuginfo("In compute_source_term_objective_api(), cellsystem.")
 #endif
 
-!$omp parallel do private(thread_number, local_index, i, element)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_cell_indexes(1, thread_number), 1
-                i = a_parallelizer%get_cell_index(1, thread_number, local_index)
-
-                element(:) = a_model%compute_source_term(variables_set(:,i), num_conservative_variables)
-                residual_set(:,i) = residual_set(:,i) + element(:)
-            end do
+!$omp parallel do private(i, element)
+        do i = 1, self%num_cells, 1
+            element(:) = a_model%compute_source_term(variables_set(:,i), num_conservative_variables)
+            residual_set(:,i) = residual_set(:,i) + element(:)
         end do
     end subroutine compute_source_term_objective_api
 
@@ -1755,19 +1658,16 @@ module class_cellsystem
             end function conservative_to_primitive_function
         end interface
 
-        integer(int_kind) :: thread_number, local_index, i
+        integer(int_kind) :: i
 
 #ifdef _DEBUG
         call write_debuginfo("In time_stepping_initialize(), cellsystem.")
 #endif
 
-!$omp parallel do private(thread_number, local_index, i)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_cell_indexes(1, thread_number), 1
-                i = a_parallelizer%get_cell_index(1, thread_number, local_index)
-                call a_time_stepping%compute_next_state(i, state_num, self%time_increment, conservative_variables_set(:,i), residual_set(:,i))
-                primitive_variables_set(:,i) = conservative_to_primitive_function(an_eos, conservative_variables_set(:,i), num_primitive_variables)
-            end do
+!$omp parallel do private(i)
+        do i = 1, self%num_cells, 1
+            call a_time_stepping%compute_next_state(i, state_num, self%time_increment, conservative_variables_set(:,i), residual_set(:,i))
+            primitive_variables_set(:,i) = conservative_to_primitive_function(an_eos, conservative_variables_set(:,i), num_primitive_variables)
         end do
     end subroutine compute_next_state
 
@@ -1785,18 +1685,15 @@ module class_cellsystem
         real (real_kind    ), intent(inout) :: primitive_variables_set   (:,:)
         real (real_kind    ), intent(inout) :: residual_set              (:,:)
 
-        integer(int_kind) :: thread_number, local_index, i
+        integer(int_kind) :: i
 
 #ifdef _DEBUG
         call write_debuginfo("In prepare_stepping(), cellsystem.")
 #endif
 
-!$omp parallel do private(thread_number, local_index, i)
-        do thread_number = 1, a_parallelizer%get_number_of_threads(1), 1
-            do local_index = 1, a_parallelizer%get_number_of_cell_indexes(1, thread_number), 1
-                i = a_parallelizer%get_cell_index(1, thread_number, local_index)
-                call a_time_stepping%prepare_stepping(i, conservative_variables_set(:,i), primitive_variables_set(:,i), residual_set(:,i))
-            end do
+!$omp parallel do private(i)
+        do i = 1, self%num_cells, 1
+            call a_time_stepping%prepare_stepping(i, conservative_variables_set(:,i), primitive_variables_set(:,i), residual_set(:,i))
         end do
     end subroutine
 
