@@ -16,7 +16,7 @@ We are working on improving parallel computing and developing features for unstr
 
 ### F3DS Flamework
 
-The source code is located in resource/five_equation_model_common. The static link library is located in libs/f5eq_common.a.  
+The source code is located in "framework" directory. The static link library is located in libs/f3ds_framework.a.  
 This flamework is desined by Object Oriented Desing (OOD) and supports Structure of Arrays (SoA) layout.
 We provide a fast, maintainable FVM library and solvers.
 
