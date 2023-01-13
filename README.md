@@ -1,8 +1,10 @@
-# Fortran Finite-volume Fluid Dynamics Solver (F3DS) Flamework & Collection
+# Fortran Finite volume Fluid Dynamics Solver (F3DS) Package
 
-F3DS is the modern Fortran (such as Fortran 2003, 2008, ...) library for development fluid dynamics solvers by Finite-volume method (FVM).  
-This library support for Object Oriented Desing (OOD) and Structure of Arrays (SoA) layout. 
-We provide a fast, maintainable FVM library and solvers.  
+F3DS package is a modern Fortran (such as Fortran 2003, 2008, ...) software of finite volume method (FVM) for fulid dynamics solvers. F3DS Package is composed of below:
+
+- F3DS Flamework: Flamework for developing fluid dynamics solvers.
+- F3DS Resource: Models and schemes for specific solvers.
+- F3DS Collection: Solvers built by F3DS Framework & Resource.
 
 Status: **DEVELOPMENT**  
 
@@ -11,22 +13,6 @@ We can easily build a solver for any non-viscous and viscous fluid using this fl
 We are working on improving parallel computing and developing features for unstructured mesh.
 
 ## Feature
-
-### F3DS Collection
-
-- [x] 5 equation model (in collection/five_equation_model. Binary name is "f5eq") [Kapila 2001] [Allaire 2002]
-    - Additional terms
-        - [x] with Kdiv(u) term [Kapila 2001]
-        - [ ] with cavitation model
-
-- [x] viscosity 5 equation model (in collection/viscous_five_equation_model. Binary name is "fv5eq") [Perigaud 2005] [Coralic 2014]
-    - Additional terms
-        - [x] with Kdiv(u) term [Kapila 2001]
-        - [x] with surface tension term [Perigaud 2005] [Garrick 2017]
-        - [ ] with cavitation model
-        - [x] with gravity
-
-- [ ] Euler equation (in collection/euler. Binary name is "feuler")
 
 ### F3DS Flamework
 
@@ -51,18 +37,16 @@ We are working on improving parallel computing and developing features for unstr
 
 #### Reconstruction Methods
 
-- For structure grid (supported orthogonal grid)
+- For structure grid
     - [x] MUSCL3 (3rd order)
         - [x] with minimod flux limmiter
         - [ ] with monotonized central flux limmiter
-    - [x] MUSCL3 + rho-THINC (5-equation model only)
     - [x] WENO5 (5th order)
         - [x] with original smoothing indicator (WENO5) [Liu 1994]
         - [x] with smoothing indicator proposed by Jiang & Shu (WENO5-JS) [Jiang 1996]
         - [x] with monotonicity-preserving schemes (MP-WENO5-JS) [Balsara 2000]
 - For unstructure grid
     - [ ] UMUSCL3 (3rd order)
-    - [ ] UMUSCL3 + rho-THINC (5-equation model only)
 
 #### Gradient scheme
 
@@ -84,9 +68,9 @@ We are working on improving parallel computing and developing features for unstr
 - Explicit
     - [x] Forward Euler
 - Explicit Runge-Kutta
-    - [x] 2nd order TVD(SPP) Runge-Kutta
-    - [x] 3rd order TVD(SPP) Runge-Kutta
-    - [ ] 4th order TVD(SPP) Runge-Kutta
+    - [x] 2nd order TVD (SPP) Runge-Kutta
+    - [x] 3rd order TVD (SPP) Runge-Kutta
+    - [ ] 4th order TVD (SPP) Runge-Kutta
     - [ ] Jameson-Baker 4 stage Runge-Kutta [Jameson 1929]
 
 #### Grid System
@@ -142,6 +126,26 @@ We are working on improving parallel computing and developing features for unstr
     - [x] JSON ([JSON-Fortran](https://github.com/jacobwilliams/json-fortran) backend)
     - [X] XML ([FoXy](https://github.com/Fortran-FOSS-Programmers/FoXy) backend)
 
+### F3DS Resource
+
+#### Five-equation model common tools
+
+- [x] rho-THINC reconstruction
+### F3DS Collection
+
+- [x] 5 equation model (in collection/five_equation_model. Binary name is "f5eq") [Kapila 2001] [Allaire 2002]
+    - Additional terms
+        - [x] with Kdiv(u) term [Kapila 2001]
+        - [ ] with cavitation model
+
+- [x] viscosity 5 equation model (in collection/viscous_five_equation_model. Binary name is "fv5eq") [Perigaud 2005] [Coralic 2014]
+    - Additional terms
+        - [x] with Kdiv(u) term [Kapila 2001]
+        - [x] with surface tension term [Perigaud 2005] [Garrick 2017]
+        - [ ] with cavitation model
+        - [x] with gravity
+
+- [ ] Euler equation (in collection/euler. Binary name is "feuler")
 ## How to compile
 
 At first, we should clone the repository and download submodules.
