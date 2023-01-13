@@ -91,7 +91,7 @@ program five_equation_model_solver
     class(time_increment_controller), pointer :: a_time_increment_controller
 
     ! Loop index
-    integer(int_kind) :: state_num, cell_index
+    integer(int_kind) :: stage_num, cell_index
 
     ! Read config
     call a_configuration%parse("config.json")
@@ -147,7 +147,7 @@ program five_equation_model_solver
 
         call a_cellsystem%prepare_stepping(a_parallelizer, a_time_stepping, conservative_variables_set, primitive_variables_set, residual_set)
 
-        do state_num = 1, a_cellsystem%get_number_of_states(a_time_stepping), 1
+        do stage_num = 1, a_cellsystem%get_number_of_stages(a_time_stepping), 1
             call a_cellsystem%apply_empty_condition    (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, empty_bc    )
             call a_cellsystem%apply_outflow_condition  (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, outflow_bc  )
             call a_cellsystem%apply_nonslip_wall_condition     (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, nonslip_wall_bc     )
@@ -166,7 +166,7 @@ program five_equation_model_solver
                 compute_residual_element          &
             )
 
-            call a_cellsystem%compute_next_state(a_parallelizer, a_time_stepping, an_eos, state_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, conservative_to_primitive)
+            call a_cellsystem%compute_next_stage(a_parallelizer, a_time_stepping, an_eos, stage_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, conservative_to_primitive)
         end do
 
         call a_cellsystem%increment_time()

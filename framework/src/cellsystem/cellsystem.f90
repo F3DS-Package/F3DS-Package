@@ -237,9 +237,9 @@ module class_cellsystem
                                                                 compute_source_term_objective_api
 
         ! ### Time Stepping ###
-        procedure, public, pass(self) :: compute_next_state
+        procedure, public, pass(self) :: compute_next_stage
         procedure, public, pass(self) :: prepare_stepping
-        procedure, public, pass(self) :: get_number_of_states
+        procedure, public, pass(self) :: get_number_of_stages
 
         ! ### Result Writer ###
         procedure, public, pass(self) :: write_scolar
@@ -1634,14 +1634,14 @@ module class_cellsystem
         call a_time_stepping%initialize(config, self%num_cells, num_conservative_variables)
     end subroutine time_stepping_initialize
 
-    subroutine compute_next_state(self, a_parallelizer, a_time_stepping, an_eos, state_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, &
+    subroutine compute_next_stage(self, a_parallelizer, a_time_stepping, an_eos, stage_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, &
         conservative_to_primitive_function)
 
         class  (cellsystem         ), intent(inout) :: self
         class  (parallelizer       ), intent(in   ) :: a_parallelizer
         class  (time_stepping      ), intent(inout) :: a_time_stepping
         class  (eos                ), intent(in   ) :: an_eos
-        integer(int_kind           ), intent(in   ) :: state_num
+        integer(int_kind           ), intent(in   ) :: stage_num
         real   (real_kind          ), intent(inout) :: conservative_variables_set(:,:)
         real   (real_kind          ), intent(inout) :: primitive_variables_set   (:,:)
         real   (real_kind          ), intent(inout) :: residual_set              (:,:)
@@ -1666,10 +1666,10 @@ module class_cellsystem
 
 !$omp parallel do private(i)
         do i = 1, self%num_cells, 1
-            call a_time_stepping%compute_next_state(i, state_num, self%time_increment, conservative_variables_set(:,i), residual_set(:,i))
+            call a_time_stepping%compute_next_stage(i, stage_num, self%time_increment, conservative_variables_set(:,i), residual_set(:,i))
             primitive_variables_set(:,i) = conservative_to_primitive_function(an_eos, conservative_variables_set(:,i), num_primitive_variables)
         end do
-    end subroutine compute_next_state
+    end subroutine compute_next_stage
 
     subroutine prepare_stepping(    &
         self                      , &
@@ -1697,12 +1697,12 @@ module class_cellsystem
         end do
     end subroutine
 
-    pure function get_number_of_states(self, a_time_stepping) result(n)
+    pure function get_number_of_stages(self, a_time_stepping) result(n)
         class  (cellsystem   ), intent(in) :: self
         class  (time_stepping), intent(in) :: a_time_stepping
         integer(int_kind     )                :: n
-        n = a_time_stepping%get_number_of_states()
-    end function get_number_of_states
+        n = a_time_stepping%get_number_of_stages()
+    end function get_number_of_stages
 
     ! ###  Result writer ###
     subroutine result_writer_initialize(self, writer, config, num_conservative_variables, num_primitive_variables)

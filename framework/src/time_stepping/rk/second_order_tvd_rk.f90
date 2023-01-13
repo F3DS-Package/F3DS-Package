@@ -24,9 +24,9 @@ module class_second_order_tvd_rk
         contains
 
         procedure, public, pass(self) :: initialize
-        procedure, public, pass(self) :: compute_next_state
+        procedure, public, pass(self) :: compute_next_stage
         procedure, public, pass(self) :: prepare_stepping
-        procedure, public, pass(self) :: get_number_of_states
+        procedure, public, pass(self) :: get_number_of_stages
     end type second_order_tvd_rk
 
     contains
@@ -40,26 +40,26 @@ module class_second_order_tvd_rk
         allocate(self%init_conservative_variables_set(1:num_conservative_variables, 1:num_cells))
     end subroutine initialize
 
-    subroutine compute_next_state(   &
+    subroutine compute_next_stage(   &
         self                       , &
         cell_index                 , &
-        state_num                  , &
+        stage_num                  , &
         time_increment             , &
         conservative_variables     , &
         residuals                      )
 
         class  (second_order_tvd_rk), intent(inout) :: self
         integer(int_kind           ), intent(in   ) :: cell_index
-        integer(int_kind           ), intent(in   ) :: state_num
+        integer(int_kind           ), intent(in   ) :: stage_num
         real   (real_kind          ), intent(in   ) :: time_increment
         real   (real_kind          ), intent(inout) :: conservative_variables(:)
         real   (real_kind          ), intent(inout) :: residuals             (:)
 
-        conservative_variables(:) = alpha1_(state_num) * self%init_conservative_variables_set(:, cell_index) &
-                                  + alpha2_(state_num) * conservative_variables              (:)             &
-                                  + beta_  (state_num) * time_increment * residuals          (:)
+        conservative_variables(:) = alpha1_(stage_num) * self%init_conservative_variables_set(:, cell_index) &
+                                  + alpha2_(stage_num) * conservative_variables              (:)             &
+                                  + beta_  (stage_num) * time_increment * residuals          (:)
         residuals             (:) = 0.d0
-    end subroutine compute_next_state
+    end subroutine compute_next_stage
 
     subroutine prepare_stepping(   &
         self                     , &
@@ -77,9 +77,9 @@ module class_second_order_tvd_rk
         self%init_conservative_variables_set(:, cell_index) = conservative_variables(:)
     end subroutine prepare_stepping
 
-    pure function get_number_of_states(self) result(n)
+    pure function get_number_of_stages(self) result(n)
         class  (second_order_tvd_rk), intent(in) :: self
         integer(int_kind          )              :: n
         n = nmu_stage_
-    end function get_number_of_states
+    end function get_number_of_stages
 end module class_second_order_tvd_rk
