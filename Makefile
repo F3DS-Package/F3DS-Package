@@ -4,11 +4,21 @@ COMPILER = gfortran
 DEBUG    = no
 
 # Constants
-GNU_RELEAS_FLAGS =-O3 -march=native -ffree-line-length-none -cpp -fopenmp
-GNU_DEBUG_FLAGS  =-O0 -g -pg -ffree-line-length-none -cpp -Wall -Wextra -Warray-temporaries -Wconversion -fimplicit-none -fbacktrace -fcheck=all -ffpe-trap=invalid,zero,overflow -finit-real=nan -D_DEBUG
+# for gfortran
+GNU_RELEASE_FLAGS =-O3 -march=native -ffree-line-length-none -cpp -fopenmp
+GNU_DEBUG_FLAGS   =-O0 -g -pg -ffree-line-length-none -Wall -Wextra -Warray-temporaries -Wconversion -fimplicit-none -fbacktrace -fcheck=all -ffpe-trap=invalid,zero,overflow -finit-real=nan -cpp -D_DEBUG
 
-INTEL_RELEAS_FLAGS =-fast -fpp -std03 -O3 -ipo -inline all -ipo-jobs4 -qopenmp -static
-INTEL_DEBUG_FLAGS  =-g -std03  -check all -fpe0 -warn -traceback -debug extended -fpp -D_DEBUG
+# for ifort
+INTEL_CLASSIC_RELEASE_FLAGS =-fast -fpp -std18 -O3 -ipo -inline all -ipo-jobs4 -qopenmp -static
+INTEL_CLASSIC_DEBUG_FLAGS   =-g -std18  -check all -fpe0 -warn -traceback -debug extended -fpp -D_DEBUG
+
+# for ifx
+INTEL_RELEASE_FLAGS =-std18 -O3 -xHost -ipo -fast -fiopenmp -fpp
+INTEL_DEBUG_FLAGS   =-std18 -O0 -g -assume ieee_compares -check all -fpe0 -warn -traceback -debug extended -fpp -D_DEBUG
+
+# for nvfortran
+NVIDIA_RELEASE_FLAGS =-O3 -fast -Mfree -cpp
+NVIDIA_DEBUG_FLAGS   =-O0 -g -traceback -Mdclchk -Mfree -cpp -D_DEBUG
 
 OBJDIR=objs
 MODDIR=mods
@@ -17,9 +27,29 @@ BINDIR=bins
 # Setup
 FC=$(COMPILER)
 ifeq "$(DEBUG)" "no"
-	FCFLAGS=$(if $(findstring gfortran, $(FC)), $(GNU_RELEAS_FLAGS), $(INTEL_RELEAS_FLAGS))
+	ifeq "$(findstring gfortran, $(FC))" "gfortran"
+		FCFLAGS=$(GNU_RELEASE_FLAGS)
+	else ifeq "$(FC)" "ifort"
+		FCFLAGS=$(INTEL_CLASSIC_RELEASE_FLAGS)
+	else ifeq "$(FC)" "ifx"
+		FCFLAGS=$(INTEL_RELEASE_FLAGS)
+	else ifeq "$(FC)" "nvfortran"
+		FCFLAGS=$(NVIDIA_RELEASE_FLAGS)
+	endif
 else
-	FCFLAGS=$(if $(findstring gfortran, $(FC)), $(GNU_DEBUG_FLAGS), $(INTEL_DEBUG_FLAGS))
+	ifeq "$(findstring gfortran, $(FC))" "gfortran"
+		FCFLAGS=$(GNU_DEBUG_FLAGS)
+	else ifeq "$(FC)" "ifort"
+		FCFLAGS=$(INTEL_CLASSIC_DEBUG_FLAGS)
+	else ifeq "$(FC)" "ifx"
+		FCFLAGS=$(INTEL_DEBUG_FLAGS)
+	else ifeq "$(FC)" "nvfortran"
+		FCFLAGS=$(NVIDIA_DEBUG_FLAGS)
+	endif
+endif
+
+ifdef EXTERNAL_FLAGS
+	FCFLAGS+=$(EXTERNAL_FLAGS)
 endif
 
 # Flags for module strage
@@ -147,8 +177,13 @@ help:
 	@echo -e '\033[1;32m Usage: \033[0m'
 	@echo -e '  make {options}'
 	@echo -e '\033[1;32m Options: \033[0m'
-	@echo -e '  COMPILER={compiler name} : Compiler name you want to use. F3DS support for ifort and gfortran now!'
+	@echo -e '  COMPILER={compiler name} : Compiler name you want to use. F3DS support below:'
+	@echo -e '                             - gfortran'
+	@echo -e '                             - ifort'
+	@echo -e '                             - ifx'
+	@echo -e '                             - nvfortran'
 	@echo -e '  DEBUG={yes/no}           : If you set DEBUG=yes, Debug infomations are embeded to your code.'
+	@echo -e '  EXTERNAL_FLAGS="{flags}" : Flags you want to set the compiler.'
 	@echo -e '\033[1;32m Example use: \033[0m'
 	@echo -e '  make COMPILER=gfortran DEBUG=no'
 
