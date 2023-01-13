@@ -6,7 +6,6 @@ module viscous_five_equation_model_module
     use abstract_configuration
     use abstract_eos
     use abstract_riemann_solver
-    use abstract_model
     use viscous_five_equation_model_utils_module
     use matrix_module
     use vector_module

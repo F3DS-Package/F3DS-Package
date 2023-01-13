@@ -20,7 +20,6 @@ module class_cellsystem
     use abstract_time_increment_controller
     use abstract_initial_condition_parser
     use abstract_face_gradient_interpolator
-    use abstract_model
     use abstract_parallelizer
     use class_line_plotter
     use class_control_volume_profiler
@@ -151,7 +150,6 @@ module class_cellsystem
         procedure, public, pass(self) :: interpolator_initialize
         procedure, public, pass(self) :: line_plotter_initialize
         procedure, public, pass(self) :: control_volume_profiler_initialize
-        procedure, public, pass(self) :: model_initialize
         procedure, public, pass(self) :: face_gradient_interpolator_initialize
         procedure, public, pass(self) :: parallelizer_initialize
         generic  , public             :: initialize  => result_writer_initialize             , &
@@ -167,7 +165,6 @@ module class_cellsystem
                                                         interpolator_initialize              , &
                                                         line_plotter_initialize              , &
                                                         control_volume_profiler_initialize   , &
-                                                        model_initialize                     , &
                                                         face_gradient_interpolator_initialize, &
                                                         parallelizer_initialize
         procedure, public, pass(self) :: result_writer_open_file
@@ -198,10 +195,7 @@ module class_cellsystem
         procedure, public, pass(self) :: smooth_variables
 
         ! ### Time increment control ###
-        procedure, public, pass(self) :: update_time_increment_functional_api
-        procedure, public, pass(self) :: update_time_increment_objective_api
-        generic  , public             :: update_time_increment => update_time_increment_functional_api, &
-                                                                  update_time_increment_objective_api
+        procedure, public, pass(self) :: update_time_increment
 
         ! ### Termination criterion ###
         procedure, public, pass(self) :: satisfies_termination_criterion
@@ -225,16 +219,11 @@ module class_cellsystem
                                                                compute_divergence_2darray
 
         ! ### Resudual ###
-        procedure, public, pass(self) :: compute_residual_nonviscous_functional_api
-        procedure, public, pass(self) :: compute_residual_viscous_functional_api
-        procedure, public, pass(self) :: compute_residual_viscous_objective_api
-        generic  , public             :: compute_residual => compute_residual_nonviscous_functional_api, &
-                                                             compute_residual_viscous_functional_api   , &
-                                                             compute_residual_viscous_objective_api
-        procedure, public, pass(self) :: compute_source_term_functional_api
-        procedure, public, pass(self) :: compute_source_term_objective_api
-        generic  , public             :: compute_source_term => compute_source_term_functional_api, &
-                                                                compute_source_term_objective_api
+        procedure, public, pass(self) :: compute_residual_nonviscous
+        procedure, public, pass(self) :: compute_residual_viscous
+        generic  , public             :: compute_residual => compute_residual_nonviscous , &
+                                                             compute_residual_viscous
+        procedure, public, pass(self) :: compute_source_term
 
         ! ### Time Stepping ###
         procedure, public, pass(self) :: compute_next_stage
@@ -311,19 +300,6 @@ module class_cellsystem
         call a_face_gradient_interpolator%initialize(config)
     end subroutine face_gradient_interpolator_initialize
 
-    ! ### Model ###
-    subroutine model_initialize(self, a_model, a_config, num_conservative_variables, num_primitive_variables)
-        class   (cellsystem   ), intent(inout) :: self
-        class   (model        ), intent(inout) :: a_model
-        class   (configuration), intent(inout) :: a_config
-        integer(int_kind      ), intent(in   ) :: num_conservative_variables
-        integer(int_kind      ), intent(in   ) :: num_primitive_variables
-#ifdef _DEBUG
-        call write_debuginfo("In model_initialize(), cellsystem.")
-#endif
-        call a_model%initialize(a_config)
-    end subroutine model_initialize
-
     ! ### Control volume profiler ###
     subroutine control_volume_profiler_initialize(self, plotter, config, num_conservative_variables, num_primitive_variables)
         class(cellsystem             ), intent(inout) :: self
@@ -397,7 +373,7 @@ module class_cellsystem
         call controller%initialize(config)
     end subroutine time_increment_controller_initialize
 
-    subroutine update_time_increment_functional_api(self, controller, an_eos, variables_set, spectral_radius_function)
+    subroutine update_time_increment(self, controller, an_eos, variables_set, spectral_radius_function)
         class  (cellsystem               ), intent(inout) :: self
         class  (time_increment_controller), intent(in   ) :: controller
         class  (eos                      ), intent(in   ) :: an_eos
@@ -417,7 +393,7 @@ module class_cellsystem
         integer(int_kind ) :: i
 
 #ifdef _DEBUG
-        call write_debuginfo("In update_time_increment_functional_api(), cellsystem.")
+        call write_debuginfo("In update_time_increment (), cellsystem.")
 #endif
 
         if ( controller%returns_constant() ) then
@@ -444,46 +420,7 @@ module class_cellsystem
                 end if
             end associate
         end do
-    end subroutine update_time_increment_functional_api
-
-    subroutine update_time_increment_objective_api(self, controller, an_eos, variables_set, a_model)
-        class  (cellsystem               ), intent(inout) :: self
-        class  (time_increment_controller), intent(in   ) :: controller
-        class  (eos                      ), intent(in   ) :: an_eos
-        real   (real_kind                ), intent(in   ) :: variables_set(:,:)
-        class  (model                    ), intent(in   ) :: a_model
-
-        integer(int_kind ) :: i
-
-#ifdef _DEBUG
-        call write_debuginfo("In update_time_increment_objective_api(), cellsystem.")
-#endif
-
-        if ( controller%returns_constant() ) then
-            self%time_increment = controller%get_constant_dt()
-            return
-        end if
-
-        self%time_increment = large_value
-        do i = 1, self%num_faces, 1
-            associate(                                                                                                             &
-                lhc_q        => variables_set    (:, self%face_to_cell_indexes(self%num_local_cells+0, i)), &
-                rhc_q        => variables_set    (:, self%face_to_cell_indexes(self%num_local_cells+1, i)), &
-                lhc_v        => self%cell_volumes   (self%face_to_cell_indexes(self%num_local_cells+0, i)), &
-                rhc_v        => self%cell_volumes   (self%face_to_cell_indexes(self%num_local_cells+1, i)), &
-                s            => self%face_areas                                                       (i) , &
-                lhc_is_real  => self%is_real_cell   (self%face_to_cell_indexes(self%num_local_cells+0, i)), &
-                rhc_is_real  => self%is_real_cell   (self%face_to_cell_indexes(self%num_local_cells+1, i))  &
-            )
-                if(lhc_is_real)then
-                    self%time_increment = min(controller%compute_local_dt(lhc_v, s, a_model%spectral_radius(an_eos, lhc_q, lhc_v / s)), self%time_increment)
-                end if
-                if(rhc_is_real)then
-                    self%time_increment = min(controller%compute_local_dt(rhc_v, s, a_model%spectral_radius(an_eos, rhc_q, rhc_v / s)), self%time_increment)
-                end if
-            end associate
-        end do
-    end subroutine update_time_increment_objective_api
+    end subroutine update_time_increment
 
     ! ### Termination criterion ###
     subroutine termination_criterion_initialize(self, criterion, config, num_conservative_variables, num_primitive_variables)
@@ -1208,7 +1145,7 @@ module class_cellsystem
     end subroutine eos_initialize
 
     ! ### Resudual ###
-    subroutine compute_residual_nonviscous_functional_api(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos,                        &
+    subroutine compute_residual_nonviscous(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos,                        &
                                            primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
                                            primitive_to_conservative_function, residual_element_function                                )
 
@@ -1279,7 +1216,7 @@ module class_cellsystem
         real   (real_kind) :: residual_element                        (num_conservative_variables, 1:2)
 
 #ifdef _DEBUG
-        call write_debuginfo("In compute_residual_nonviscous_functional_api(), cellsystem.")
+        call write_debuginfo("In compute_residual_nonviscous (), cellsystem.")
 #endif
 
 !$omp parallel do private(i,lhc_index,rhc_index,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,residual_element)
@@ -1316,11 +1253,11 @@ module class_cellsystem
             residual_set(:,lhc_index) = residual_set(:,lhc_index) + residual_element(:, 1)
             residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
         end do
-    end subroutine compute_residual_nonviscous_functional_api
+    end subroutine compute_residual_nonviscous
 
-    subroutine compute_residual_viscous_functional_api(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos, a_face_gradient_interpolator,                                &
-                                                       primitive_variables_set, gradient_primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
-                                                       primitive_to_conservative_function, residual_element_function)
+    subroutine compute_residual_viscous(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos, a_face_gradient_interpolator,                                &
+                                        primitive_variables_set, gradient_primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
+                                        primitive_to_conservative_function, residual_element_function)
 
         class  (cellsystem                ), intent(in   ) :: self
         class  (parallelizer              ), intent(in   ) :: a_parallelizer
@@ -1392,7 +1329,7 @@ module class_cellsystem
         real   (real_kind) :: residual_element                        (num_conservative_variables, 1:2)
 
 #ifdef _DEBUG
-        call write_debuginfo("In compute_residual_viscous_functional_api(), cellsystem.")
+        call write_debuginfo("In compute_residual_viscous (), cellsystem.")
 #endif
 
 !$omp parallel do private(i,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,face_gradient_primitive_variables,residual_element)
@@ -1447,101 +1384,9 @@ module class_cellsystem
                 residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
             end associate
         end do
-    end subroutine compute_residual_viscous_functional_api
+    end subroutine compute_residual_viscous
 
-    subroutine compute_residual_viscous_objective_api(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos, a_face_gradient_interpolator,                            &
-                                          primitive_variables_set, gradient_primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
-                                          primitive_to_conservative_function, a_model)
-
-        class  (cellsystem                ), intent(in   ) :: self
-        class  (parallelizer              ), intent(in   ) :: a_parallelizer
-        class  (reconstructor             ), intent(in   ) :: a_reconstructor
-        class  (riemann_solver            ), intent(in   ) :: a_riemann_solver
-        class  (eos                       ), intent(in   ) :: an_eos
-        class  (face_gradient_interpolator), intent(in   ) :: a_face_gradient_interpolator
-        real   (real_kind                 ), intent(in   ) :: primitive_variables_set          (:,:)
-        real   (real_kind                 ), intent(in   ) :: gradient_primitive_variables_set (:,:)
-        real   (real_kind                 ), intent(inout) :: residual_set                     (:,:)
-        integer(int_kind                  ), intent(in   ) :: num_conservative_variables
-        integer(int_kind                  ), intent(in   ) :: num_primitive_variables
-        class  (model                     ), intent(in   ) :: a_model
-
-        interface
-            pure function primitive_to_conservative_function(an_eos, primitive_variables, num_conservative_values) result(conservative_values)
-                use typedef_module
-                use abstract_eos
-                class  (eos      ), intent(in) :: an_eos
-                real   (real_kind), intent(in) :: primitive_variables(:)
-                integer(int_kind ), intent(in) :: num_conservative_values
-                real   (real_kind)             :: conservative_values(num_conservative_values)
-            end function primitive_to_conservative_function
-        end interface
-
-        integer(int_kind ) :: i
-        real   (real_kind) :: reconstructed_primitive_variables_lhc   (num_primitive_variables)
-        real   (real_kind) :: reconstructed_primitive_variables_rhc   (num_primitive_variables)
-        real   (real_kind) :: face_gradient_primitive_variables       (num_primitive_variables*3)
-        real   (real_kind) :: residual_element                        (num_conservative_variables, 1:2)
-
-#ifdef _DEBUG
-        call write_debuginfo("In compute_residual_viscous_objective_api(), cellsystem.")
-#endif
-
-!$omp parallel do private(i,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,face_gradient_primitive_variables,residual_element)
-        do i = 1, self%num_faces, 1
-            associate(                                                             &
-                lhc_index => self%face_to_cell_indexes(self%num_local_cells+0, i), &
-                rhc_index => self%face_to_cell_indexes(self%num_local_cells+1, i)  &
-            )
-                reconstructed_primitive_variables_lhc(:) = a_reconstructor%reconstruct_lhc(                              &
-                    primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
-                    i, self%num_local_cells, num_primitive_variables                                                     &
-                )
-                reconstructed_primitive_variables_rhc(:) = a_reconstructor%reconstruct_rhc(                              &
-                    primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
-                    i, self%num_local_cells, num_primitive_variables                                                     &
-                )
-
-                if(.not. self%is_real_cell(rhc_index))then
-                    face_gradient_primitive_variables(:) = self%compute_boundary_gradient(                &
-                        primitive_variables_set   (:,lhc_index), primitive_variables_set   (:,rhc_index), &
-                        self%cell_centor_positions(:,lhc_index), self%cell_centor_positions(:,rhc_index), &
-                        num_primitive_variables                                                           &
-                    )
-                else
-                    face_gradient_primitive_variables(:) = a_face_gradient_interpolator%interpolate(                  &
-                        gradient_primitive_variables_set(:,lhc_index), gradient_primitive_variables_set(:,rhc_index), &
-                        primitive_variables_set         (:,lhc_index), primitive_variables_set         (:,rhc_index), &
-                        self%cell_centor_positions      (:,lhc_index), self%cell_centor_positions      (:,rhc_index), &
-                        num_primitive_variables                                                                       &
-                    )
-                end if
-
-                residual_element(:,:) = a_model%compute_residual_element( &
-                    an_eos                                              , &
-                    a_riemann_solver                                    , &
-                    primitive_variables_set              (:,lhc_index)  , &
-                    primitive_variables_set              (:,rhc_index)  , &
-                    reconstructed_primitive_variables_lhc(:)            , &
-                    reconstructed_primitive_variables_rhc(:)            , &
-                    face_gradient_primitive_variables    (:)            , &
-                    self%cell_volumes                      (lhc_index)  , &
-                    self%cell_volumes                      (rhc_index)  , &
-                    self%face_areas                  (i)                , &
-                    self%face_normal_vectors     (1:3,i)                , &
-                    self%face_tangential1_vectors(1:3,i)                , &
-                    self%face_tangential2_vectors(1:3,i)                , &
-                    num_conservative_variables                          , &
-                    num_primitive_variables                               &
-                )
-
-                residual_set(:,lhc_index) = residual_set(:,lhc_index) + residual_element(:, 1)
-                residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
-            end associate
-        end do
-    end subroutine compute_residual_viscous_objective_api
-
-    subroutine compute_source_term_functional_api(self, a_parallelizer, variables_set, residual_set, num_conservative_variables, compute_source_term_function)
+    subroutine compute_source_term(self, a_parallelizer, variables_set, residual_set, num_conservative_variables, compute_source_term_function)
         class  (cellsystem  ), intent(in   ) :: self
         class  (parallelizer), intent(in   ) :: a_parallelizer
         real   (real_kind   ), intent(in   ) :: variables_set(:,:)
@@ -1563,7 +1408,7 @@ module class_cellsystem
         integer(int_kind ) :: element(num_conservative_variables)
 
 #ifdef _DEBUG
-        call write_debuginfo("In compute_source_term_functional_api(), cellsystem.")
+        call write_debuginfo("In compute_source_term (), cellsystem.")
 #endif
 
 !$omp parallel do private(i, element)
@@ -1571,29 +1416,7 @@ module class_cellsystem
             element(:) = compute_source_term_function(variables_set(:,i), num_conservative_variables)
             residual_set(:,i) = residual_set(:,i) + element(:)
         end do
-    end subroutine compute_source_term_functional_api
-
-    subroutine compute_source_term_objective_api(self, a_parallelizer, variables_set, residual_set, num_conservative_variables, a_model)
-        class  (cellsystem  ), intent(in   ) :: self
-        class  (parallelizer), intent(in   ) :: a_parallelizer
-        real   (real_kind   ), intent(in   ) :: variables_set(:,:)
-        real   (real_kind   ), intent(inout) :: residual_set (:,:)
-        integer(int_kind    ), intent(in   ) :: num_conservative_variables
-        class  (model       ), intent(in   ) :: a_model
-
-        integer(int_kind ) :: i
-        integer(int_kind ) :: element(num_conservative_variables)
-
-#ifdef _DEBUG
-        call write_debuginfo("In compute_source_term_objective_api(), cellsystem.")
-#endif
-
-!$omp parallel do private(i, element)
-        do i = 1, self%num_cells, 1
-            element(:) = a_model%compute_source_term(variables_set(:,i), num_conservative_variables)
-            residual_set(:,i) = residual_set(:,i) + element(:)
-        end do
-    end subroutine compute_source_term_objective_api
+    end subroutine compute_source_term
 
     ! ### Riemann solver ###
     subroutine riemann_solver_initialize(self, a_riemann_solver, config, num_conservative_variables, num_primitive_variables)
