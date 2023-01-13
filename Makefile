@@ -145,14 +145,15 @@ FRAMEWORK_OBJS+=$(subst $(FRAMEWORK_SRCDIR)/, $(OBJDIR)/, $(FRAMEWORK_SRCS))
 FRAMEWORK_OBJS:=$(subst .f90,.o,$(FRAMEWORK_OBJS))
 FRAMEWORK_OBJS:=$(subst .F90,.o,$(FRAMEWORK_OBJS))
 
-# F3DS Collection
+# F3DS Resource
 # Five-equation model common tools
-FIVE_EQUATION_MODEL_COMMON_SRCDIR=collection/five_equation_model_common/src
+FIVE_EQUATION_MODEL_COMMON_TARGET=f5eq_common.a
+FIVE_EQUATION_MODEL_COMMON_SRCDIR=resource/five_equation_model_common/src
 FIVE_EQUATION_MODEL_COMMON_SRCS=$(wildcard  $(FIVE_EQUATION_MODEL_COMMON_SRCDIR)/special_reconstructor/*.f90)
 FIVE_EQUATION_MODEL_COMMON_SRCS+=$(wildcard $(FIVE_EQUATION_MODEL_COMMON_SRCDIR)/special_generator/*.f90)
-FIVE_EQUATION_MODEL_COMMON_OBJS=$(FRAMEWORK_OBJS)
-FIVE_EQUATION_MODEL_COMMON_OBJS+=$(subst .f90,.o, $(subst $(FIVE_EQUATION_MODEL_COMMON_SRCDIR)/, $(OBJDIR)/, $(FIVE_EQUATION_MODEL_COMMON_SRCS)))
+FIVE_EQUATION_MODEL_COMMON_OBJS=$(subst .f90,.o, $(subst $(FIVE_EQUATION_MODEL_COMMON_SRCDIR)/, $(OBJDIR)/, $(FIVE_EQUATION_MODEL_COMMON_SRCS)))
 
+# F3DS Collection
 # Five-equation model
 FIVE_EQUATION_MODEL_TARGET=f5eq
 FIVE_EQUATION_MODEL_SRCDIR=collection/five_equation_model/src
@@ -161,7 +162,8 @@ FIVE_EQUATION_MODEL_SRCS+=$(wildcard $(FIVE_EQUATION_MODEL_SRCDIR)/model/*.f90)
 FIVE_EQUATION_MODEL_SRCS+=$(wildcard $(FIVE_EQUATION_MODEL_SRCDIR)/special_reconstructor/*.f90)
 FIVE_EQUATION_MODEL_SRCS+=$(wildcard $(FIVE_EQUATION_MODEL_SRCDIR)/special_generator/*.f90)
 FIVE_EQUATION_MODEL_SRCS+=$(wildcard $(FIVE_EQUATION_MODEL_SRCDIR)/*.f90)
-FIVE_EQUATION_MODEL_OBJS=$(FIVE_EQUATION_MODEL_COMMON_OBJS)
+FIVE_EQUATION_MODEL_OBJS=$(FRAMEWORK_OBJS)
+FIVE_EQUATION_MODEL_OBJS+=$(FIVE_EQUATION_MODEL_COMMON_OBJS)
 FIVE_EQUATION_MODEL_OBJS+=$(subst .f90,.o, $(subst $(FIVE_EQUATION_MODEL_SRCDIR)/, $(OBJDIR)/, $(FIVE_EQUATION_MODEL_SRCS)))
 
 # Viscous five-equation model
@@ -170,10 +172,11 @@ VISCOUS_FIVE_EQUATION_MODEL_SRCDIR=collection/viscous_five_equation_model/src
 VISCOUS_FIVE_EQUATION_MODEL_SRCS=$(wildcard $(VISCOUS_FIVE_EQUATION_MODEL_SRCDIR)/variables/*.f90)
 VISCOUS_FIVE_EQUATION_MODEL_SRCS+=$(wildcard $(VISCOUS_FIVE_EQUATION_MODEL_SRCDIR)/model/*.f90)
 VISCOUS_FIVE_EQUATION_MODEL_SRCS+=$(wildcard $(VISCOUS_FIVE_EQUATION_MODEL_SRCDIR)/*.f90)
-VISCOUS_FIVE_EQUATION_MODEL_OBJS=$(FIVE_EQUATION_MODEL_COMMON_OBJS)
+VISCOUS_FIVE_EQUATION_MODEL_OBJS=$(FRAMEWORK_OBJS)
+VISCOUS_FIVE_EQUATION_MODEL_OBJS+=$(FIVE_EQUATION_MODEL_COMMON_OBJS)
 VISCOUS_FIVE_EQUATION_MODEL_OBJS+=$(subst .f90,.o, $(subst $(VISCOUS_FIVE_EQUATION_MODEL_SRCDIR)/, $(OBJDIR)/, $(VISCOUS_FIVE_EQUATION_MODEL_SRCS)))
 
-all: $(FRAMEWORK_TARGET) $(FIVE_EQUATION_MODEL_TARGET) $(VISCOUS_FIVE_EQUATION_MODEL_TARGET)
+all: $(FRAMEWORK_TARGET) $(FIVE_EQUATION_MODEL_COMMON_TARGET) $(FIVE_EQUATION_MODEL_TARGET) $(VISCOUS_FIVE_EQUATION_MODEL_TARGET)
 
 # Help
 help:
@@ -198,12 +201,19 @@ $(FRAMEWORK_TARGET): $(FRAMEWORK_OBJS)
 	[ -d $(LIBDIR) ] || mkdir -p $(LIBDIR)
 	$(AR) rc $(LIBDIR)/$@ $+
 
-## Five-equation model
+## F3DS Resource
+### Five-equation model
+$(FIVE_EQUATION_MODEL_COMMON_TARGET): $(FIVE_EQUATION_MODEL_COMMON_OBJS)
+	[ -d $(LIBDIR) ] || mkdir -p $(LIBDIR)
+	$(AR) rc $(LIBDIR)/$@ $+
+
+## F3DS collection
+### Five-equation model
 $(FIVE_EQUATION_MODEL_TARGET): $(FIVE_EQUATION_MODEL_OBJS)
 	[ -d $(BINDIR) ] || mkdir -p $(BINDIR)
 	$(FC) $(FCFLAGS) $+ -o $(BINDIR)/$@
 
-## Viscous five-equation model
+### Viscous five-equation model
 $(VISCOUS_FIVE_EQUATION_MODEL_TARGET): $(VISCOUS_FIVE_EQUATION_MODEL_OBJS)
 	[ -d $(BINDIR) ] || mkdir -p $(BINDIR)
 	$(FC) $(FCFLAGS) $+ -o $(BINDIR)/$@
@@ -288,11 +298,14 @@ clean:
 	rm -rf $(OBJDIR)
 	rm -rf $(MODDIR)
 	rm -rf $(BINDIR)
+	rm -rf $(LIBDIR)
 
 list:
 	@echo -e '\033[1;32m Framework objects:\033[0m'
 	@echo -e $(FRAMEWORK_OBJS)
-	@echo -e '\033[1;32m Viscous 5-equation model objects:\033[0m'
+	@echo -e '\033[1;32m Five-equation model resource objects:\033[0m'
+	@echo -e $(FIVE_EQUATION_MODEL_COMMON_OBJS)
+	@echo -e '\033[1;32m Viscous five-equation model objects:\033[0m'
 	@echo -e $(VISCOUS_FIVE_EQUATION_MODEL_OBJS)
-	@echo -e '\033[1;32m 5-equation model objects objects:\033[0m'
+	@echo -e '\033[1;32m five-equation model objects objects:\033[0m'
 	@echo -e $(FIVE_EQUATION_MODEL_OBJS)
