@@ -16,6 +16,10 @@ We are working on improving parallel computing and developing features for unstr
 
 ### F3DS Flamework
 
+The source code is located in resource/five_equation_model_common. The static link library is located in libs/f5eq_common.a.  
+This flamework is desined by Object Oriented Desing (OOD) and supports Structure of Arrays (SoA) layout.
+We provide a fast, maintainable FVM library and solvers.
+
 #### EoS
 
 - [ ] Ideal gas EoS
@@ -130,22 +134,25 @@ We are working on improving parallel computing and developing features for unstr
 
 #### Five-equation model common tools
 
+The source code is located in resource/five_equation_model_common. The static link library is located in libs/f5eq_common.a.  
+This resource provides following schemes:
+
 - [x] rho-THINC reconstruction
 ### F3DS Collection
 
-- [x] 5 equation model (in collection/five_equation_model. Binary name is "f5eq") [Kapila 2001] [Allaire 2002]
+- [x] five-equation model (The source code is placed in collection/five_equation_model. The binary is located in bins/f5eq) [Kapila 2001] [Allaire 2002]
     - Additional terms
         - [x] with Kdiv(u) term [Kapila 2001]
         - [ ] with cavitation model
 
-- [x] viscosity 5 equation model (in collection/viscous_five_equation_model. Binary name is "fv5eq") [Perigaud 2005] [Coralic 2014]
+- [x] viscosity five-equation model (The source code is placed in collection/viscous_five_equation_model. The binary is located in bins/fv5eq) [Perigaud 2005] [Coralic 2014]
     - Additional terms
         - [x] with Kdiv(u) term [Kapila 2001]
         - [x] with surface tension term [Perigaud 2005] [Garrick 2017]
         - [ ] with cavitation model
         - [x] with gravity
 
-- [ ] Euler equation (in collection/euler. Binary name is "feuler")
+- [ ] Euler equation (The source code is placed in collection/euler. The binary is located in bins/feuler)
 ## How to compile
 
 At first, we should clone the repository and download submodules.
@@ -172,6 +179,16 @@ make COMPILER=ifort DEBUG=yes
 More details can be found in 'make help'.
 
 ## How to use
+
+### Use F3DS Framework and F3DS Resource
+
+Please link static link libraries and mod files.
+
+```
+gfortran your_solver.f90 -o your_solver.exe -L/{your_f3ds_path}/f3ds/libs -I/{your_f3ds_path}/f3ds/mods f3ds_framework.a
+```
+
+### Use solvers
 
 All binaries provided by F3DS is stored in "bins" directory. If you want use "f5eq", you type "./bins/f5eq".  
 If you want more infomations, please read README.md in each collection directories.
