@@ -2,6 +2,7 @@
 # User inputs
 COMPILER = gfortran
 DEBUG    = no
+ARCHIVER = ar
 
 # Constants
 # for gfortran
@@ -23,9 +24,11 @@ NVIDIA_DEBUG_FLAGS   =-O0 -g -traceback -Mdclchk -Mfree -cpp -D_DEBUG
 OBJDIR=objs
 MODDIR=mods
 BINDIR=bins
+LIBDIR=libs
 
 # Setup
 FC=$(COMPILER)
+AR=$(ARCHIVER)
 ifeq "$(DEBUG)" "no"
 	ifeq "$(findstring gfortran, $(FC))" "gfortran"
 		FCFLAGS=$(GNU_RELEASE_FLAGS)
@@ -130,6 +133,7 @@ FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/generator/*.f90)
 FRAMEWORK_SRCS+=$(wildcard $(FRAMEWORK_SRCDIR)/cellsystem/*.f90)
 
 # Flamework objects
+FRAMEWORK_TARGET=f3ds_framework.a
 FRAMEWORK_OBJS=$(subst $(JSONFORTDIR)/,$(OBJDIR)/, $(JSONFORTSRCS))
 FRAMEWORK_OBJS+=$(subst $(PENF_DIR)/, $(OBJDIR)/, $(PENF_SRC))
 FRAMEWORK_OBJS+=$(subst $(FACE_DIR)/, $(OBJDIR)/, $(FACE_SRC))
@@ -169,7 +173,7 @@ VISCOUS_FIVE_EQUATION_MODEL_SRCS+=$(wildcard $(VISCOUS_FIVE_EQUATION_MODEL_SRCDI
 VISCOUS_FIVE_EQUATION_MODEL_OBJS=$(FIVE_EQUATION_MODEL_COMMON_OBJS)
 VISCOUS_FIVE_EQUATION_MODEL_OBJS+=$(subst .f90,.o, $(subst $(VISCOUS_FIVE_EQUATION_MODEL_SRCDIR)/, $(OBJDIR)/, $(VISCOUS_FIVE_EQUATION_MODEL_SRCS)))
 
-all: $(FIVE_EQUATION_MODEL_TARGET) $(VISCOUS_FIVE_EQUATION_MODEL_TARGET)
+all: $(FRAMEWORK_TARGET) $(FIVE_EQUATION_MODEL_TARGET) $(VISCOUS_FIVE_EQUATION_MODEL_TARGET)
 
 # Help
 help:
@@ -177,57 +181,65 @@ help:
 	@echo -e '\033[1;32m Usage: \033[0m'
 	@echo -e '  make {options}'
 	@echo -e '\033[1;32m Options: \033[0m'
-	@echo -e '  COMPILER={compiler name} : Compiler name you want to use. F3DS support below:'
+	@echo -e '  COMPILER={name}          : Compiler name you want to use. F3DS support below:'
 	@echo -e '                             - gfortran'
 	@echo -e '                             - ifort'
 	@echo -e '                             - ifx'
 	@echo -e '                             - nvfortran'
 	@echo -e '  DEBUG={yes/no}           : If you set DEBUG=yes, Debug infomations are embeded to your code.'
-	@echo -e '  EXTERNAL_FLAGS="{flags}" : Flags you want to set the compiler.'
+	@echo -e '  EXTERNAL_FLAGS={flags}   : Flags you want to set the compiler.'
+	@echo -e '  ARCHIVER={name}          : Archiver you want to use on making a static link library.'
 	@echo -e '\033[1;32m Example use: \033[0m'
 	@echo -e '  make COMPILER=gfortran DEBUG=no'
 
-# Five-equation model compiling rule
+# Build rules
+## F3DS Flamework
+$(FRAMEWORK_TARGET): $(FRAMEWORK_OBJS)
+	[ -d $(LIBDIR) ] || mkdir -p $(LIBDIR)
+	$(AR) rc $(LIBDIR)/$@ $+
+
+## Five-equation model
 $(FIVE_EQUATION_MODEL_TARGET): $(FIVE_EQUATION_MODEL_OBJS)
 	[ -d $(BINDIR) ] || mkdir -p $(BINDIR)
 	$(FC) $(FCFLAGS) $+ -o $(BINDIR)/$@
 
-# Viscous five-equation model compiling rule
+## Viscous five-equation model
 $(VISCOUS_FIVE_EQUATION_MODEL_TARGET): $(VISCOUS_FIVE_EQUATION_MODEL_OBJS)
 	[ -d $(BINDIR) ] || mkdir -p $(BINDIR)
 	$(FC) $(FCFLAGS) $+ -o $(BINDIR)/$@
 
-# JSON Fortran
+# Third-party compile rule
+## JSON Fortran
 $(OBJDIR)/%.o: $(JSONFORTDIR)/%.F90
 	[ -d $(dir $@) ] || mkdir -p $(dir $@)
 	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
 	$(FC) $(FCFLAGS) -c $< -o $@
 
-# PENF
+## PENF
 $(OBJDIR)/%.o: $(PENF_DIR)/%.F90
 	[ -d $(dir $@) ] || mkdir -p $(dir $@)
 	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
 	$(FC) $(FCFLAGS) -c $< -o $@
 
-# FACE
+## FACE
 $(OBJDIR)/%.o: $(FACE_DIR)/%.F90
 	[ -d $(dir $@) ] || mkdir -p $(dir $@)
 	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
 	$(FC) $(FCFLAGS) -c $< -o $@
 
-# BeFoR64
+## BeFoR64
 $(OBJDIR)/%.o: $(BEFOR64_DIR)/%.F90
 	[ -d $(dir $@) ] || mkdir -p $(dir $@)
 	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
 	$(FC) $(FCFLAGS) -c $< -o $@
 
-# StringiFor
+## StringiFor
 $(OBJDIR)/%.o: $(STRINGIFOR_DIR)/%.F90
 	[ -d $(dir $@) ] || mkdir -p $(dir $@)
 	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
 	$(FC) $(FCFLAGS) -c $< -o $@
 
-# FoXy
+## FoXy
 $(OBJDIR)/%.o: $(FoXy_DIR)/%.F90
 	[ -d $(dir $@) ] || mkdir -p $(dir $@)
 	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
@@ -237,7 +249,7 @@ $(OBJDIR)/%.o: $(FoXy_DIR)/%.f90
 	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
 	$(FC) $(FCFLAGS) -c $< -o $@
 
-# VTKFortran
+## VTKFortran
 $(OBJDIR)/%.o: $(VTKFORTRAN_DIR)/%.f90
 	[ -d $(dir $@) ] || mkdir -p $(dir $@)
 	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
@@ -247,25 +259,26 @@ $(OBJDIR)/%.o: $(VTKFORTRAN_DIR)/%.F90
 	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
 	$(FC) $(FCFLAGS) -c $< -o $@
 
-# F3DS Flamework
+# F3DS Flamework compile rule
 $(OBJDIR)/%.o: $(FRAMEWORK_SRCDIR)/%.f90
 	[ -d $(dir $@) ] || mkdir -p $(dir $@)
 	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
 	$(FC) $(FCFLAGS) -c $< -o $@
 
-# Five-equation model common tools
+# F3DS Collection compile rule
+## Five-equation model common tools
 $(OBJDIR)/%.o: $(FIVE_EQUATION_MODEL_COMMON_SRCDIR)/%.f90
 	[ -d $(dir $@) ] || mkdir -p $(dir $@)
 	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
 	$(FC) $(FCFLAGS) -c $< -o $@
 
-# Five-equation model
+## Five-equation model
 $(OBJDIR)/%.o: $(FIVE_EQUATION_MODEL_SRCDIR)/%.f90
 	[ -d $(dir $@) ] || mkdir -p $(dir $@)
 	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
 	$(FC) $(FCFLAGS) -c $< -o $@
 
-# Viscous five-equation model
+## Viscous five-equation model
 $(OBJDIR)/%.o: $(VISCOUS_FIVE_EQUATION_MODEL_SRCDIR)/%.f90
 	[ -d $(dir $@) ] || mkdir -p $(dir $@)
 	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
