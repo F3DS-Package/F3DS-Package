@@ -906,19 +906,21 @@ module class_cellsystem
             lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
             rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
 
-            associate(                           &
-                x => self%cell_centor_positions, &
-                v => variables_set               &
+            associate(                                               &
+                x_lhc => self%cell_centor_positions(1:3, lhc_index), &
+                x_rhc => self%cell_centor_positions(1:3, rhc_index), &
+                v_lhc => variables_set             ( : , lhc_index), &
+                v_rhc => variables_set             ( : , rhc_index)  &
             )
-                lhc_w = weight_function(x(:,lhc_index), x(:,rhc_index), v(:,lhc_index), v(:,rhc_index))
+                lhc_w = weight_function(x_lhc, x_rhc, v_lhc, v_rhc)
                 if(self%is_real_cell(rhc_index))then
-                    rhc_w = weight_function(x(:,rhc_index), x(:,lhc_index), v(:,rhc_index), v(:,lhc_index))
+                    rhc_w = weight_function(x_lhc, x_rhc, v_lhc, v_rhc)
                 else
                     rhc_w = 0.d0
                 endif
 
-                smoothed_variables_set(:, lhc_index) = smoothed_variables_set(:, lhc_index) + lhc_w * v(:, lhc_index)
-                smoothed_variables_set(:, rhc_index) = smoothed_variables_set(:, rhc_index) + rhc_w * v(:, rhc_index)
+                smoothed_variables_set(:, lhc_index) = smoothed_variables_set(:, lhc_index) + lhc_w * v_lhc
+                smoothed_variables_set(:, rhc_index) = smoothed_variables_set(:, rhc_index) + rhc_w * v_rhc
 
                 total_weight_set(lhc_index) = total_weight_set(lhc_index) + lhc_w
                 total_weight_set(rhc_index) = total_weight_set(rhc_index) + rhc_w
