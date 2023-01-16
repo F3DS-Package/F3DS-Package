@@ -216,7 +216,7 @@ program viscous_five_equation_model_solver
                 call a_cellsystem%apply_slip_and_symmetric_condition(a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, slip_and_symmetric_bc)
             end if
 
-            call a_cellsystem%compute_residual(   &
+            call a_cellsystem%compute_divergence(   &
                 a_parallelizer                  , &
                 a_reconstructor                 , &
                 a_riemann_solver                , &

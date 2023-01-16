@@ -215,14 +215,14 @@ module class_cellsystem
         ! ### Divergence Calculator ###
         procedure, public, pass(self) :: compute_divergence_1darray
         procedure, public, pass(self) :: compute_divergence_2darray
+        procedure, public, pass(self) :: compute_divergence_nonviscous
+        procedure, public, pass(self) :: compute_divergence_viscous
         generic  , public             :: compute_divergence => compute_divergence_1darray, &
-                                                               compute_divergence_2darray
+                                                               compute_divergence_2darray, &
+                                                               compute_divergence_nonviscous , &
+                                                               compute_divergence_viscous
 
-        ! ### Resudual ###
-        procedure, public, pass(self) :: compute_residual_nonviscous
-        procedure, public, pass(self) :: compute_residual_viscous
-        generic  , public             :: compute_residual => compute_residual_nonviscous , &
-                                                             compute_residual_viscous
+        ! ### Sorce Term
         procedure, public, pass(self) :: compute_source_term
 
         ! ### Time Stepping ###
@@ -1147,7 +1147,7 @@ module class_cellsystem
     end subroutine eos_initialize
 
     ! ### Resudual ###
-    subroutine compute_residual_nonviscous(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos,                        &
+    subroutine compute_divergence_nonviscous(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos,                        &
                                            primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
                                            primitive_to_conservative_function, residual_element_function                                )
 
@@ -1218,7 +1218,7 @@ module class_cellsystem
         real   (real_kind) :: residual_element                        (num_conservative_variables, 1:2)
 
 #ifdef _DEBUG
-        call write_debuginfo("In compute_residual_nonviscous (), cellsystem.")
+        call write_debuginfo("In compute_divergence_nonviscous (), cellsystem.")
 #endif
 
 !$omp parallel do private(i,lhc_index,rhc_index,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,residual_element)
@@ -1255,9 +1255,9 @@ module class_cellsystem
             residual_set(:,lhc_index) = residual_set(:,lhc_index) + residual_element(:, 1)
             residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
         end do
-    end subroutine compute_residual_nonviscous
+    end subroutine compute_divergence_nonviscous
 
-    subroutine compute_residual_viscous(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos, a_face_gradient_interpolator,                                &
+    subroutine compute_divergence_viscous(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos, a_face_gradient_interpolator,                                &
                                         primitive_variables_set, gradient_primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
                                         primitive_to_conservative_function, residual_element_function)
 
@@ -1331,7 +1331,7 @@ module class_cellsystem
         real   (real_kind) :: residual_element                        (num_conservative_variables, 1:2)
 
 #ifdef _DEBUG
-        call write_debuginfo("In compute_residual_viscous (), cellsystem.")
+        call write_debuginfo("In compute_divergence_viscous (), cellsystem.")
 #endif
 
 !$omp parallel do private(i,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,face_gradient_primitive_variables,residual_element)
@@ -1386,7 +1386,7 @@ module class_cellsystem
                 residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
             end associate
         end do
-    end subroutine compute_residual_viscous
+    end subroutine compute_divergence_viscous
 
     subroutine compute_source_term(self, a_parallelizer, variables_set, residual_set, num_conservative_variables, compute_source_term_function)
         class  (cellsystem  ), intent(in   ) :: self
