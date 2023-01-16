@@ -3,6 +3,7 @@
 COMPILER = gfortran
 DEBUG    = no
 ARCHIVER = ar
+PREFIX   = /opt/f3ds
 
 # Constants
 # for gfortran
@@ -180,10 +181,14 @@ all: $(FRAMEWORK_TARGET) $(FIVE_EQUATION_MODEL_COMMON_TARGET) $(FIVE_EQUATION_MO
 
 # Help
 help:
-	@echo -e '\033[1;32m Make options of F3DS framework & collection \033[0m'
+	@echo -e '\033[1;32m Make options of F3DS Package \033[0m'
 	@echo -e '\033[1;32m Usage: \033[0m'
-	@echo -e '  make {options}'
+	@echo -e '  make {options} {flags}'
 	@echo -e '\033[1;32m Options: \033[0m'
+	@echo -e '  all                      : Compile F3DS Framework, Resource, and Collection.'
+	@echo -e '  list                     : Show compiling target.'
+	@echo -e '  install                  : Install F3DS Package.'
+	@echo -e '\033[1;32m Flags: \033[0m'
 	@echo -e '  COMPILER={name}          : Compiler name you want to use. F3DS support below:'
 	@echo -e '                             - gfortran'
 	@echo -e '                             - ifort'
@@ -192,6 +197,7 @@ help:
 	@echo -e '  DEBUG={yes/no}           : If you set DEBUG=yes, Debug infomations are embeded to your code.'
 	@echo -e '  EXTERNAL_FLAGS={flags}   : Flags you want to set the compiler.'
 	@echo -e '  ARCHIVER={name}          : Archiver you want to use on making a static link library.'
+	@echo -e '  PLEFIX={path}            : Install path you want to set. The default is "/opt/f3ds".'
 	@echo -e '\033[1;32m Example use: \033[0m'
 	@echo -e '  make COMPILER=gfortran DEBUG=no'
 
@@ -309,3 +315,14 @@ list:
 	@echo -e $(VISCOUS_FIVE_EQUATION_MODEL_OBJS)
 	@echo -e '\033[1;32m five-equation model objects objects:\033[0m'
 	@echo -e $(FIVE_EQUATION_MODEL_OBJS)
+
+install:
+	[ -d $(PREFIX) ] || mkdir -p $(PREFIX)
+	cp bins        $(PREFIX)/. -r
+	cp libs        $(PREFIX)/. -r
+	cp mods        $(PREFIX)/. -r
+	cp framework   $(PREFIX)/. -r
+	cp resource    $(PREFIX)/. -r
+	cp collection  $(PREFIX)/. -r
+	cp setenv.sh   $(PREFIX)/.
+	cp README.md   $(PREFIX)/.
