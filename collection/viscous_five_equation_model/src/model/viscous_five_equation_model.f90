@@ -40,7 +40,7 @@ module viscous_five_equation_model_module
 
 
     public :: initialize_model
-    public :: compute_residual_element
+    public :: flux_function
     public :: compute_source_term
     public :: spectral_radius
     public :: compute_smoothed_volume_fraction
@@ -226,7 +226,7 @@ module viscous_five_equation_model_module
         end if
     end subroutine initialize_model
 
-    function compute_residual_element(            &
+    function flux_function(                       &
         an_eos                                  , &
         an_riemann_solver                       , &
         primitive_variables_lhc                 , &
@@ -241,7 +241,7 @@ module viscous_five_equation_model_module
         face_tangential1_vector                 , &
         face_tangential2_vector                 , &
         num_conservative_values                 , &
-        num_primitive_values                      ) result(residual_element)
+        num_primitive_values                      ) result(flux)
 
         class  (eos           ), intent(in) :: an_eos
         class  (riemann_solver), intent(in) :: an_riemann_solver
@@ -259,7 +259,7 @@ module viscous_five_equation_model_module
         integer(int_kind      ), intent(in) :: num_conservative_values
         integer(int_kind      ), intent(in) :: num_primitive_values
 
-        real   (real_kind)                  :: residual_element(num_conservative_values, 1:2)
+        real   (real_kind)                  :: flux(num_conservative_values, 1:2)
 
         ! ## face coordinate variables
         real(real_kind) :: local_coordinate_primitives_lhc  (num_primitive_values)
@@ -444,8 +444,8 @@ module viscous_five_equation_model_module
         )
 
         ! # summation nonviscosity-flux
-        residual_element(1:7, 1) = (-1.d0 / lhc_cell_volume) * nonviscosity_flux(:) * face_area
-        residual_element(1:7, 2) = (+1.d0 / rhc_cell_volume) * nonviscosity_flux(:) * face_area
+        flux(1:7, 1) = (-1.d0 / lhc_cell_volume) * nonviscosity_flux(:) * face_area
+        flux(1:7, 2) = (+1.d0 / rhc_cell_volume) * nonviscosity_flux(:) * face_area
 
         ! # Compute interface values
         numerical_velocity = an_riemann_solver%compute_numerical_velocity( &
@@ -489,9 +489,9 @@ module viscous_five_equation_model_module
                 lhc_k = an_eos%compute_k(lhc_p, lhc_rhos, lhc_z1)
                 rhc_k = an_eos%compute_k(rhc_p, rhc_rhos, rhc_z1)
             end if
-            residual_element(7, 1) = residual_element(7, 1) &
+            flux(7, 1) = flux(7, 1) &
                                    + (lhc_z1 + lhc_k) * (1.d0 / lhc_cell_volume) * numerical_velocity * face_area
-            residual_element(7, 2) = residual_element(7, 2) &
+            flux(7, 2) = flux(7, 2) &
                                    - (rhc_z1 + rhc_k) * (1.d0 / rhc_cell_volume) * numerical_velocity * face_area
         end associate
 
@@ -510,13 +510,13 @@ module viscous_five_equation_model_module
                 interface_alpha_heavy = get_heavest_volume_fraction(lhc_z1)
                 lhc_alpha_heavy       = get_heavest_volume_fraction(lhc_z1)
                 rhc_alpha_heavy       = get_heavest_volume_fraction(rhc_z1)
-                residual_element(3:5, 1) = residual_element(3:5, 1) &
+                flux(3:5, 1) = flux(3:5, 1) &
                                        + mixture_surface_tension(lhc_z1) * lhc_curv * (1.d0 / lhc_cell_volume) * interface_alpha_heavy * face_area * face_normal_vector(1:3)
-                residual_element(3:5, 2) = residual_element(3:5, 2) &
+                flux(3:5, 2) = flux(3:5, 2) &
                                        - mixture_surface_tension(rhc_z1) * rhc_curv * (1.d0 / rhc_cell_volume) * interface_alpha_heavy * face_area * face_normal_vector(1:3)
-                residual_element(6, 1) = residual_element(6, 1) &
+                flux(6, 1) = flux(6, 1) &
                                        + mixture_surface_tension(lhc_z1) * lhc_curv * (1.d0 / lhc_cell_volume) * (interface_alpha_heavy * numerical_velocity - lhc_alpha_heavy * numerical_velocity) * face_area
-                residual_element(6, 2) = residual_element(6, 2) &
+                flux(6, 2) = flux(6, 2) &
                                        - mixture_surface_tension(rhc_z1) * rhc_curv * (1.d0 / rhc_cell_volume) * (interface_alpha_heavy * numerical_velocity - rhc_alpha_heavy * numerical_velocity) * face_area
             end associate
         end if
@@ -559,11 +559,11 @@ module viscous_five_equation_model_module
                     face_tangential1_vector          , &
                     face_tangential2_vector            &
                 )
-                residual_element(1:7, 1) = residual_element(1:7, 1) + (1.d0 / lhc_cell_volume) * viscosity_flux(1:7) * face_area
-                residual_element(1:7, 2) = residual_element(1:7, 2) - (1.d0 / rhc_cell_volume) * viscosity_flux(1:7) * face_area
+                flux(1:7, 1) = flux(1:7, 1) + (1.d0 / lhc_cell_volume) * viscosity_flux(1:7) * face_area
+                flux(1:7, 2) = flux(1:7, 2) - (1.d0 / rhc_cell_volume) * viscosity_flux(1:7) * face_area
             end associate
         end if
-    end function compute_residual_element
+    end function flux_function
 
     function compute_source_term(variables, num_conservative_values) result(source)
         real   (real_kind), intent(in) :: variables(:)

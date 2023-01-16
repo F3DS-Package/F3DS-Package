@@ -148,9 +148,9 @@ program five_equation_model_solver
         call a_cellsystem%prepare_stepping(a_parallelizer, a_time_stepping, conservative_variables_set, primitive_variables_set, residual_set)
 
         do stage_num = 1, a_cellsystem%get_number_of_stages(a_time_stepping), 1
-            call a_cellsystem%apply_empty_condition    (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, empty_bc    )
-            call a_cellsystem%apply_outflow_condition  (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, outflow_bc  )
-            call a_cellsystem%apply_nonslip_wall_condition     (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, nonslip_wall_bc     )
+            call a_cellsystem%apply_empty_condition             (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, empty_bc    )
+            call a_cellsystem%apply_outflow_condition           (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, outflow_bc  )
+            call a_cellsystem%apply_nonslip_wall_condition      (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, nonslip_wall_bc     )
             call a_cellsystem%apply_slip_and_symmetric_condition(a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, slip_and_symmetric_bc)
 
             call a_cellsystem%compute_divergence(   &
@@ -163,7 +163,7 @@ program five_equation_model_solver
                 num_conservative_variables      , &
                 num_primitive_variables         , &
                 primitive_to_conservative       , &
-                compute_residual_element          &
+                flux_function                     &
             )
 
             call a_cellsystem%compute_next_stage(a_parallelizer, a_time_stepping, an_eos, stage_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, conservative_to_primitive)

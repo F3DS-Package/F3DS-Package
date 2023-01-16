@@ -228,7 +228,7 @@ program viscous_five_equation_model_solver
                 num_conservative_variables      , &
                 num_primitive_variables         , &
                 primitive_to_conservative       , &
-                compute_residual_element          &
+                flux_function                     &
             )
 
             call a_cellsystem%compute_source_term(a_parallelizer, primitive_variables_set, residual_set, num_conservative_variables, compute_source_term)

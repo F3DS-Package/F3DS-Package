@@ -1149,7 +1149,7 @@ module class_cellsystem
     ! ### Resudual ###
     subroutine compute_divergence_nonviscous(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos,                        &
                                            primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
-                                           primitive_to_conservative_function, residual_element_function                                )
+                                           primitive_to_conservative_function, flux_function                                )
 
         class  (cellsystem    ), intent(in   ) :: self
         class  (parallelizer  ), intent(in   ) :: a_parallelizer
@@ -1171,7 +1171,7 @@ module class_cellsystem
                 real   (real_kind)             :: conservative_values(num_conservative_values)
             end function primitive_to_conservative_function
 
-            function residual_element_function(           &
+            function flux_function(           &
                 an_eos                                  , &
                 an_riemann_solver                       , &
                 primitive_variables_lhc                 , &
@@ -1185,7 +1185,7 @@ module class_cellsystem
                 face_tangential1_vector                 , &
                 face_tangential2_vector                 , &
                 num_conservative_values                 , &
-                num_primitive_values                        ) result(residual_element)
+                num_primitive_values                        ) result(flux)
 
                 use typedef_module
                 use abstract_eos
@@ -1206,8 +1206,8 @@ module class_cellsystem
                 integer(int_kind      ), intent(in) :: num_conservative_values
                 integer(int_kind      ), intent(in) :: num_primitive_values
 
-                real   (real_kind)                  :: residual_element(num_conservative_values, 1:2)
-            end function residual_element_function
+                real   (real_kind)                  :: flux(num_conservative_values, 1:2)
+            end function flux_function
         end interface
 
         integer(int_kind ) :: i
@@ -1215,13 +1215,13 @@ module class_cellsystem
         integer(int_kind ) :: rhc_index
         real   (real_kind) :: reconstructed_primitive_variables_lhc   (num_primitive_variables)
         real   (real_kind) :: reconstructed_primitive_variables_rhc   (num_primitive_variables)
-        real   (real_kind) :: residual_element                        (num_conservative_variables, 1:2)
+        real   (real_kind) :: flux                        (num_conservative_variables, 1:2)
 
 #ifdef _DEBUG
         call write_debuginfo("In compute_divergence_nonviscous (), cellsystem.")
 #endif
 
-!$omp parallel do private(i,lhc_index,rhc_index,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,residual_element)
+!$omp parallel do private(i,lhc_index,rhc_index,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,flux)
         do i = 1, self%num_faces, 1
             lhc_index = self%face_to_cell_indexes(self%num_local_cells+0, i)
             rhc_index = self%face_to_cell_indexes(self%num_local_cells+1, i)
@@ -1235,7 +1235,7 @@ module class_cellsystem
                 i, self%num_local_cells, num_primitive_variables                                                     &
             )
 
-            residual_element(:,:) = residual_element_function(&
+            flux(:,:) = flux_function(&
                 an_eos                                      , &
                 a_riemann_solver                            , &
                 primitive_variables_set       (:,lhc_index) , &
@@ -1252,14 +1252,14 @@ module class_cellsystem
                 num_primitive_variables                       &
             )
 
-            residual_set(:,lhc_index) = residual_set(:,lhc_index) + residual_element(:, 1)
-            residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
+            residual_set(:,lhc_index) = residual_set(:,lhc_index) + flux(:, 1)
+            residual_set(:,rhc_index) = residual_set(:,rhc_index) + flux(:, 2)
         end do
     end subroutine compute_divergence_nonviscous
 
     subroutine compute_divergence_viscous(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos, a_face_gradient_interpolator,                                &
                                         primitive_variables_set, gradient_primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
-                                        primitive_to_conservative_function, residual_element_function)
+                                        primitive_to_conservative_function, flux_function)
 
         class  (cellsystem                ), intent(in   ) :: self
         class  (parallelizer              ), intent(in   ) :: a_parallelizer
@@ -1283,7 +1283,7 @@ module class_cellsystem
                 real   (real_kind)             :: conservative_values(num_conservative_values)
             end function primitive_to_conservative_function
 
-            function residual_element_function(           &
+            function flux_function(           &
                 an_eos                                  , &
                 an_riemann_solver                       , &
                 primitive_variables_lhc                 , &
@@ -1298,7 +1298,7 @@ module class_cellsystem
                 face_tangential1_vector                 , &
                 face_tangential2_vector                 , &
                 num_conservative_variables              , &
-                num_primitive_variables                     ) result(residual_element)
+                num_primitive_variables                     ) result(flux)
 
                 use typedef_module
                 use abstract_eos
@@ -1320,21 +1320,21 @@ module class_cellsystem
                 integer(int_kind      ), intent(in) :: num_conservative_variables
                 integer(int_kind      ), intent(in) :: num_primitive_variables
 
-                real   (real_kind)                  :: residual_element(num_conservative_variables, 1:2)
-            end function residual_element_function
+                real   (real_kind)                  :: flux(num_conservative_variables, 1:2)
+            end function flux_function
         end interface
 
         integer(int_kind ) :: i
         real   (real_kind) :: reconstructed_primitive_variables_lhc   (num_primitive_variables)
         real   (real_kind) :: reconstructed_primitive_variables_rhc   (num_primitive_variables)
         real   (real_kind) :: face_gradient_primitive_variables       (num_primitive_variables*3)
-        real   (real_kind) :: residual_element                        (num_conservative_variables, 1:2)
+        real   (real_kind) :: flux                        (num_conservative_variables, 1:2)
 
 #ifdef _DEBUG
         call write_debuginfo("In compute_divergence_viscous (), cellsystem.")
 #endif
 
-!$omp parallel do private(i,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,face_gradient_primitive_variables,residual_element)
+!$omp parallel do private(i,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,face_gradient_primitive_variables,flux)
         do i = 1, self%num_faces, 1
             associate(                                                             &
                 lhc_index => self%face_to_cell_indexes(self%num_local_cells+0, i), &
@@ -1364,7 +1364,7 @@ module class_cellsystem
                     )
                 end if
 
-                residual_element(:,:) = residual_element_function(        &
+                flux(:,:) = flux_function(        &
                     an_eos                                              , &
                     a_riemann_solver                                    , &
                     primitive_variables_set              (:,lhc_index)  , &
@@ -1382,8 +1382,8 @@ module class_cellsystem
                     num_primitive_variables                               &
                 )
 
-                residual_set(:,lhc_index) = residual_set(:,lhc_index) + residual_element(:, 1)
-                residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
+                residual_set(:,lhc_index) = residual_set(:,lhc_index) + flux(:, 1)
+                residual_set(:,rhc_index) = residual_set(:,rhc_index) + flux(:, 2)
             end associate
         end do
     end subroutine compute_divergence_viscous

@@ -17,7 +17,7 @@ module five_equation_model_module
     ! for Kdiv(u) term
     logical :: ignore_kdivu_
 
-    public :: compute_residual_element
+    public :: flux_function
     public :: spectral_radius
     public :: initialize_model
 
@@ -68,7 +68,7 @@ module five_equation_model_module
     end function fix_reconstructed_primitive_variables
 
 
-    pure function compute_residual_element(       &
+    pure function flux_function(                  &
         an_eos                                  , &
         an_riemann_solver                       , &
         primitive_variables_lhc                 , &
@@ -82,7 +82,7 @@ module five_equation_model_module
         face_tangential1_vector                 , &
         face_tangential2_vector                 , &
         num_conservative_values                 , &
-        num_primitive_values                      ) result(residual_element)
+        num_primitive_values                      ) result(flux)
 
         class  (eos           ), intent(in) :: an_eos
         class  (riemann_solver), intent(in) :: an_riemann_solver
@@ -99,7 +99,7 @@ module five_equation_model_module
         integer(int_kind      ), intent(in) :: num_conservative_values
         integer(int_kind      ), intent(in) :: num_primitive_values
 
-        real   (real_kind)                  :: residual_element(num_conservative_values, 1:2)
+        real   (real_kind)                  :: flux(num_conservative_values, 1:2)
 
         ! ## face coordinate variables
         real(real_kind) :: local_coordinate_primitives_lhc  (num_primitive_values)
@@ -269,8 +269,8 @@ module five_equation_model_module
         )
 
         ! # summation nonviscosity-flux
-        residual_element(1:7, 1) = (-1.d0 / lhc_cell_volume) * nonviscosity_flux(:) * face_area
-        residual_element(1:7, 2) = (+1.d0 / rhc_cell_volume) * nonviscosity_flux(:) * face_area
+        flux(1:7, 1) = (-1.d0 / lhc_cell_volume) * nonviscosity_flux(:) * face_area
+        flux(1:7, 2) = (+1.d0 / rhc_cell_volume) * nonviscosity_flux(:) * face_area
 
         ! # Compute interface values
         numerical_velocity = an_riemann_solver%compute_numerical_velocity( &
@@ -316,12 +316,12 @@ module five_equation_model_module
                 rhc_k = an_eos%compute_k(rhc_p, rhc_rhos, rhc_z1)
             end if
 
-            residual_element(7, 1) = residual_element(7, 1) &
+            flux(7, 1) = flux(7, 1) &
                                    + (lhc_z1 + lhc_k) * (1.d0 / lhc_cell_volume) * numerical_velocity * face_area
-            residual_element(7, 2) = residual_element(7, 2) &
+            flux(7, 2) = flux(7, 2) &
                                    - (rhc_z1 + rhc_k) * (1.d0 / rhc_cell_volume) * numerical_velocity * face_area
         end associate
-    end function compute_residual_element
+    end function flux_function
 
     pure function spectral_radius(an_eos, primitive_variables, length) result(r)
         class(eos      ), intent(in) :: an_eos
