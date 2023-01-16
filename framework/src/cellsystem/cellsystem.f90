@@ -275,12 +275,12 @@ module class_cellsystem
     end subroutine show_timestepping_infomation
 
     ! ### Parallelizer ###
-    subroutine parallelizer_initialize(self, a_parallelizer, config, num_conservative_variables, num_primitive_variables)
+    subroutine parallelizer_initialize(self, a_parallelizer, config, num_conservative_variables)
         class   (cellsystem   ), intent(inout) :: self
         class   (parallelizer ), intent(inout) :: a_parallelizer
         class   (configuration), intent(inout) :: config
         integer (int_kind     ), intent(in   ) :: num_conservative_variables
-        integer (int_kind     ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In parallelizer_initialize(), cellsystem.")
 #endif
@@ -288,12 +288,12 @@ module class_cellsystem
     end subroutine
 
     ! ### Face gradient interpolator ###
-    subroutine face_gradient_interpolator_initialize(self, a_face_gradient_interpolator, config, num_conservative_variables, num_primitive_variables)
+    subroutine face_gradient_interpolator_initialize(self, a_face_gradient_interpolator, config, num_conservative_variables)
         class   (cellsystem                ), intent(inout) :: self
         class   (face_gradient_interpolator), intent(inout) :: a_face_gradient_interpolator
         class   (configuration             ), intent(inout) :: config
         integer (int_kind                  ), intent(in   ) :: num_conservative_variables
-        integer (int_kind                  ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In face_gradient_interpolator_initialize(), cellsystem.")
 #endif
@@ -301,12 +301,12 @@ module class_cellsystem
     end subroutine face_gradient_interpolator_initialize
 
     ! ### Control volume profiler ###
-    subroutine control_volume_profiler_initialize(self, plotter, config, num_conservative_variables, num_primitive_variables)
+    subroutine control_volume_profiler_initialize(self, plotter, config, num_conservative_variables)
         class(cellsystem             ), intent(inout) :: self
         class(control_volume_profiler), intent(inout) :: plotter
         class(configuration          ), intent(inout) :: config
         integer(int_kind             ), intent(in   ) :: num_conservative_variables
-        integer(int_kind             ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In control_volume_profiler_initialize(), cellsystem.")
 #endif
@@ -331,12 +331,12 @@ module class_cellsystem
     end function control_volume_profiler_is_writable
 
     ! ### Line plotter ###
-    subroutine line_plotter_initialize(self, plotter, config, num_conservative_variables, num_primitive_variables)
+    subroutine line_plotter_initialize(self, plotter, config, num_conservative_variables)
         class(cellsystem   ), intent(inout) :: self
         class(line_plotter ), intent(inout) :: plotter
         class(configuration), intent(inout) :: config
         integer(int_kind   ), intent(in   ) :: num_conservative_variables
-        integer(int_kind   ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In line_plotter_initialize(), cellsystem.")
 #endif
@@ -361,12 +361,12 @@ module class_cellsystem
     end function line_plotter_is_writable
 
     ! ### Time increment control ###
-    subroutine time_increment_controller_initialize(self, controller, config, num_conservative_variables, num_primitive_variables)
+    subroutine time_increment_controller_initialize(self, controller, config, num_conservative_variables)
         class(cellsystem               ), intent(inout) :: self
         class(time_increment_controller), intent(inout) :: controller
         class(configuration            ), intent(inout) :: config
         integer(int_kind               ), intent(in   ) :: num_conservative_variables
-        integer(int_kind               ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In time_increment_controller_initialize(), cellsystem.")
 #endif
@@ -423,12 +423,12 @@ module class_cellsystem
     end subroutine update_time_increment
 
     ! ### Termination criterion ###
-    subroutine termination_criterion_initialize(self, criterion, config, num_conservative_variables, num_primitive_variables)
+    subroutine termination_criterion_initialize(self, criterion, config, num_conservative_variables)
         class  (cellsystem           ), intent(inout) :: self
         class  (termination_criterion), intent(inout) :: criterion
         class  (configuration        ), intent(inout) :: config
         integer(int_kind             ), intent(in   ) :: num_conservative_variables
-        integer(int_kind             ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In termination_criterion_initialize(), cellsystem.")
 #endif
@@ -938,12 +938,12 @@ module class_cellsystem
     end subroutine smooth_variables
 
     ! ### Gradient Calculator ###
-    subroutine gradient_calculator_initialize(self, a_gradient_calculator, config, num_conservative_variables, num_primitive_variables)
+    subroutine gradient_calculator_initialize(self, a_gradient_calculator, config, num_conservative_variables)
         class  (cellsystem         ), intent(inout) :: self
         class  (gradient_calculator), intent(inout) :: a_gradient_calculator
         class  (configuration      ), intent(inout) :: config
         integer(int_kind           ), intent(in   ) :: num_conservative_variables
-        integer(int_kind           ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In gradient_calculator_initialize(), cellsystem.")
 #endif
@@ -1039,12 +1039,12 @@ module class_cellsystem
     end subroutine compute_gradient_1darray
 
     ! ### Divergence Calculator ###
-    subroutine interpolator_initialize(self, a_interpolator, config, num_conservative_variables, num_primitive_variables)
+    subroutine interpolator_initialize(self, a_interpolator, config, num_conservative_variables)
         class  (cellsystem   ), intent(inout) :: self
         class  (interpolator ), intent(inout) :: a_interpolator
         class  (configuration), intent(inout) :: config
         integer(int_kind     ), intent(in   ) :: num_conservative_variables
-        integer(int_kind     ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In interpolator_initialize(), cellsystem.")
 #endif
@@ -1133,20 +1133,6 @@ module class_cellsystem
         end do
     end subroutine compute_divergence_1darray
 
-    ! ### EoS ###
-    subroutine eos_initialize(self, an_eos, config, num_conservative_variables, num_primitive_variables)
-        class  (cellsystem    ), intent(inout) :: self
-        class  (eos           ), intent(inout) :: an_eos
-        class  (configuration ), intent(inout) :: config
-        integer(int_kind      ), intent(in   ) :: num_conservative_variables
-        integer(int_kind      ), intent(in   ) :: num_primitive_variables
-#ifdef _DEBUG
-        call write_debuginfo("In eos_initialize(), cellsystem.")
-#endif
-        call an_eos%initialize(config)
-    end subroutine eos_initialize
-
-    ! ### Resudual ###
     subroutine compute_divergence_nonviscous(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos,                        &
                                            primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
                                            primitive_to_conservative_function, flux_function                                )
@@ -1420,13 +1406,26 @@ module class_cellsystem
         end do
     end subroutine compute_source_term
 
+    ! ### EoS ###
+    subroutine eos_initialize(self, an_eos, config, num_conservative_variables)
+        class  (cellsystem    ), intent(inout) :: self
+        class  (eos           ), intent(inout) :: an_eos
+        class  (configuration ), intent(inout) :: config
+        integer(int_kind      ), intent(in   ) :: num_conservative_variables
+
+#ifdef _DEBUG
+        call write_debuginfo("In eos_initialize(), cellsystem.")
+#endif
+        call an_eos%initialize(config)
+    end subroutine eos_initialize
+
     ! ### Riemann solver ###
-    subroutine riemann_solver_initialize(self, a_riemann_solver, config, num_conservative_variables, num_primitive_variables)
+    subroutine riemann_solver_initialize(self, a_riemann_solver, config, num_conservative_variables)
         class  (cellsystem    ), intent(inout) :: self
         class  (riemann_solver), intent(inout) :: a_riemann_solver
         class  (configuration ), intent(inout) :: config
         integer(int_kind      ), intent(in   ) :: num_conservative_variables
-        integer(int_kind      ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In riemann_solver_initialize(), cellsystem.")
 #endif
@@ -1434,12 +1433,12 @@ module class_cellsystem
     end subroutine riemann_solver_initialize
 
     ! ### Reconstructor ###
-    subroutine reconstructor_initialize(self, a_reconstructor, config, num_conservative_variables, num_primitive_variables)
+    subroutine reconstructor_initialize(self, a_reconstructor, config, num_conservative_variables)
         class  (cellsystem    ), intent(inout) :: self
         class  (reconstructor ), intent(inout) :: a_reconstructor
         class  (configuration ), intent(inout) :: config
         integer(int_kind      ), intent(in   ) :: num_conservative_variables
-        integer(int_kind      ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In reconstructor_initialize(), cellsystem.")
 #endif
@@ -1447,12 +1446,12 @@ module class_cellsystem
     end subroutine reconstructor_initialize
 
     ! ### Time stepping ###
-    subroutine time_stepping_initialize(self, a_time_stepping, config, num_conservative_variables, num_primitive_variables)
+    subroutine time_stepping_initialize(self, a_time_stepping, config, num_conservative_variables)
         class  (cellsystem   ), intent(inout) :: self
         class  (time_stepping), intent(inout) :: a_time_stepping
         class  (configuration), intent(inout) :: config
         integer(int_kind     ), intent(in   ) :: num_conservative_variables
-        integer(int_kind     ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In time_stepping_initialize(), cellsystem.")
 #endif
@@ -1530,12 +1529,12 @@ module class_cellsystem
     end function get_number_of_stages
 
     ! ###  Result writer ###
-    subroutine result_writer_initialize(self, writer, config, num_conservative_variables, num_primitive_variables)
+    subroutine result_writer_initialize(self, writer, config, num_conservative_variables)
         class  (cellsystem   ), intent(inout) :: self
         class  (result_writer), intent(inout) :: writer
         class  (configuration), intent(inout) :: config
         integer(int_kind     ), intent(in   ) :: num_conservative_variables
-        integer(int_kind     ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In result_writer_initialize(), cellsystem.")
 #endif
