@@ -227,7 +227,7 @@ module class_cellsystem
 
         ! ### Time Stepping ###
         procedure, public, pass(self) :: compute_next_stage
-        procedure, public, pass(self) :: prepare_stepping
+        procedure, public, pass(self) :: prepare_time_stepping
         procedure, public, pass(self) :: get_number_of_stages
 
         ! ### Result Writer ###
@@ -1495,7 +1495,7 @@ module class_cellsystem
         end do
     end subroutine compute_next_stage
 
-    subroutine prepare_stepping(    &
+    subroutine prepare_time_stepping(    &
         self                      , &
         a_parallelizer            , &
         a_time_stepping           , &
@@ -1512,12 +1512,12 @@ module class_cellsystem
         integer(int_kind) :: i
 
 #ifdef _DEBUG
-        call write_debuginfo("In prepare_stepping(), cellsystem.")
+        call write_debuginfo("In prepare_time_stepping(), cellsystem.")
 #endif
 
 !$omp parallel do private(i)
         do i = 1, self%num_cells, 1
-            call a_time_stepping%prepare_stepping(i, conservative_variables_set(:,i), primitive_variables_set(:,i), residual_set(:,i))
+            call a_time_stepping%prepare_time_stepping(i, conservative_variables_set(:,i), primitive_variables_set(:,i), residual_set(:,i))
         end do
     end subroutine
 

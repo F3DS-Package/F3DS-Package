@@ -17,7 +17,7 @@ module class_forward_euler
 
         procedure, public, pass(self) :: initialize
         procedure, public, pass(self) :: compute_next_stage
-        procedure, public, pass(self) :: prepare_stepping
+        procedure, public, pass(self) :: prepare_time_stepping
         procedure, public, pass(self) :: get_number_of_stages
     end type forward_euler
 
@@ -51,7 +51,7 @@ module class_forward_euler
         residuals             (:) = 0.d0
     end subroutine compute_next_stage
 
-    subroutine prepare_stepping(   &
+    subroutine prepare_time_stepping(   &
         self                     , &
         cell_index               , &
         conservative_variables   , &
@@ -65,7 +65,7 @@ module class_forward_euler
         real   (real_kind          ), intent(inout) :: residuals             (:)
 
         return
-    end subroutine prepare_stepping
+    end subroutine prepare_time_stepping
 
     pure function get_number_of_stages(self) result(n)
         class  (forward_euler), intent(in) :: self

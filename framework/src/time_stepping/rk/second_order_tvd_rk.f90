@@ -25,7 +25,7 @@ module class_second_order_tvd_rk
 
         procedure, public, pass(self) :: initialize
         procedure, public, pass(self) :: compute_next_stage
-        procedure, public, pass(self) :: prepare_stepping
+        procedure, public, pass(self) :: prepare_time_stepping
         procedure, public, pass(self) :: get_number_of_stages
     end type second_order_tvd_rk
 
@@ -61,7 +61,7 @@ module class_second_order_tvd_rk
         residuals             (:) = 0.d0
     end subroutine compute_next_stage
 
-    subroutine prepare_stepping(   &
+    subroutine prepare_time_stepping(   &
         self                     , &
         cell_index               , &
         conservative_variables   , &
@@ -75,7 +75,7 @@ module class_second_order_tvd_rk
         real   (real_kind          ), intent(inout) :: residuals             (:)
 
         self%init_conservative_variables_set(:, cell_index) = conservative_variables(:)
-    end subroutine prepare_stepping
+    end subroutine prepare_time_stepping
 
     pure function get_number_of_stages(self) result(n)
         class  (second_order_tvd_rk), intent(in) :: self

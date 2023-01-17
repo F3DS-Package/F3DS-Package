@@ -8,7 +8,7 @@ module abstract_time_stepping
 
         procedure(initialize_interface          ), pass(self), deferred :: initialize
         procedure(compute_next_stage_interface  ), pass(self), deferred :: compute_next_stage
-        procedure(prepare_stepping_interface    ), pass(self), deferred :: prepare_stepping
+        procedure(prepare_time_stepping_interface    ), pass(self), deferred :: prepare_time_stepping
         !procedure(cleanup_stepping_interface    ), pass(self), deferred :: cleanup_stepping
         procedure(get_number_of_stages_interface), pass(self), deferred :: get_number_of_stages
     end type
@@ -44,7 +44,7 @@ module abstract_time_stepping
             real   (real_kind          ), intent(inout) :: residuals             (:)
         end subroutine compute_next_stage_interface
 
-        subroutine prepare_stepping_interface(   &
+        subroutine prepare_time_stepping_interface(   &
             self                               , &
             cell_index                         , &
             conservative_variables             , &
@@ -57,7 +57,7 @@ module abstract_time_stepping
             real   (real_kind    ), intent(inout) :: conservative_variables(:)
             real   (real_kind    ), intent(inout) :: primitive_variables   (:)
             real   (real_kind    ), intent(inout) :: residuals             (:)
-        end subroutine prepare_stepping_interface
+        end subroutine prepare_time_stepping_interface
 
         pure function get_number_of_stages_interface(self) result(n)
             use typedef_module
