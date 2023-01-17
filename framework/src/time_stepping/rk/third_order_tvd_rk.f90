@@ -65,13 +65,11 @@ module class_third_order_tvd_rk
         self                     , &
         cell_index               , &
         conservative_variables   , &
-        primitive_variables      , &
         residuals                    )
 
         class   (third_order_tvd_rk), intent(inout) :: self
         integer(int_kind           ), intent(in   ) :: cell_index
         real   (real_kind          ), intent(inout) :: conservative_variables(:)
-        real   (real_kind          ), intent(inout) :: primitive_variables   (:)
         real   (real_kind          ), intent(inout) :: residuals             (:)
 
         self%init_conservative_variables_set(:,cell_index) = conservative_variables(:)

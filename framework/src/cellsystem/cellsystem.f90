@@ -1500,13 +1500,11 @@ module class_cellsystem
         a_parallelizer            , &
         a_time_stepping           , &
         conservative_variables_set, &
-        primitive_variables_set   , &
         residual_set                  )
         class(cellsystem   ), intent(inout) :: self
         class(parallelizer ), intent(in   ) :: a_parallelizer
         class(time_stepping), intent(inout) :: a_time_stepping
         real (real_kind    ), intent(inout) :: conservative_variables_set(:,:)
-        real (real_kind    ), intent(inout) :: primitive_variables_set   (:,:)
         real (real_kind    ), intent(inout) :: residual_set              (:,:)
 
         integer(int_kind) :: i
@@ -1517,7 +1515,7 @@ module class_cellsystem
 
 !$omp parallel do private(i)
         do i = 1, self%num_cells, 1
-            call a_time_stepping%prepare_time_stepping(i, conservative_variables_set(:,i), primitive_variables_set(:,i), residual_set(:,i))
+            call a_time_stepping%prepare_time_stepping(i, conservative_variables_set(:,i), residual_set(:,i))
         end do
     end subroutine
 

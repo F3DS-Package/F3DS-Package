@@ -48,14 +48,12 @@ module abstract_time_stepping
             self                               , &
             cell_index                         , &
             conservative_variables             , &
-            primitive_variables                , &
             residuals                              )
             use typedef_module
             import time_stepping
             class  (time_stepping), intent(inout) :: self
             integer(int_kind     ), intent(in   ) :: cell_index
             real   (real_kind    ), intent(inout) :: conservative_variables(:)
-            real   (real_kind    ), intent(inout) :: primitive_variables   (:)
             real   (real_kind    ), intent(inout) :: residuals             (:)
         end subroutine prepare_time_stepping_interface
 
