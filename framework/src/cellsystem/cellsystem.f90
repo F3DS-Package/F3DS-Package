@@ -229,7 +229,12 @@ module class_cellsystem
         procedure, public, pass(self) :: compute_source_term
 
         ! ### Time Stepping ###
-        procedure, public, pass(self) :: compute_next_stage
+        procedure, public, pass(self) :: compute_next_stage_with_primitive
+        procedure, public, pass(self) :: compute_next_stage_without_primitive_2darray
+        procedure, public, pass(self) :: compute_next_stage_without_primitive_1darray
+        generic  , public             :: compute_next_stage => compute_next_stage_with_primitive           , &
+                                                               compute_next_stage_without_primitive_2darray, &
+                                                               compute_next_stage_without_primitive_1darray
         procedure, public, pass(self) :: prepare_time_stepping
         procedure, public, pass(self) :: get_number_of_stages
 
@@ -1534,7 +1539,7 @@ module class_cellsystem
         call a_time_stepping%initialize(config, self%num_cells, num_conservative_variables)
     end subroutine time_stepping_initialize
 
-    subroutine compute_next_stage(self, a_parallelizer, a_time_stepping, an_eos, stage_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, &
+    subroutine compute_next_stage_with_primitive(self, a_parallelizer, a_time_stepping, an_eos, stage_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, &
         conservative_to_primitive_function)
 
         class  (cellsystem         ), intent(inout) :: self
@@ -1561,15 +1566,62 @@ module class_cellsystem
         integer(int_kind) :: i
 
 #ifdef _DEBUG
-        call write_debuginfo("In time_stepping_initialize(), cellsystem.")
+        call write_debuginfo("In compute_next_stage_with_primitive(), cellsystem.")
 #endif
 
 !$omp parallel do private(i)
         do i = 1, self%num_cells, 1
-            call a_time_stepping%compute_next_stage(i, stage_num, self%time_increment, conservative_variables_set(:,i), residual_set(:,i))
-            primitive_variables_set(:,i) = conservative_to_primitive_function(an_eos, conservative_variables_set(:,i), num_primitive_variables)
+            conservative_variables_set(:,i) = a_time_stepping%compute_next_stage(i, stage_num, self%time_increment, conservative_variables_set(:,i), residual_set(:,i))
+            residual_set              (:,i) = 0.d0
+            primitive_variables_set   (:,i) = conservative_to_primitive_function(an_eos, conservative_variables_set(:,i), num_primitive_variables)
         end do
-    end subroutine compute_next_stage
+    end subroutine compute_next_stage_with_primitive
+
+    subroutine compute_next_stage_without_primitive_2darray(self, a_parallelizer, a_time_stepping, stage_num, conservative_variables_set, residual_set)
+
+        class  (cellsystem         ), intent(inout) :: self
+        class  (parallelizer       ), intent(in   ) :: a_parallelizer
+        class  (time_stepping      ), intent(inout) :: a_time_stepping
+        integer(int_kind           ), intent(in   ) :: stage_num
+        real   (real_kind          ), intent(inout) :: conservative_variables_set(:,:)
+        real   (real_kind          ), intent(inout) :: residual_set              (:,:)
+
+        integer(int_kind) :: i
+
+#ifdef _DEBUG
+        call write_debuginfo("In compute_next_stage_without_primitive_2darray(), cellsystem.")
+#endif
+
+!$omp parallel do private(i)
+        do i = 1, self%num_cells, 1
+            conservative_variables_set(:,i) = a_time_stepping%compute_next_stage(i, stage_num, self%time_increment, conservative_variables_set(:,i), residual_set(:,i))
+            residual_set              (:,i) = 0.d0
+        end do
+    end subroutine compute_next_stage_without_primitive_2darray
+
+    subroutine compute_next_stage_without_primitive_1darray(self, a_parallelizer, a_time_stepping, stage_num, conservative_variable_set, residual_set)
+
+        class  (cellsystem         ), intent(inout) :: self
+        class  (parallelizer       ), intent(in   ) :: a_parallelizer
+        class  (time_stepping      ), intent(inout) :: a_time_stepping
+        integer(int_kind           ), intent(in   ) :: stage_num
+        real   (real_kind          ), intent(inout) :: conservative_variable_set(:)
+        real   (real_kind          ), intent(inout) :: residual_set             (:)
+
+        integer(int_kind) :: i
+
+#ifdef _DEBUG
+        call write_debuginfo("In compute_next_stage_without_primitive_1darray(), cellsystem.")
+#endif
+
+!$omp parallel do private(i)
+        do i = 1, self%num_cells, 1
+            ! Fortran cannot implicitly convert a 1-dimensional array of 1 elements to a scalar.
+            ! In the following, the built-in function sum is used to convert to a scalar.
+            conservative_variable_set(i) = sum( a_time_stepping%compute_next_stage(i, stage_num, self%time_increment, [conservative_variable_set(i)], [residual_set(i)]) )
+            residual_set             (i) = 0.d0
+        end do
+    end subroutine compute_next_stage_without_primitive_1darray
 
     subroutine prepare_time_stepping(    &
         self                      , &

@@ -32,24 +32,24 @@ module class_forward_euler
         return
     end subroutine initialize
 
-    subroutine compute_next_stage(   &
-        self                       , &
-        cell_index                 , &
-        stage_num                  , &
-        time_increment             , &
-        conservative_variables     , &
-        residuals                      )
+    pure function compute_next_stage(   &
+        self                          , &
+        cell_index                    , &
+        stage_num                     , &
+        time_increment                , &
+        conservative_variables        , &
+        residuals                         ) result(updated_conservative_variables)
 
-        class  (forward_euler), intent(inout) :: self
-        integer(int_kind           ), intent(in   ) :: cell_index
-        integer(int_kind           ), intent(in   ) :: stage_num
-        real   (real_kind          ), intent(in   ) :: time_increment
-        real   (real_kind          ), intent(inout) :: conservative_variables(:)
-        real   (real_kind          ), intent(inout) :: residuals             (:)
+        class  (forward_euler      ), intent(in) :: self
+        integer(int_kind           ), intent(in) :: cell_index
+        integer(int_kind           ), intent(in) :: stage_num
+        real   (real_kind          ), intent(in) :: time_increment
+        real   (real_kind          ), intent(in) :: conservative_variables        (:)
+        real   (real_kind          ), intent(in) :: residuals                     (:)
+        real   (real_kind          )             :: updated_conservative_variables(1:size(conservative_variables))
 
-        conservative_variables(:) = conservative_variables(:) + time_increment * residuals(:)
-        residuals             (:) = 0.d0
-    end subroutine compute_next_stage
+        updated_conservative_variables(:) = conservative_variables(:) + time_increment * residuals(:)
+    end function compute_next_stage
 
     subroutine prepare_time_stepping(   &
         self                     , &
