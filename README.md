@@ -81,7 +81,7 @@ We provide a fast, maintainable FVM library and solvers.
 
 - [x] Structure grid
 - [x] Unstructure grid
-- [ ] Addaptive Mesh Refinement (AMR)
+- [ ] Adaptive Mesh Refinement (AMR)
 
 #### Grid I/O
 
@@ -117,8 +117,8 @@ We provide a fast, maintainable FVM library and solvers.
 #### Measurement Tools
 
 - [ ] Sensor (Probe)
-- [ ] Measurement surface
-- [x] Line plotting tool
+- [ ] Measurement surface profiler
+- [x] Line plotter
 - [x] Control volume profiler
 
 #### Other tools
@@ -140,22 +140,34 @@ This resource provides following schemes:
 - [x] rho-THINC reconstruction
 ### F3DS Collection
 
-- [x] five-equation model (The source code is placed in collection/five_equation_model. The binary is located in bins/f5eq) [Kapila 2001] [Allaire 2002]
-    - Additional terms
-        - [x] with Kdiv(u) term [Kapila 2001]
-        - [ ] with cavitation model
+### Five-equation model [Kapila 2001] [Allaire 2002]
 
-- [x] viscosity five-equation model (The source code is placed in collection/viscous_five_equation_model. The binary is located in bins/fv5eq) [Perigaud 2005] [Coralic 2014]
-    - Additional terms
-        - [x] with Kdiv(u) term [Kapila 2001]
-        - [x] with surface tension term [Perigaud 2005] [Garrick 2017]
-        - [ ] with cavitation model
-        - [x] with gravity
+- Source code location: collection/five_equation_model
+- binary location: bins/f5eq.
 
-- [ ] Euler equation (The source code is placed in collection/euler. The binary is located in bins/feuler)
+The solver include the following terms.
+
+- [x] with Kdiv(u) term [Kapila 2001]
+- [ ] with cavitation model
+
+### Viscosity five-equation model [Perigaud 2005] [Coralic 2014]
+
+- Source code location: collection/five_equation_model
+- binary location: bins/f5eq.
+
+The solver include the following terms.
+
+- [x] with Kdiv(u) term [Kapila 2001]
+- [x] with surface tension term [Perigaud 2005] [Garrick 2017]
+- [ ] with cavitation model
+- [x] with gravity
+
+### Euler equation
+
+Currently under development
 ## How to compile
 
-At first, we should clone the repository and download submodules.
+At first, we need to clone the repository and download submodules.
 
 ```:shell
 git clone https://165.93.124.207/gitlab/tishikawa/f3ds.git
@@ -169,8 +181,8 @@ F3DS only support for Linux system now. We can compile F3DS by Makefile like thi
 make
 ```
 
-Default compiler is set "gfortran" with default options.  
-If you want to use "ifort" and debug options, you shoud type following command in your terminal.
+Default compiler is set "gfortran" with a release build options.  
+If you want to use "ifort" and debug options, you can use the following command.
 
 ```:shell
 make COMPILER=ifort DEBUG=yes
