@@ -24,6 +24,7 @@ module class_cellsystem
     use abstract_parallelizer
     use class_line_plotter
     use class_control_volume_profiler
+    use class_surface_profiler
 
     implicit none
 
@@ -151,6 +152,7 @@ module class_cellsystem
         procedure, public, pass(self) :: interpolator_initialize
         procedure, public, pass(self) :: line_plotter_initialize
         procedure, public, pass(self) :: control_volume_profiler_initialize
+        procedure, public, pass(self) :: surface_profiler_initialize
         procedure, public, pass(self) :: model_initialize
         procedure, public, pass(self) :: face_gradient_interpolator_initialize
         procedure, public, pass(self) :: parallelizer_initialize
@@ -167,6 +169,7 @@ module class_cellsystem
                                                         interpolator_initialize              , &
                                                         line_plotter_initialize              , &
                                                         control_volume_profiler_initialize   , &
+                                                        surface_profiler_initialize          , &
                                                         model_initialize                     , &
                                                         face_gradient_interpolator_initialize, &
                                                         parallelizer_initialize
@@ -177,13 +180,17 @@ module class_cellsystem
         procedure, public, pass(self) :: result_writer_is_writable
         procedure, public, pass(self) :: line_plotter_is_writable
         procedure, public, pass(self) :: control_volume_profiler_is_writable
-        generic  , public             :: is_writable => result_writer_is_writable , &
-                                                        line_plotter_is_writable  , &
-                                                        control_volume_profiler_is_writable
+        procedure, public, pass(self) :: surface_profiler_is_writable
+        generic  , public             :: is_writable => result_writer_is_writable          , &
+                                                        line_plotter_is_writable           , &
+                                                        control_volume_profiler_is_writable, &
+                                                        surface_profiler_is_writable
         procedure, public, pass(self) :: line_plotter_write
         procedure, public, pass(self) :: control_volume_profiler_write
-        generic  , public             :: write => line_plotter_write  , &
-                                                  control_volume_profiler_write
+        procedure, public, pass(self) :: surface_profiler_write
+        generic  , public             :: write => line_plotter_write           , &
+                                                  control_volume_profiler_write, &
+                                                  surface_profiler_write
 
         ! ### Show infomation ###
         procedure, public, pass(self) :: show_timestepping_infomation
@@ -323,6 +330,36 @@ module class_cellsystem
 #endif
         call a_model%initialize(a_config)
     end subroutine model_initialize
+
+    ! ### Surface profiler ###
+    subroutine surface_profiler_initialize(self, plotter, config, num_conservative_variables, num_primitive_variables)
+        class  (cellsystem      ), intent(inout) :: self
+        class  (surface_profiler), intent(inout) :: plotter
+        class  (configuration   ), intent(inout) :: config
+        integer(int_kind        ), intent(in   ) :: num_conservative_variables
+        integer(int_kind        ), intent(in   ) :: num_primitive_variables
+#ifdef _DEBUG
+        call write_debuginfo("In surface_profiler_initialize(), cellsystem.")
+#endif
+        call plotter%initialize(config, self%face_to_cell_indexes, self%face_positions, self%face_normal_vectors, self%is_real_cell, self%num_faces, self%num_local_cells)
+    end subroutine surface_profiler_initialize
+
+    subroutine surface_profiler_write(self, plotter, values_set)
+        class(cellsystem      ), intent(inout) :: self
+        class(surface_profiler), intent(inout) :: plotter
+        real (real_kind       ), intent(in   ) :: values_set(:,:)
+#ifdef _DEBUG
+        call write_debuginfo("In surface_profiler_write(), cellsystem.")
+#endif
+        call plotter%write(self%time, values_set, self%face_to_cell_indexes, self%face_areas)
+    end subroutine surface_profiler_write
+
+    pure function surface_profiler_is_writable(self, plotter) result(juge)
+        class(cellsystem      ), intent(in) :: self
+        class(surface_profiler), intent(in) :: plotter
+        logical                             :: juge
+        juge = plotter%is_writable(self%time)
+    end function surface_profiler_is_writable
 
     ! ### Control volume profiler ###
     subroutine control_volume_profiler_initialize(self, plotter, config, num_conservative_variables, num_primitive_variables)
