@@ -317,12 +317,12 @@ module class_cellsystem
     end subroutine face_gradient_interpolator_initialize
 
     ! ### Surface profiler ###
-    subroutine surface_profiler_initialize(self, plotter, config, num_conservative_variables, num_primitive_variables)
+    subroutine surface_profiler_initialize(self, plotter, config, num_conservative_variables)
         class  (cellsystem      ), intent(inout) :: self
         class  (surface_profiler), intent(inout) :: plotter
         class  (configuration   ), intent(inout) :: config
         integer(int_kind        ), intent(in   ) :: num_conservative_variables
-        integer(int_kind        ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In surface_profiler_initialize(), cellsystem.")
 #endif
