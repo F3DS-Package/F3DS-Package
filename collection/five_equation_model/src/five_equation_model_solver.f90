@@ -35,6 +35,7 @@ program five_equation_model_solver
     ! Measurements
     use class_line_plotter
     use class_control_volume_profiler
+    use class_surface_profiler
     ! Model
     use five_equation_model_utils_module
     use five_equation_model_boundary_condition_module
@@ -84,6 +85,8 @@ program five_equation_model_solver
     type(openmp_parallelizer                          ) :: a_parallelizer
     type(line_plotter                                 ) :: a_line_plotter
     type(control_volume_profiler                      ) :: a_control_volume_profiler
+    type(surface_profiler                             ) :: a_surface_profiler
+    
 
     ! These schemes and methods can be cahnge from configuration file you set.
     class(time_stepping            ), pointer :: a_time_stepping
@@ -119,6 +122,7 @@ program five_equation_model_solver
     call a_cellsystem%initialize(a_time_increment_controller , a_configuration, num_conservative_variables)
     call a_cellsystem%initialize(a_line_plotter              , a_configuration, num_conservative_variables)
     call a_cellsystem%initialize(a_control_volume_profiler   , a_configuration, num_conservative_variables)
+    call a_cellsystem%initialize(a_surface_profiler          , a_configuration, num_conservative_variables)
 
     ! Set initial condition
     call a_cellsystem%read_initial_condition(an_initial_condition_parser, a_configuration, conservative_variables_set)
@@ -141,6 +145,10 @@ program five_equation_model_solver
 
         if ( a_cellsystem%is_writable(a_control_volume_profiler) ) then
             call a_cellsystem%write(a_control_volume_profiler, primitive_variables_set)
+        end if
+
+        if ( a_cellsystem%is_writable(a_surface_profiler) ) then
+            call a_cellsystem%write(a_surface_profiler, primitive_variables_set)
         end if
 
         call a_cellsystem%show_timestepping_infomation()
@@ -183,6 +191,10 @@ program five_equation_model_solver
 
     if ( a_cellsystem%is_writable(a_control_volume_profiler) ) then
         call a_cellsystem%write(a_control_volume_profiler, primitive_variables_set)
+    end if
+
+    if ( a_cellsystem%is_writable(a_surface_profiler) ) then
+        call a_cellsystem%write(a_surface_profiler, primitive_variables_set)
     end if
 
     call a_result_writer%cleanup()
