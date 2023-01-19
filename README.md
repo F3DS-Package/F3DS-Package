@@ -1,8 +1,10 @@
-# Fortran Finite-volume Fluid Dynamics Solver (F3DS) Flamework & Collection
+# Fortran Finite volume Fluid Dynamics Solver (F3DS) Package
 
-F3DS is the modern Fortran (such as Fortran 2003, 2008, ...) library for development fluid dynamics solvers by Finite-volume method (FVM).  
-This library support for Object Oriented Desing (OOD) and Structure of Arrays (SoA) layout. 
-We provide a fast, maintainable FVM library and solvers.  
+F3DS package is a modern Fortran (such as Fortran 2003, 2008, ...) software of finite volume method (FVM) for fulid dynamics solvers. F3DS Package is composed of below:
+
+- F3DS Flamework: Flamework for developing fluid dynamics solvers.
+- F3DS Resource: Models and schemes for specific solvers.
+- F3DS Collection: Solvers built by F3DS Framework & Resource.
 
 Status: **DEVELOPMENT**  
 
@@ -12,23 +14,11 @@ We are working on improving parallel computing and developing features for unstr
 
 ## Feature
 
-### F3DS Collection
-
-- [x] 5 equation model (in collection/five_equation_model. Binary name is "f5eq") [Kapila 2001] [Allaire 2002]
-    - Additional terms
-        - [x] with Kdiv(u) term [Kapila 2001]
-        - [ ] with cavitation model
-
-- [x] viscosity 5 equation model (in collection/viscous_five_equation_model. Binary name is "fv5eq") [Perigaud 2005] [Coralic 2014]
-    - Additional terms
-        - [x] with Kdiv(u) term [Kapila 2001]
-        - [x] with surface tension term [Perigaud 2005] [Garrick 2017]
-        - [ ] with cavitation model
-        - [x] with gravity
-
-- [ ] Euler equation (in collection/euler. Binary name is "feuler")
-
 ### F3DS Flamework
+
+The source code is located in "framework" directory. The static link library is located in libs/f3ds_framework.a.  
+This flamework is desined by Object Oriented Desing (OOD) and supports Structure of Arrays (SoA) layout.
+We provide a fast, maintainable FVM library and solvers.
 
 #### EoS
 
@@ -51,18 +41,16 @@ We are working on improving parallel computing and developing features for unstr
 
 #### Reconstruction Methods
 
-- For structure grid (supported orthogonal grid)
+- For structure grid
     - [x] MUSCL3 (3rd order)
         - [x] with minimod flux limmiter
         - [ ] with monotonized central flux limmiter
-    - [x] MUSCL3 + rho-THINC (5-equation model only)
     - [x] WENO5 (5th order)
         - [x] with original smoothing indicator (WENO5) [Liu 1994]
         - [x] with smoothing indicator proposed by Jiang & Shu (WENO5-JS) [Jiang 1996]
         - [x] with monotonicity-preserving schemes (MP-WENO5-JS) [Balsara 2000]
 - For unstructure grid
     - [ ] UMUSCL3 (3rd order)
-    - [ ] UMUSCL3 + rho-THINC (5-equation model only)
 
 #### Gradient scheme
 
@@ -84,16 +72,16 @@ We are working on improving parallel computing and developing features for unstr
 - Explicit
     - [x] Forward Euler
 - Explicit Runge-Kutta
-    - [x] 2nd order TVD(SPP) Runge-Kutta
-    - [x] 3rd order TVD(SPP) Runge-Kutta
-    - [ ] 4th order TVD(SPP) Runge-Kutta
+    - [x] 2nd order TVD (SPP) Runge-Kutta
+    - [x] 3rd order TVD (SPP) Runge-Kutta
+    - [ ] 4th order TVD (SPP) Runge-Kutta
     - [ ] Jameson-Baker 4 stage Runge-Kutta [Jameson 1929]
 
 #### Grid System
 
 - [x] Structure grid
 - [x] Unstructure grid
-- [ ] Addaptive Mesh Refinement (AMR)
+- [ ] Adaptive Mesh Refinement (AMR)
 
 #### Grid I/O
 
@@ -129,8 +117,8 @@ We are working on improving parallel computing and developing features for unstr
 #### Measurement Tools
 
 - [ ] Sensor (Probe)
-- [ ] Measurement surface
-- [x] Line plotting tool
+- [ ] Measurement surface profiler
+- [x] Line plotter
 - [x] Control volume profiler
 
 #### Other tools
@@ -142,9 +130,44 @@ We are working on improving parallel computing and developing features for unstr
     - [x] JSON ([JSON-Fortran](https://github.com/jacobwilliams/json-fortran) backend)
     - [X] XML ([FoXy](https://github.com/Fortran-FOSS-Programmers/FoXy) backend)
 
+### F3DS Resource
+
+#### Five-equation model common tools
+
+The source code is located in resource/five_equation_model_common. The static link library is located in libs/f5eq_common.a.  
+This resource provides following schemes:
+
+- [x] rho-THINC reconstruction
+### F3DS Collection
+
+### Five-equation model [Kapila 2001] [Allaire 2002]
+
+- Source code location: collection/five_equation_model
+- binary location: bins/f5eq.
+
+The solver include the following terms.
+
+- [x] with Kdiv(u) term [Kapila 2001]
+- [ ] with cavitation model
+
+### Viscosity five-equation model [Perigaud 2005] [Coralic 2014]
+
+- Source code location: collection/five_equation_model
+- binary location: bins/f5eq.
+
+The solver include the following terms.
+
+- [x] with Kdiv(u) term [Kapila 2001]
+- [x] with surface tension term [Perigaud 2005] [Garrick 2017]
+- [ ] with cavitation model
+- [x] with gravity
+
+### Euler equation
+
+Currently under development
 ## How to compile
 
-At first, we should clone the repository and download submodules.
+At first, we need to clone the repository and download submodules.
 
 ```:shell
 git clone https://165.93.124.207/gitlab/tishikawa/f3ds.git
@@ -158,8 +181,8 @@ F3DS only support for Linux system now. We can compile F3DS by Makefile like thi
 make
 ```
 
-Default compiler is set "gfortran" with default options.  
-If you want to use "ifort" and debug options, you shoud type following command in your terminal.
+Default compiler is set "gfortran" with a release build options.  
+If you want to use "ifort" and debug options, you can use the following command.
 
 ```:shell
 make COMPILER=ifort DEBUG=yes
@@ -168,6 +191,16 @@ make COMPILER=ifort DEBUG=yes
 More details can be found in 'make help'.
 
 ## How to use
+
+### Use F3DS Framework and F3DS Resource
+
+Please link static link libraries and mod files.
+
+```
+gfortran your_solver.f90 -o your_solver.exe -L/{your_f3ds_path}/f3ds/libs -I/{your_f3ds_path}/f3ds/mods f3ds_framework.a
+```
+
+### Use solvers
 
 All binaries provided by F3DS is stored in "bins" directory. If you want use "f5eq", you type "./bins/f5eq".  
 If you want more infomations, please read README.md in each collection directories.

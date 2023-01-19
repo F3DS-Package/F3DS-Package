@@ -91,7 +91,7 @@ program five_equation_model_solver
     class(time_increment_controller), pointer :: a_time_increment_controller
 
     ! Loop index
-    integer(int_kind) :: state_num, cell_index
+    integer(int_kind) :: stage_num, cell_index
 
     ! Read config
     call a_configuration%parse("config.json")
@@ -109,16 +109,16 @@ program five_equation_model_solver
     call a_cellsystem%initialize(residual_set                    , num_conservative_variables      )
     call a_cellsystem%initialize(primitive_variables_set         , num_primitive_variables         )
     ! Initialize schemes & utils
-    call a_cellsystem%initialize(a_parallelizer              , a_configuration, num_conservative_variables, num_primitive_variables)
-    call a_cellsystem%initialize(an_eos                      , a_configuration, num_conservative_variables, num_primitive_variables)
-    call a_cellsystem%initialize(a_riemann_solver            , a_configuration, num_conservative_variables, num_primitive_variables)
-    call a_cellsystem%initialize(a_time_stepping             , a_configuration, num_conservative_variables, num_primitive_variables)
-    call a_cellsystem%initialize(a_reconstructor             , a_configuration, num_conservative_variables, num_primitive_variables)
-    call a_cellsystem%initialize(a_result_writer             , a_configuration, num_conservative_variables, num_primitive_variables)
-    call a_cellsystem%initialize(a_termination_criterion     , a_configuration, num_conservative_variables, num_primitive_variables)
-    call a_cellsystem%initialize(a_time_increment_controller , a_configuration, num_conservative_variables, num_primitive_variables)
-    call a_cellsystem%initialize(a_line_plotter              , a_configuration, num_conservative_variables, num_primitive_variables)
-    call a_cellsystem%initialize(a_control_volume_profiler   , a_configuration, num_conservative_variables, num_primitive_variables)
+    call a_cellsystem%initialize(a_parallelizer              , a_configuration, num_conservative_variables)
+    call a_cellsystem%initialize(an_eos                      , a_configuration, num_conservative_variables)
+    call a_cellsystem%initialize(a_riemann_solver            , a_configuration, num_conservative_variables)
+    call a_cellsystem%initialize(a_time_stepping             , a_configuration, num_conservative_variables)
+    call a_cellsystem%initialize(a_reconstructor             , a_configuration, num_conservative_variables)
+    call a_cellsystem%initialize(a_result_writer             , a_configuration, num_conservative_variables)
+    call a_cellsystem%initialize(a_termination_criterion     , a_configuration, num_conservative_variables)
+    call a_cellsystem%initialize(a_time_increment_controller , a_configuration, num_conservative_variables)
+    call a_cellsystem%initialize(a_line_plotter              , a_configuration, num_conservative_variables)
+    call a_cellsystem%initialize(a_control_volume_profiler   , a_configuration, num_conservative_variables)
 
     ! Set initial condition
     call a_cellsystem%read_initial_condition(an_initial_condition_parser, a_configuration, conservative_variables_set)
@@ -145,15 +145,16 @@ program five_equation_model_solver
 
         call a_cellsystem%show_timestepping_infomation()
 
-        call a_cellsystem%prepare_stepping(a_parallelizer, a_time_stepping, conservative_variables_set, primitive_variables_set, residual_set)
+        call a_cellsystem%prepare_time_stepping(a_parallelizer, a_time_stepping, conservative_variables_set, residual_set)
 
-        do state_num = 1, a_cellsystem%get_number_of_states(a_time_stepping), 1
-            call a_cellsystem%apply_empty_condition    (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, empty_bc    )
-            call a_cellsystem%apply_outflow_condition  (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, outflow_bc  )
-            call a_cellsystem%apply_nonslip_wall_condition     (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, nonslip_wall_bc     )
-            call a_cellsystem%apply_slip_and_symmetric_condition(a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, slip_and_symmetric_bc)
+        do stage_num = 1, a_cellsystem%get_number_of_stages(a_time_stepping), 1
+            call a_cellsystem%apply_empty_condition       (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, empty_bc             )
+            call a_cellsystem%apply_outflow_condition     (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, outflow_bc           )
+            call a_cellsystem%apply_nonslip_wall_condition(a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, nonslip_wall_bc      )
+            call a_cellsystem%apply_slip_wall_condition   (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, slip_and_symmetric_bc)
+            call a_cellsystem%apply_symmetric_condition   (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, slip_and_symmetric_bc)
 
-            call a_cellsystem%compute_residual(   &
+            call a_cellsystem%compute_divergence(   &
                 a_parallelizer                  , &
                 a_reconstructor                 , &
                 a_riemann_solver                , &
@@ -163,10 +164,10 @@ program five_equation_model_solver
                 num_conservative_variables      , &
                 num_primitive_variables         , &
                 primitive_to_conservative       , &
-                compute_residual_element          &
+                flux_function                     &
             )
 
-            call a_cellsystem%compute_next_state(a_parallelizer, a_time_stepping, an_eos, state_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, conservative_to_primitive)
+            call a_cellsystem%compute_next_stage(a_parallelizer, a_time_stepping, an_eos, stage_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, conservative_to_primitive)
         end do
 
         call a_cellsystem%increment_time()

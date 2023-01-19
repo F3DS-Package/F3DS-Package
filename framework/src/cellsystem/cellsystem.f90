@@ -20,7 +20,6 @@ module class_cellsystem
     use abstract_time_increment_controller
     use abstract_initial_condition_parser
     use abstract_face_gradient_interpolator
-    use abstract_model
     use abstract_parallelizer
     use class_line_plotter
     use class_control_volume_profiler
@@ -66,7 +65,8 @@ module class_cellsystem
         ! Number of boundary faces
         integer(int_kind) :: num_outflow_faces
         integer(int_kind) :: num_nonslip_wall_faces
-        integer(int_kind) :: num_slip_and_symmetric_faces
+        integer(int_kind) :: num_slip_wall_faces
+        integer(int_kind) :: num_symmetric_faces
         integer(int_kind) :: num_empty_faces
 
         ! ### Faces ###
@@ -129,10 +129,11 @@ module class_cellsystem
 
         ! Elements are stored boundary face index.
         ! Elm. 1) 1 : num_{boundary condition}_faces
-        integer(int_kind), allocatable :: outflow_face_indexes           (:)
-        integer(int_kind), allocatable :: nonslip_wall_face_indexes      (:)
-        integer(int_kind), allocatable :: slip_and_symmetric_face_indexes(:)
-        integer(int_kind), allocatable :: empty_face_indexes             (:)
+        integer(int_kind), allocatable :: outflow_face_indexes      (:)
+        integer(int_kind), allocatable :: nonslip_wall_face_indexes (:)
+        integer(int_kind), allocatable :: slip_wall_face_indexes    (:)
+        integer(int_kind), allocatable :: symmetric_face_indexes    (:)
+        integer(int_kind), allocatable :: empty_face_indexes        (:)
 
         ! ### Status ###
         logical :: read_cellsystem = .false.
@@ -153,7 +154,6 @@ module class_cellsystem
         procedure, public, pass(self) :: line_plotter_initialize
         procedure, public, pass(self) :: control_volume_profiler_initialize
         procedure, public, pass(self) :: surface_profiler_initialize
-        procedure, public, pass(self) :: model_initialize
         procedure, public, pass(self) :: face_gradient_interpolator_initialize
         procedure, public, pass(self) :: parallelizer_initialize
         generic  , public             :: initialize  => result_writer_initialize             , &
@@ -170,7 +170,6 @@ module class_cellsystem
                                                         line_plotter_initialize              , &
                                                         control_volume_profiler_initialize   , &
                                                         surface_profiler_initialize          , &
-                                                        model_initialize                     , &
                                                         face_gradient_interpolator_initialize, &
                                                         parallelizer_initialize
         procedure, public, pass(self) :: result_writer_open_file
@@ -205,10 +204,7 @@ module class_cellsystem
         procedure, public, pass(self) :: smooth_variables
 
         ! ### Time increment control ###
-        procedure, public, pass(self) :: update_time_increment_functional_api
-        procedure, public, pass(self) :: update_time_increment_objective_api
-        generic  , public             :: update_time_increment => update_time_increment_functional_api, &
-                                                                  update_time_increment_objective_api
+        procedure, public, pass(self) :: update_time_increment
 
         ! ### Termination criterion ###
         procedure, public, pass(self) :: satisfies_termination_criterion
@@ -216,7 +212,8 @@ module class_cellsystem
         ! ### Boundary Condition ###
         procedure, public, pass(self) :: apply_outflow_condition
         procedure, public, pass(self) :: apply_nonslip_wall_condition
-        procedure, public, pass(self) :: apply_slip_and_symmetric_condition
+        procedure, public, pass(self) :: apply_symmetric_condition
+        procedure, public, pass(self) :: apply_slip_wall_condition
         procedure, public, pass(self) :: apply_empty_condition
 
         ! ### Gradient Calculator ###
@@ -228,25 +225,25 @@ module class_cellsystem
         ! ### Divergence Calculator ###
         procedure, public, pass(self) :: compute_divergence_1darray
         procedure, public, pass(self) :: compute_divergence_2darray
+        procedure, public, pass(self) :: compute_divergence_nonviscous
+        procedure, public, pass(self) :: compute_divergence_viscous
         generic  , public             :: compute_divergence => compute_divergence_1darray, &
-                                                               compute_divergence_2darray
+                                                               compute_divergence_2darray, &
+                                                               compute_divergence_nonviscous , &
+                                                               compute_divergence_viscous
 
-        ! ### Resudual ###
-        procedure, public, pass(self) :: compute_residual_nonviscous_functional_api
-        procedure, public, pass(self) :: compute_residual_viscous_functional_api
-        procedure, public, pass(self) :: compute_residual_viscous_objective_api
-        generic  , public             :: compute_residual => compute_residual_nonviscous_functional_api, &
-                                                             compute_residual_viscous_functional_api   , &
-                                                             compute_residual_viscous_objective_api
-        procedure, public, pass(self) :: compute_source_term_functional_api
-        procedure, public, pass(self) :: compute_source_term_objective_api
-        generic  , public             :: compute_source_term => compute_source_term_functional_api, &
-                                                                compute_source_term_objective_api
+        ! ### Sorce Term
+        procedure, public, pass(self) :: compute_source_term
 
         ! ### Time Stepping ###
-        procedure, public, pass(self) :: compute_next_state
-        procedure, public, pass(self) :: prepare_stepping
-        procedure, public, pass(self) :: get_number_of_states
+        procedure, public, pass(self) :: compute_next_stage_with_primitive
+        procedure, public, pass(self) :: compute_next_stage_without_primitive_2darray
+        procedure, public, pass(self) :: compute_next_stage_without_primitive_1darray
+        generic  , public             :: compute_next_stage => compute_next_stage_with_primitive           , &
+                                                               compute_next_stage_without_primitive_2darray, &
+                                                               compute_next_stage_without_primitive_1darray
+        procedure, public, pass(self) :: prepare_time_stepping
+        procedure, public, pass(self) :: get_number_of_stages
 
         ! ### Result Writer ###
         procedure, public, pass(self) :: write_scolar
@@ -264,7 +261,8 @@ module class_cellsystem
         procedure, public, pass(self) :: get_number_of_cells
         procedure, public, pass(self) :: get_number_of_outflow_faces
         procedure, public, pass(self) :: get_number_of_nonslip_wall_faces
-        procedure, public, pass(self) :: get_number_of_slip_and_symmetric_faces
+        procedure, public, pass(self) :: get_number_of_slip_wall_faces
+        procedure, public, pass(self) :: get_number_of_symmetric_faces
         procedure, public, pass(self) :: get_number_of_empty_faces
         procedure, public, pass(self) :: get_number_of_steps
         procedure, public, pass(self) :: get_time
@@ -293,43 +291,30 @@ module class_cellsystem
     end subroutine show_timestepping_infomation
 
     ! ### Parallelizer ###
-    subroutine parallelizer_initialize(self, a_parallelizer, config, num_conservative_variables, num_primitive_variables)
+    subroutine parallelizer_initialize(self, a_parallelizer, config, num_conservative_variables)
         class   (cellsystem   ), intent(inout) :: self
         class   (parallelizer ), intent(inout) :: a_parallelizer
         class   (configuration), intent(inout) :: config
         integer (int_kind     ), intent(in   ) :: num_conservative_variables
-        integer (int_kind     ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In parallelizer_initialize(), cellsystem.")
 #endif
-        call a_parallelizer%initialize(config, self%num_cells, self%num_faces, self%num_outflow_faces, self%num_nonslip_wall_faces, self%num_slip_and_symmetric_faces, self%num_empty_faces)
+        call a_parallelizer%initialize(config)
     end subroutine
 
     ! ### Face gradient interpolator ###
-    subroutine face_gradient_interpolator_initialize(self, a_face_gradient_interpolator, config, num_conservative_variables, num_primitive_variables)
+    subroutine face_gradient_interpolator_initialize(self, a_face_gradient_interpolator, config, num_conservative_variables)
         class   (cellsystem                ), intent(inout) :: self
         class   (face_gradient_interpolator), intent(inout) :: a_face_gradient_interpolator
         class   (configuration             ), intent(inout) :: config
         integer (int_kind                  ), intent(in   ) :: num_conservative_variables
-        integer (int_kind                  ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In face_gradient_interpolator_initialize(), cellsystem.")
 #endif
         call a_face_gradient_interpolator%initialize(config)
     end subroutine face_gradient_interpolator_initialize
-
-    ! ### Model ###
-    subroutine model_initialize(self, a_model, a_config, num_conservative_variables, num_primitive_variables)
-        class   (cellsystem   ), intent(inout) :: self
-        class   (model        ), intent(inout) :: a_model
-        class   (configuration), intent(inout) :: a_config
-        integer(int_kind      ), intent(in   ) :: num_conservative_variables
-        integer(int_kind      ), intent(in   ) :: num_primitive_variables
-#ifdef _DEBUG
-        call write_debuginfo("In model_initialize(), cellsystem.")
-#endif
-        call a_model%initialize(a_config)
-    end subroutine model_initialize
 
     ! ### Surface profiler ###
     subroutine surface_profiler_initialize(self, plotter, config, num_conservative_variables, num_primitive_variables)
@@ -362,12 +347,12 @@ module class_cellsystem
     end function surface_profiler_is_writable
 
     ! ### Control volume profiler ###
-    subroutine control_volume_profiler_initialize(self, plotter, config, num_conservative_variables, num_primitive_variables)
+    subroutine control_volume_profiler_initialize(self, plotter, config, num_conservative_variables)
         class(cellsystem             ), intent(inout) :: self
         class(control_volume_profiler), intent(inout) :: plotter
         class(configuration          ), intent(inout) :: config
         integer(int_kind             ), intent(in   ) :: num_conservative_variables
-        integer(int_kind             ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In control_volume_profiler_initialize(), cellsystem.")
 #endif
@@ -392,12 +377,12 @@ module class_cellsystem
     end function control_volume_profiler_is_writable
 
     ! ### Line plotter ###
-    subroutine line_plotter_initialize(self, plotter, config, num_conservative_variables, num_primitive_variables)
+    subroutine line_plotter_initialize(self, plotter, config, num_conservative_variables)
         class(cellsystem   ), intent(inout) :: self
         class(line_plotter ), intent(inout) :: plotter
         class(configuration), intent(inout) :: config
         integer(int_kind   ), intent(in   ) :: num_conservative_variables
-        integer(int_kind   ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In line_plotter_initialize(), cellsystem.")
 #endif
@@ -422,19 +407,19 @@ module class_cellsystem
     end function line_plotter_is_writable
 
     ! ### Time increment control ###
-    subroutine time_increment_controller_initialize(self, controller, config, num_conservative_variables, num_primitive_variables)
+    subroutine time_increment_controller_initialize(self, controller, config, num_conservative_variables)
         class(cellsystem               ), intent(inout) :: self
         class(time_increment_controller), intent(inout) :: controller
         class(configuration            ), intent(inout) :: config
         integer(int_kind               ), intent(in   ) :: num_conservative_variables
-        integer(int_kind               ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In time_increment_controller_initialize(), cellsystem.")
 #endif
         call controller%initialize(config)
     end subroutine time_increment_controller_initialize
 
-    subroutine update_time_increment_functional_api(self, controller, an_eos, variables_set, spectral_radius_function)
+    subroutine update_time_increment(self, controller, an_eos, variables_set, spectral_radius_function)
         class  (cellsystem               ), intent(inout) :: self
         class  (time_increment_controller), intent(in   ) :: controller
         class  (eos                      ), intent(in   ) :: an_eos
@@ -454,7 +439,7 @@ module class_cellsystem
         integer(int_kind ) :: i
 
 #ifdef _DEBUG
-        call write_debuginfo("In update_time_increment_functional_api(), cellsystem.")
+        call write_debuginfo("In update_time_increment (), cellsystem.")
 #endif
 
         if ( controller%returns_constant() ) then
@@ -481,54 +466,15 @@ module class_cellsystem
                 end if
             end associate
         end do
-    end subroutine update_time_increment_functional_api
-
-    subroutine update_time_increment_objective_api(self, controller, an_eos, variables_set, a_model)
-        class  (cellsystem               ), intent(inout) :: self
-        class  (time_increment_controller), intent(in   ) :: controller
-        class  (eos                      ), intent(in   ) :: an_eos
-        real   (real_kind                ), intent(in   ) :: variables_set(:,:)
-        class  (model                    ), intent(in   ) :: a_model
-
-        integer(int_kind ) :: i
-
-#ifdef _DEBUG
-        call write_debuginfo("In update_time_increment_objective_api(), cellsystem.")
-#endif
-
-        if ( controller%returns_constant() ) then
-            self%time_increment = controller%get_constant_dt()
-            return
-        end if
-
-        self%time_increment = large_value
-        do i = 1, self%num_faces, 1
-            associate(                                                                                                             &
-                lhc_q        => variables_set    (:, self%face_to_cell_indexes(self%num_local_cells+0, i)), &
-                rhc_q        => variables_set    (:, self%face_to_cell_indexes(self%num_local_cells+1, i)), &
-                lhc_v        => self%cell_volumes   (self%face_to_cell_indexes(self%num_local_cells+0, i)), &
-                rhc_v        => self%cell_volumes   (self%face_to_cell_indexes(self%num_local_cells+1, i)), &
-                s            => self%face_areas                                                       (i) , &
-                lhc_is_real  => self%is_real_cell   (self%face_to_cell_indexes(self%num_local_cells+0, i)), &
-                rhc_is_real  => self%is_real_cell   (self%face_to_cell_indexes(self%num_local_cells+1, i))  &
-            )
-                if(lhc_is_real)then
-                    self%time_increment = min(controller%compute_local_dt(lhc_v, s, a_model%spectral_radius(an_eos, lhc_q, lhc_v / s)), self%time_increment)
-                end if
-                if(rhc_is_real)then
-                    self%time_increment = min(controller%compute_local_dt(rhc_v, s, a_model%spectral_radius(an_eos, rhc_q, rhc_v / s)), self%time_increment)
-                end if
-            end associate
-        end do
-    end subroutine update_time_increment_objective_api
+    end subroutine update_time_increment
 
     ! ### Termination criterion ###
-    subroutine termination_criterion_initialize(self, criterion, config, num_conservative_variables, num_primitive_variables)
+    subroutine termination_criterion_initialize(self, criterion, config, num_conservative_variables)
         class  (cellsystem           ), intent(inout) :: self
         class  (termination_criterion), intent(inout) :: criterion
         class  (configuration        ), intent(inout) :: config
         integer(int_kind             ), intent(in   ) :: num_conservative_variables
-        integer(int_kind             ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In termination_criterion_initialize(), cellsystem.")
 #endif
@@ -543,51 +489,51 @@ module class_cellsystem
     end function satisfies_termination_criterion
 
     ! ### Boundary Condition ###
-    subroutine apply_outflow_condition(self, a_parallelizer, primitive_variables_set, num_primitive_variables, &
-        compute_rotate_primitive_variables_function, compute_unrotate_primitive_variables_function, boundary_condition_function)
+    subroutine apply_outflow_condition(self, a_parallelizer, variables_set, num_variables, &
+        compute_rotate_variables_function, compute_unrotate_variables_function, boundary_condition_function)
         class  (cellsystem  ), intent(inout) :: self
         class  (parallelizer), intent(in   ) :: a_parallelizer
-        real   (real_kind   ), intent(inout) :: primitive_variables_set(:,:)
-        integer(int_kind    ), intent(in   ) :: num_primitive_variables
+        real   (real_kind   ), intent(inout) :: variables_set(:,:)
+        integer(int_kind    ), intent(in   ) :: num_variables
 
         interface
-            pure function compute_rotate_primitive_variables_function( &
-                primitive_variables                                  , &
-                face_normal_vector                                   , &
-                face_tangential1_vector                              , &
-                face_tangential2_vector                              , &
-                num_primitive_variables                                  ) result(rotate_primitive_variables)
+            pure function compute_rotate_variables_function( &
+                variables                                  , &
+                face_normal_vector                         , &
+                face_tangential1_vector                    , &
+                face_tangential2_vector                    , &
+                num_variables                                  ) result(rotate_variables)
 
                 use typedef_module
-                real   (real_kind     ), intent(in)  :: primitive_variables     (:)
+                real   (real_kind     ), intent(in)  :: variables               (:)
                 real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
                 real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
                 real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
-                integer(int_kind      ), intent(in)  :: num_primitive_variables
-                real   (real_kind     )              :: rotate_primitive_variables(num_primitive_variables)
-            end function compute_rotate_primitive_variables_function
+                integer(int_kind      ), intent(in)  :: num_variables
+                real   (real_kind     )              :: rotate_variables(num_variables)
+            end function compute_rotate_variables_function
 
-            pure function compute_unrotate_primitive_variables_function( &
-                primitive_variables                                    , &
-                face_normal_vector                                     , &
-                face_tangential1_vector                                , &
-                face_tangential2_vector                                , &
-                num_primitive_variables                                    ) result(unrotate_primitive_variables)
+            pure function compute_unrotate_variables_function( &
+                variables                                    , &
+                face_normal_vector                           , &
+                face_tangential1_vector                      , &
+                face_tangential2_vector                      , &
+                num_variables                                    ) result(unrotate_variables)
 
                 use typedef_module
-                real   (real_kind     ), intent(in)  :: primitive_variables     (:)
+                real   (real_kind     ), intent(in)  :: variables               (:)
                 real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
                 real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
                 real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
-                integer(int_kind      ), intent(in)  :: num_primitive_variables
-                real   (real_kind     )              :: unrotate_primitive_variables(num_primitive_variables)
-            end function compute_unrotate_primitive_variables_function
+                integer(int_kind      ), intent(in)  :: num_variables
+                real   (real_kind     )              :: unrotate_variables(num_variables)
+            end function compute_unrotate_variables_function
 
-            function boundary_condition_function(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
+            function boundary_condition_function(inner_variables, num_variables) result(ghost_variables)
                 use typedef_module
-                real   (real_kind), intent(in) :: inner_primitive_variables(:)
-                integer(int_kind ), intent(in) :: num_primitive_variables
-                real   (real_kind)             :: ghost_primitive_variables(num_primitive_variables)
+                real   (real_kind), intent(in) :: inner_variables(:)
+                integer(int_kind ), intent(in) :: num_variables
+                real   (real_kind)             :: ghost_variables(num_variables)
             end function boundary_condition_function
         end interface
 
@@ -601,65 +547,65 @@ module class_cellsystem
         do i = 1, self%num_outflow_faces, 1
             face_index = self%outflow_face_indexes(i)
             call apply_boundary_condition_common_impl(          &
-                primitive_variables_set                       , &
+                variables_set                                 , &
                 self%face_normal_vectors     (:,face_index)   , &
                 self%face_tangential1_vectors(:,face_index)   , &
                 self%face_tangential2_vectors(:,face_index)   , &
                 self%face_to_cell_indexes    (:,face_index)   , &
                 self%num_local_cells                          , &
-                num_primitive_variables                       , &
-                compute_rotate_primitive_variables_function   , &
-                compute_unrotate_primitive_variables_function , &
+                num_variables                                 , &
+                compute_rotate_variables_function             , &
+                compute_unrotate_variables_function           , &
                 boundary_condition_function                     &
             )
         end do
     end subroutine apply_outflow_condition
 
-    subroutine apply_nonslip_wall_condition(self, a_parallelizer, primitive_variables_set, num_primitive_variables, &
-        compute_rotate_primitive_variables_function, compute_unrotate_primitive_variables_function, boundary_condition_function)
+    subroutine apply_nonslip_wall_condition(self, a_parallelizer, variables_set, num_variables, &
+        compute_rotate_variables_function, compute_unrotate_variables_function, boundary_condition_function)
         class  (cellsystem  ), intent(inout) :: self
         class  (parallelizer), intent(in   ) :: a_parallelizer
-        real   (real_kind   ), intent(inout) :: primitive_variables_set(:,:)
-        integer(int_kind    ), intent(in   ) :: num_primitive_variables
+        real   (real_kind   ), intent(inout) :: variables_set(:,:)
+        integer(int_kind    ), intent(in   ) :: num_variables
 
         interface
-            pure function compute_rotate_primitive_variables_function( &
-                primitive_variables                                  , &
-                face_normal_vector                                   , &
-                face_tangential1_vector                              , &
-                face_tangential2_vector                              , &
-                num_primitive_variables                                  ) result(rotate_primitive_variables)
+            pure function compute_rotate_variables_function( &
+                variables                                  , &
+                face_normal_vector                         , &
+                face_tangential1_vector                    , &
+                face_tangential2_vector                    , &
+                num_variables                                  ) result(rotate_variables)
 
                 use typedef_module
-                real   (real_kind     ), intent(in)  :: primitive_variables     (:)
+                real   (real_kind     ), intent(in)  :: variables               (:)
                 real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
                 real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
                 real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
-                integer(int_kind      ), intent(in)  :: num_primitive_variables
-                real   (real_kind     )              :: rotate_primitive_variables(num_primitive_variables)
-            end function compute_rotate_primitive_variables_function
+                integer(int_kind      ), intent(in)  :: num_variables
+                real   (real_kind     )              :: rotate_variables(num_variables)
+            end function compute_rotate_variables_function
 
-            pure function compute_unrotate_primitive_variables_function( &
-                primitive_variables                                    , &
-                face_normal_vector                                     , &
-                face_tangential1_vector                                , &
-                face_tangential2_vector                                , &
-                num_primitive_variables                                    ) result(unrotate_primitive_variables)
+            pure function compute_unrotate_variables_function( &
+                variables                                    , &
+                face_normal_vector                           , &
+                face_tangential1_vector                      , &
+                face_tangential2_vector                      , &
+                num_variables                                    ) result(unrotate_variables)
 
                 use typedef_module
-                real   (real_kind     ), intent(in)  :: primitive_variables     (:)
+                real   (real_kind     ), intent(in)  :: variables               (:)
                 real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
                 real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
                 real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
-                integer(int_kind      ), intent(in)  :: num_primitive_variables
-                real   (real_kind     )              :: unrotate_primitive_variables(num_primitive_variables)
-            end function compute_unrotate_primitive_variables_function
+                integer(int_kind      ), intent(in)  :: num_variables
+                real   (real_kind     )              :: unrotate_variables(num_variables)
+            end function compute_unrotate_variables_function
 
-            function boundary_condition_function(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
+            function boundary_condition_function(inner_variables, num_variables) result(ghost_variables)
                 use typedef_module
-                real   (real_kind), intent(in) :: inner_primitive_variables(:)
-                integer(int_kind ), intent(in) :: num_primitive_variables
-                real   (real_kind)             :: ghost_primitive_variables(num_primitive_variables)
+                real   (real_kind), intent(in) :: inner_variables(:)
+                integer(int_kind ), intent(in) :: num_variables
+                real   (real_kind)             :: ghost_variables(num_variables)
             end function boundary_condition_function
         end interface
 
@@ -673,65 +619,65 @@ module class_cellsystem
         do i = 1, self%num_nonslip_wall_faces, 1
             face_index = self%nonslip_wall_face_indexes(i)
             call apply_boundary_condition_common_impl(         &
-                primitive_variables_set                      , &
+                variables_set                                , &
                 self%face_normal_vectors     (:,face_index)  , &
                 self%face_tangential1_vectors(:,face_index)  , &
                 self%face_tangential2_vectors(:,face_index)  , &
                 self%face_to_cell_indexes    (:,face_index)  , &
                 self%num_local_cells                         , &
-                num_primitive_variables                      , &
-                compute_rotate_primitive_variables_function  , &
-                compute_unrotate_primitive_variables_function, &
+                num_variables                                , &
+                compute_rotate_variables_function            , &
+                compute_unrotate_variables_function          , &
                 boundary_condition_function                    &
             )
         end do
     end subroutine apply_nonslip_wall_condition
 
-    subroutine apply_slip_and_symmetric_condition(self, a_parallelizer, primitive_variables_set, num_primitive_variables, &
-        compute_rotate_primitive_variables_function, compute_unrotate_primitive_variables_function, boundary_condition_function)
+    subroutine apply_symmetric_condition(self, a_parallelizer, variables_set, num_variables, &
+        compute_rotate_variables_function, compute_unrotate_variables_function, boundary_condition_function)
         class  (cellsystem  ), intent(inout) :: self
         class  (parallelizer), intent(in   ) :: a_parallelizer
-        real   (real_kind   ), intent(inout) :: primitive_variables_set(:,:)
-        integer(int_kind    ), intent(in   ) :: num_primitive_variables
+        real   (real_kind   ), intent(inout) :: variables_set(:,:)
+        integer(int_kind    ), intent(in   ) :: num_variables
 
         interface
-            pure function compute_rotate_primitive_variables_function( &
-                primitive_variables                                  , &
-                face_normal_vector                                   , &
-                face_tangential1_vector                              , &
-                face_tangential2_vector                              , &
-                num_primitive_variables                                  ) result(rotate_primitive_variables)
+            pure function compute_rotate_variables_function( &
+                variables                                  , &
+                face_normal_vector                         , &
+                face_tangential1_vector                    , &
+                face_tangential2_vector                    , &
+                num_variables                                  ) result(rotate_variables)
 
                 use typedef_module
-                real   (real_kind     ), intent(in)  :: primitive_variables     (:)
+                real   (real_kind     ), intent(in)  :: variables               (:)
                 real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
                 real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
                 real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
-                integer(int_kind      ), intent(in)  :: num_primitive_variables
-                real   (real_kind     )              :: rotate_primitive_variables(num_primitive_variables)
-            end function compute_rotate_primitive_variables_function
+                integer(int_kind      ), intent(in)  :: num_variables
+                real   (real_kind     )              :: rotate_variables(num_variables)
+            end function compute_rotate_variables_function
 
-            pure function compute_unrotate_primitive_variables_function( &
-                primitive_variables                                    , &
-                face_normal_vector                                     , &
-                face_tangential1_vector                                , &
-                face_tangential2_vector                                , &
-                num_primitive_variables                                    ) result(unrotate_primitive_variables)
+            pure function compute_unrotate_variables_function( &
+                variables                                    , &
+                face_normal_vector                           , &
+                face_tangential1_vector                      , &
+                face_tangential2_vector                      , &
+                num_variables                                    ) result(unrotate_variables)
 
                 use typedef_module
-                real   (real_kind     ), intent(in)  :: primitive_variables     (:)
+                real   (real_kind     ), intent(in)  :: variables               (:)
                 real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
                 real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
                 real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
-                integer(int_kind      ), intent(in)  :: num_primitive_variables
-                real   (real_kind     )              :: unrotate_primitive_variables(num_primitive_variables)
-            end function compute_unrotate_primitive_variables_function
+                integer(int_kind      ), intent(in)  :: num_variables
+                real   (real_kind     )              :: unrotate_variables(num_variables)
+            end function compute_unrotate_variables_function
 
-            function boundary_condition_function(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
+            function boundary_condition_function(inner_variables, num_variables) result(ghost_variables)
                 use typedef_module
-                real   (real_kind), intent(in) :: inner_primitive_variables(:)
-                integer(int_kind ), intent(in) :: num_primitive_variables
-                real   (real_kind)             :: ghost_primitive_variables(num_primitive_variables)
+                real   (real_kind), intent(in) :: inner_variables(:)
+                integer(int_kind ), intent(in) :: num_variables
+                real   (real_kind)             :: ghost_variables(num_variables)
             end function boundary_condition_function
         end interface
 
@@ -742,68 +688,140 @@ module class_cellsystem
 #endif
 
 !$omp parallel do private(i, face_index)
-        do i = 1, self%num_slip_and_symmetric_faces, 1
-            face_index = self%slip_and_symmetric_face_indexes(i)
+        do i = 1, self%num_symmetric_faces, 1
+            face_index = self%symmetric_face_indexes(i)
             call apply_boundary_condition_common_impl(          &
-                primitive_variables_set                       , &
+                variables_set                                 , &
                 self%face_normal_vectors     (:,face_index)   , &
                 self%face_tangential1_vectors(:,face_index)   , &
                 self%face_tangential2_vectors(:,face_index)   , &
                 self%face_to_cell_indexes    (:,face_index)   , &
                 self%num_local_cells                          , &
-                num_primitive_variables                       , &
-                compute_rotate_primitive_variables_function   , &
-                compute_unrotate_primitive_variables_function , &
+                num_variables                                 , &
+                compute_rotate_variables_function             , &
+                compute_unrotate_variables_function           , &
                 boundary_condition_function                     &
             )
         end do
-    end subroutine apply_slip_and_symmetric_condition
+    end subroutine apply_symmetric_condition
 
-    subroutine apply_empty_condition(self, a_parallelizer, primitive_variables_set, num_primitive_variables, &
-        compute_rotate_primitive_variables_function, compute_unrotate_primitive_variables_function, boundary_condition_function)
+    subroutine apply_slip_wall_condition(self, a_parallelizer, variables_set, num_variables, &
+        compute_rotate_variables_function, compute_unrotate_variables_function, boundary_condition_function)
         class  (cellsystem  ), intent(inout) :: self
         class  (parallelizer), intent(in   ) :: a_parallelizer
-        real   (real_kind   ), intent(inout) :: primitive_variables_set(:,:)
-        integer(int_kind    ), intent(in   ) :: num_primitive_variables
+        real   (real_kind   ), intent(inout) :: variables_set(:,:)
+        integer(int_kind    ), intent(in   ) :: num_variables
 
         interface
-            pure function compute_rotate_primitive_variables_function( &
-                primitive_variables                                  , &
-                face_normal_vector                                   , &
-                face_tangential1_vector                              , &
-                face_tangential2_vector                              , &
-                num_primitive_variables                                  ) result(rotate_primitive_variables)
+            pure function compute_rotate_variables_function( &
+                variables                                  , &
+                face_normal_vector                         , &
+                face_tangential1_vector                    , &
+                face_tangential2_vector                    , &
+                num_variables                                  ) result(rotate_variables)
 
                 use typedef_module
-                real   (real_kind     ), intent(in)  :: primitive_variables     (:)
+                real   (real_kind     ), intent(in)  :: variables               (:)
                 real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
                 real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
                 real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
-                integer(int_kind      ), intent(in)  :: num_primitive_variables
-                real   (real_kind     )              :: rotate_primitive_variables(num_primitive_variables)
-            end function compute_rotate_primitive_variables_function
+                integer(int_kind      ), intent(in)  :: num_variables
+                real   (real_kind     )              :: rotate_variables(num_variables)
+            end function compute_rotate_variables_function
 
-            pure function compute_unrotate_primitive_variables_function( &
-                primitive_variables                                    , &
-                face_normal_vector                                     , &
-                face_tangential1_vector                                , &
-                face_tangential2_vector                                , &
-                num_primitive_variables                                    ) result(unrotate_primitive_variables)
+            pure function compute_unrotate_variables_function( &
+                variables                                    , &
+                face_normal_vector                           , &
+                face_tangential1_vector                      , &
+                face_tangential2_vector                      , &
+                num_variables                                    ) result(unrotate_variables)
 
                 use typedef_module
-                real   (real_kind     ), intent(in)  :: primitive_variables     (:)
+                real   (real_kind     ), intent(in)  :: variables               (:)
                 real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
                 real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
                 real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
-                integer(int_kind      ), intent(in)  :: num_primitive_variables
-                real   (real_kind     )              :: unrotate_primitive_variables(num_primitive_variables)
-            end function compute_unrotate_primitive_variables_function
+                integer(int_kind      ), intent(in)  :: num_variables
+                real   (real_kind     )              :: unrotate_variables(num_variables)
+            end function compute_unrotate_variables_function
 
-            function boundary_condition_function(inner_primitive_variables, num_primitive_variables) result(ghost_primitive_variables)
+            function boundary_condition_function(inner_variables, num_variables) result(ghost_variables)
                 use typedef_module
-                real   (real_kind), intent(in) :: inner_primitive_variables(:)
-                integer(int_kind ), intent(in) :: num_primitive_variables
-                real   (real_kind)             :: ghost_primitive_variables(num_primitive_variables)
+                real   (real_kind), intent(in) :: inner_variables(:)
+                integer(int_kind ), intent(in) :: num_variables
+                real   (real_kind)             :: ghost_variables(num_variables)
+            end function boundary_condition_function
+        end interface
+
+        integer :: i, face_index
+
+#ifdef _DEBUG
+        call write_debuginfo("In apply_slip_wall_condition(), cellsystem.")
+#endif
+
+!$omp parallel do private(i, face_index)
+        do i = 1, self%num_slip_wall_faces, 1
+            face_index = self%slip_wall_face_indexes(i)
+            call apply_boundary_condition_common_impl(          &
+                variables_set                                 , &
+                self%face_normal_vectors     (:,face_index)   , &
+                self%face_tangential1_vectors(:,face_index)   , &
+                self%face_tangential2_vectors(:,face_index)   , &
+                self%face_to_cell_indexes    (:,face_index)   , &
+                self%num_local_cells                          , &
+                num_variables                                 , &
+                compute_rotate_variables_function             , &
+                compute_unrotate_variables_function           , &
+                boundary_condition_function                     &
+            )
+        end do
+    end subroutine apply_slip_wall_condition
+
+    subroutine apply_empty_condition(self, a_parallelizer, variables_set, num_variables, &
+        compute_rotate_variables_function, compute_unrotate_variables_function, boundary_condition_function)
+        class  (cellsystem  ), intent(inout) :: self
+        class  (parallelizer), intent(in   ) :: a_parallelizer
+        real   (real_kind   ), intent(inout) :: variables_set(:,:)
+        integer(int_kind    ), intent(in   ) :: num_variables
+
+        interface
+            pure function compute_rotate_variables_function( &
+                variables                                  , &
+                face_normal_vector                         , &
+                face_tangential1_vector                    , &
+                face_tangential2_vector                    , &
+                num_variables                                  ) result(rotate_variables)
+
+                use typedef_module
+                real   (real_kind     ), intent(in)  :: variables               (:)
+                real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
+                real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
+                real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
+                integer(int_kind      ), intent(in)  :: num_variables
+                real   (real_kind     )              :: rotate_variables(num_variables)
+            end function compute_rotate_variables_function
+
+            pure function compute_unrotate_variables_function( &
+                variables                                    , &
+                face_normal_vector                           , &
+                face_tangential1_vector                      , &
+                face_tangential2_vector                      , &
+                num_variables                                    ) result(unrotate_variables)
+
+                use typedef_module
+                real   (real_kind     ), intent(in)  :: variables               (:)
+                real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
+                real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
+                real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
+                integer(int_kind      ), intent(in)  :: num_variables
+                real   (real_kind     )              :: unrotate_variables(num_variables)
+            end function compute_unrotate_variables_function
+
+            function boundary_condition_function(inner_variables, num_variables) result(ghost_variables)
+                use typedef_module
+                real   (real_kind), intent(in) :: inner_variables(:)
+                integer(int_kind ), intent(in) :: num_variables
+                real   (real_kind)             :: ghost_variables(num_variables)
             end function boundary_condition_function
         end interface
 
@@ -817,15 +835,15 @@ module class_cellsystem
         do i = 1, self%num_empty_faces, 1
             face_index = self%empty_face_indexes(i)
             call apply_boundary_condition_empty_impl(           &
-                primitive_variables_set                       , &
+                variables_set                                 , &
                 self%face_normal_vectors     (:,face_index)   , &
                 self%face_tangential1_vectors(:,face_index)   , &
                 self%face_tangential2_vectors(:,face_index)   , &
                 self%face_to_cell_indexes    (:,face_index)   , &
                 self%num_local_cells                          , &
-                num_primitive_variables                       , &
-                compute_rotate_primitive_variables_function   , &
-                compute_unrotate_primitive_variables_function , &
+                num_variables                                 , &
+                compute_rotate_variables_function             , &
+                compute_unrotate_variables_function           , &
                 boundary_condition_function                     &
             )
         end do
@@ -1006,19 +1024,21 @@ module class_cellsystem
             lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
             rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
 
-            associate(                           &
-                x => self%cell_centor_positions, &
-                v => variables_set               &
+            associate(                                               &
+                x_lhc => self%cell_centor_positions(1:3, lhc_index), &
+                x_rhc => self%cell_centor_positions(1:3, rhc_index), &
+                v_lhc => variables_set             ( : , lhc_index), &
+                v_rhc => variables_set             ( : , rhc_index)  &
             )
-                lhc_w = weight_function(x(:,lhc_index), x(:,rhc_index), v(:,lhc_index), v(:,rhc_index))
+                lhc_w = weight_function(x_lhc, x_rhc, v_lhc, v_rhc)
                 if(self%is_real_cell(rhc_index))then
-                    rhc_w = weight_function(x(:,rhc_index), x(:,lhc_index), v(:,rhc_index), v(:,lhc_index))
+                    rhc_w = weight_function(x_lhc, x_rhc, v_lhc, v_rhc)
                 else
                     rhc_w = 0.d0
                 endif
 
-                smoothed_variables_set(:, lhc_index) = smoothed_variables_set(:, lhc_index) + lhc_w * v(:, lhc_index)
-                smoothed_variables_set(:, rhc_index) = smoothed_variables_set(:, rhc_index) + rhc_w * v(:, rhc_index)
+                smoothed_variables_set(:, lhc_index) = smoothed_variables_set(:, lhc_index) + lhc_w * v_lhc
+                smoothed_variables_set(:, rhc_index) = smoothed_variables_set(:, rhc_index) + rhc_w * v_rhc
 
                 total_weight_set(lhc_index) = total_weight_set(lhc_index) + lhc_w
                 total_weight_set(rhc_index) = total_weight_set(rhc_index) + rhc_w
@@ -1036,12 +1056,12 @@ module class_cellsystem
     end subroutine smooth_variables
 
     ! ### Gradient Calculator ###
-    subroutine gradient_calculator_initialize(self, a_gradient_calculator, config, num_conservative_variables, num_primitive_variables)
+    subroutine gradient_calculator_initialize(self, a_gradient_calculator, config, num_conservative_variables)
         class  (cellsystem         ), intent(inout) :: self
         class  (gradient_calculator), intent(inout) :: a_gradient_calculator
         class  (configuration      ), intent(inout) :: config
         integer(int_kind           ), intent(in   ) :: num_conservative_variables
-        integer(int_kind           ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In gradient_calculator_initialize(), cellsystem.")
 #endif
@@ -1108,7 +1128,7 @@ module class_cellsystem
 #endif
 
 !$omp parallel do private(cell_index)
-        do cell_index = 1, a_parallelizer%get_number_of_threads(1), 1
+        do cell_index = 1, self%num_cells, 1
             gradient_variable_set(:,cell_index) = 0.d0
         end do
 
@@ -1137,12 +1157,12 @@ module class_cellsystem
     end subroutine compute_gradient_1darray
 
     ! ### Divergence Calculator ###
-    subroutine interpolator_initialize(self, a_interpolator, config, num_conservative_variables, num_primitive_variables)
+    subroutine interpolator_initialize(self, a_interpolator, config, num_conservative_variables)
         class  (cellsystem   ), intent(inout) :: self
         class  (interpolator ), intent(inout) :: a_interpolator
         class  (configuration), intent(inout) :: config
         integer(int_kind     ), intent(in   ) :: num_conservative_variables
-        integer(int_kind     ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In interpolator_initialize(), cellsystem.")
 #endif
@@ -1231,23 +1251,9 @@ module class_cellsystem
         end do
     end subroutine compute_divergence_1darray
 
-    ! ### EoS ###
-    subroutine eos_initialize(self, an_eos, config, num_conservative_variables, num_primitive_variables)
-        class  (cellsystem    ), intent(inout) :: self
-        class  (eos           ), intent(inout) :: an_eos
-        class  (configuration ), intent(inout) :: config
-        integer(int_kind      ), intent(in   ) :: num_conservative_variables
-        integer(int_kind      ), intent(in   ) :: num_primitive_variables
-#ifdef _DEBUG
-        call write_debuginfo("In eos_initialize(), cellsystem.")
-#endif
-        call an_eos%initialize(config)
-    end subroutine eos_initialize
-
-    ! ### Resudual ###
-    subroutine compute_residual_nonviscous_functional_api(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos,                        &
+    subroutine compute_divergence_nonviscous(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos,                        &
                                            primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
-                                           primitive_to_conservative_function, residual_element_function                                )
+                                           primitive_to_conservative_function, flux_function                                )
 
         class  (cellsystem    ), intent(in   ) :: self
         class  (parallelizer  ), intent(in   ) :: a_parallelizer
@@ -1269,7 +1275,7 @@ module class_cellsystem
                 real   (real_kind)             :: conservative_values(num_conservative_values)
             end function primitive_to_conservative_function
 
-            function residual_element_function(           &
+            function flux_function(           &
                 an_eos                                  , &
                 an_riemann_solver                       , &
                 primitive_variables_lhc                 , &
@@ -1283,7 +1289,7 @@ module class_cellsystem
                 face_tangential1_vector                 , &
                 face_tangential2_vector                 , &
                 num_conservative_values                 , &
-                num_primitive_values                        ) result(residual_element)
+                num_primitive_values                        ) result(flux)
 
                 use typedef_module
                 use abstract_eos
@@ -1304,8 +1310,8 @@ module class_cellsystem
                 integer(int_kind      ), intent(in) :: num_conservative_values
                 integer(int_kind      ), intent(in) :: num_primitive_values
 
-                real   (real_kind)                  :: residual_element(num_conservative_values, 1:2)
-            end function residual_element_function
+                real   (real_kind)                  :: flux(num_conservative_values, 1:2)
+            end function flux_function
         end interface
 
         integer(int_kind ) :: i
@@ -1313,13 +1319,13 @@ module class_cellsystem
         integer(int_kind ) :: rhc_index
         real   (real_kind) :: reconstructed_primitive_variables_lhc   (num_primitive_variables)
         real   (real_kind) :: reconstructed_primitive_variables_rhc   (num_primitive_variables)
-        real   (real_kind) :: residual_element                        (num_conservative_variables, 1:2)
+        real   (real_kind) :: flux                        (num_conservative_variables, 1:2)
 
 #ifdef _DEBUG
-        call write_debuginfo("In compute_residual_nonviscous_functional_api(), cellsystem.")
+        call write_debuginfo("In compute_divergence_nonviscous (), cellsystem.")
 #endif
 
-!$omp parallel do private(i,lhc_index,rhc_index,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,residual_element)
+!$omp parallel do private(i,lhc_index,rhc_index,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,flux)
         do i = 1, self%num_faces, 1
             lhc_index = self%face_to_cell_indexes(self%num_local_cells+0, i)
             rhc_index = self%face_to_cell_indexes(self%num_local_cells+1, i)
@@ -1333,7 +1339,7 @@ module class_cellsystem
                 i, self%num_local_cells, num_primitive_variables                                                     &
             )
 
-            residual_element(:,:) = residual_element_function(&
+            flux(:,:) = flux_function(&
                 an_eos                                      , &
                 a_riemann_solver                            , &
                 primitive_variables_set       (:,lhc_index) , &
@@ -1350,14 +1356,14 @@ module class_cellsystem
                 num_primitive_variables                       &
             )
 
-            residual_set(:,lhc_index) = residual_set(:,lhc_index) + residual_element(:, 1)
-            residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
+            residual_set(:,lhc_index) = residual_set(:,lhc_index) + flux(:, 1)
+            residual_set(:,rhc_index) = residual_set(:,rhc_index) + flux(:, 2)
         end do
-    end subroutine compute_residual_nonviscous_functional_api
+    end subroutine compute_divergence_nonviscous
 
-    subroutine compute_residual_viscous_functional_api(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos, a_face_gradient_interpolator,                                &
-                                                       primitive_variables_set, gradient_primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
-                                                       primitive_to_conservative_function, residual_element_function)
+    subroutine compute_divergence_viscous(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos, a_face_gradient_interpolator,                                &
+                                        primitive_variables_set, gradient_primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
+                                        primitive_to_conservative_function, flux_function)
 
         class  (cellsystem                ), intent(in   ) :: self
         class  (parallelizer              ), intent(in   ) :: a_parallelizer
@@ -1381,7 +1387,7 @@ module class_cellsystem
                 real   (real_kind)             :: conservative_values(num_conservative_values)
             end function primitive_to_conservative_function
 
-            function residual_element_function(           &
+            function flux_function(           &
                 an_eos                                  , &
                 an_riemann_solver                       , &
                 primitive_variables_lhc                 , &
@@ -1396,7 +1402,7 @@ module class_cellsystem
                 face_tangential1_vector                 , &
                 face_tangential2_vector                 , &
                 num_conservative_variables              , &
-                num_primitive_variables                     ) result(residual_element)
+                num_primitive_variables                     ) result(flux)
 
                 use typedef_module
                 use abstract_eos
@@ -1418,21 +1424,21 @@ module class_cellsystem
                 integer(int_kind      ), intent(in) :: num_conservative_variables
                 integer(int_kind      ), intent(in) :: num_primitive_variables
 
-                real   (real_kind)                  :: residual_element(num_conservative_variables, 1:2)
-            end function residual_element_function
+                real   (real_kind)                  :: flux(num_conservative_variables, 1:2)
+            end function flux_function
         end interface
 
         integer(int_kind ) :: i
         real   (real_kind) :: reconstructed_primitive_variables_lhc   (num_primitive_variables)
         real   (real_kind) :: reconstructed_primitive_variables_rhc   (num_primitive_variables)
         real   (real_kind) :: face_gradient_primitive_variables       (num_primitive_variables*3)
-        real   (real_kind) :: residual_element                        (num_conservative_variables, 1:2)
+        real   (real_kind) :: flux                        (num_conservative_variables, 1:2)
 
 #ifdef _DEBUG
-        call write_debuginfo("In compute_residual_viscous_functional_api(), cellsystem.")
+        call write_debuginfo("In compute_divergence_viscous (), cellsystem.")
 #endif
 
-!$omp parallel do private(i,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,face_gradient_primitive_variables,residual_element)
+!$omp parallel do private(i,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,face_gradient_primitive_variables,flux)
         do i = 1, self%num_faces, 1
             associate(                                                             &
                 lhc_index => self%face_to_cell_indexes(self%num_local_cells+0, i), &
@@ -1462,7 +1468,7 @@ module class_cellsystem
                     )
                 end if
 
-                residual_element(:,:) = residual_element_function(        &
+                flux(:,:) = flux_function(        &
                     an_eos                                              , &
                     a_riemann_solver                                    , &
                     primitive_variables_set              (:,lhc_index)  , &
@@ -1480,105 +1486,13 @@ module class_cellsystem
                     num_primitive_variables                               &
                 )
 
-                residual_set(:,lhc_index) = residual_set(:,lhc_index) + residual_element(:, 1)
-                residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
+                residual_set(:,lhc_index) = residual_set(:,lhc_index) + flux(:, 1)
+                residual_set(:,rhc_index) = residual_set(:,rhc_index) + flux(:, 2)
             end associate
         end do
-    end subroutine compute_residual_viscous_functional_api
+    end subroutine compute_divergence_viscous
 
-    subroutine compute_residual_viscous_objective_api(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos, a_face_gradient_interpolator,                            &
-                                          primitive_variables_set, gradient_primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
-                                          primitive_to_conservative_function, a_model)
-
-        class  (cellsystem                ), intent(in   ) :: self
-        class  (parallelizer              ), intent(in   ) :: a_parallelizer
-        class  (reconstructor             ), intent(in   ) :: a_reconstructor
-        class  (riemann_solver            ), intent(in   ) :: a_riemann_solver
-        class  (eos                       ), intent(in   ) :: an_eos
-        class  (face_gradient_interpolator), intent(in   ) :: a_face_gradient_interpolator
-        real   (real_kind                 ), intent(in   ) :: primitive_variables_set          (:,:)
-        real   (real_kind                 ), intent(in   ) :: gradient_primitive_variables_set (:,:)
-        real   (real_kind                 ), intent(inout) :: residual_set                     (:,:)
-        integer(int_kind                  ), intent(in   ) :: num_conservative_variables
-        integer(int_kind                  ), intent(in   ) :: num_primitive_variables
-        class  (model                     ), intent(in   ) :: a_model
-
-        interface
-            pure function primitive_to_conservative_function(an_eos, primitive_variables, num_conservative_values) result(conservative_values)
-                use typedef_module
-                use abstract_eos
-                class  (eos      ), intent(in) :: an_eos
-                real   (real_kind), intent(in) :: primitive_variables(:)
-                integer(int_kind ), intent(in) :: num_conservative_values
-                real   (real_kind)             :: conservative_values(num_conservative_values)
-            end function primitive_to_conservative_function
-        end interface
-
-        integer(int_kind ) :: i
-        real   (real_kind) :: reconstructed_primitive_variables_lhc   (num_primitive_variables)
-        real   (real_kind) :: reconstructed_primitive_variables_rhc   (num_primitive_variables)
-        real   (real_kind) :: face_gradient_primitive_variables       (num_primitive_variables*3)
-        real   (real_kind) :: residual_element                        (num_conservative_variables, 1:2)
-
-#ifdef _DEBUG
-        call write_debuginfo("In compute_residual_viscous_objective_api(), cellsystem.")
-#endif
-
-!$omp parallel do private(i,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,face_gradient_primitive_variables,residual_element)
-        do i = 1, self%num_faces, 1
-            associate(                                                             &
-                lhc_index => self%face_to_cell_indexes(self%num_local_cells+0, i), &
-                rhc_index => self%face_to_cell_indexes(self%num_local_cells+1, i)  &
-            )
-                reconstructed_primitive_variables_lhc(:) = a_reconstructor%reconstruct_lhc(                              &
-                    primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
-                    i, self%num_local_cells, num_primitive_variables                                                     &
-                )
-                reconstructed_primitive_variables_rhc(:) = a_reconstructor%reconstruct_rhc(                              &
-                    primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
-                    i, self%num_local_cells, num_primitive_variables                                                     &
-                )
-
-                if(.not. self%is_real_cell(rhc_index))then
-                    face_gradient_primitive_variables(:) = self%compute_boundary_gradient(                &
-                        primitive_variables_set   (:,lhc_index), primitive_variables_set   (:,rhc_index), &
-                        self%cell_centor_positions(:,lhc_index), self%cell_centor_positions(:,rhc_index), &
-                        num_primitive_variables                                                           &
-                    )
-                else
-                    face_gradient_primitive_variables(:) = a_face_gradient_interpolator%interpolate(                  &
-                        gradient_primitive_variables_set(:,lhc_index), gradient_primitive_variables_set(:,rhc_index), &
-                        primitive_variables_set         (:,lhc_index), primitive_variables_set         (:,rhc_index), &
-                        self%cell_centor_positions      (:,lhc_index), self%cell_centor_positions      (:,rhc_index), &
-                        num_primitive_variables                                                                       &
-                    )
-                end if
-
-                residual_element(:,:) = a_model%compute_residual_element( &
-                    an_eos                                              , &
-                    a_riemann_solver                                    , &
-                    primitive_variables_set              (:,lhc_index)  , &
-                    primitive_variables_set              (:,rhc_index)  , &
-                    reconstructed_primitive_variables_lhc(:)            , &
-                    reconstructed_primitive_variables_rhc(:)            , &
-                    face_gradient_primitive_variables    (:)            , &
-                    self%cell_volumes                      (lhc_index)  , &
-                    self%cell_volumes                      (rhc_index)  , &
-                    self%face_areas                  (i)                , &
-                    self%face_normal_vectors     (1:3,i)                , &
-                    self%face_tangential1_vectors(1:3,i)                , &
-                    self%face_tangential2_vectors(1:3,i)                , &
-                    num_conservative_variables                          , &
-                    num_primitive_variables                               &
-                )
-
-                residual_set(:,lhc_index) = residual_set(:,lhc_index) + residual_element(:, 1)
-                residual_set(:,rhc_index) = residual_set(:,rhc_index) + residual_element(:, 2)
-            end associate
-        end do
-    end subroutine compute_residual_viscous_objective_api
-
-    subroutine compute_source_term_functional_api(self, a_parallelizer, variables_set, residual_set, num_conservative_variables, compute_source_term_function)
+    subroutine compute_source_term(self, a_parallelizer, variables_set, residual_set, num_conservative_variables, compute_source_term_function)
         class  (cellsystem  ), intent(in   ) :: self
         class  (parallelizer), intent(in   ) :: a_parallelizer
         real   (real_kind   ), intent(in   ) :: variables_set(:,:)
@@ -1600,7 +1514,7 @@ module class_cellsystem
         integer(int_kind ) :: element(num_conservative_variables)
 
 #ifdef _DEBUG
-        call write_debuginfo("In compute_source_term_functional_api(), cellsystem.")
+        call write_debuginfo("In compute_source_term (), cellsystem.")
 #endif
 
 !$omp parallel do private(i, element)
@@ -1608,37 +1522,28 @@ module class_cellsystem
             element(:) = compute_source_term_function(variables_set(:,i), num_conservative_variables)
             residual_set(:,i) = residual_set(:,i) + element(:)
         end do
-    end subroutine compute_source_term_functional_api
+    end subroutine compute_source_term
 
-    subroutine compute_source_term_objective_api(self, a_parallelizer, variables_set, residual_set, num_conservative_variables, a_model)
-        class  (cellsystem  ), intent(in   ) :: self
-        class  (parallelizer), intent(in   ) :: a_parallelizer
-        real   (real_kind   ), intent(in   ) :: variables_set(:,:)
-        real   (real_kind   ), intent(inout) :: residual_set (:,:)
-        integer(int_kind    ), intent(in   ) :: num_conservative_variables
-        class  (model       ), intent(in   ) :: a_model
-
-        integer(int_kind ) :: i
-        integer(int_kind ) :: element(num_conservative_variables)
+    ! ### EoS ###
+    subroutine eos_initialize(self, an_eos, config, num_conservative_variables)
+        class  (cellsystem    ), intent(inout) :: self
+        class  (eos           ), intent(inout) :: an_eos
+        class  (configuration ), intent(inout) :: config
+        integer(int_kind      ), intent(in   ) :: num_conservative_variables
 
 #ifdef _DEBUG
-        call write_debuginfo("In compute_source_term_objective_api(), cellsystem.")
+        call write_debuginfo("In eos_initialize(), cellsystem.")
 #endif
-
-!$omp parallel do private(i, element)
-        do i = 1, self%num_cells, 1
-            element(:) = a_model%compute_source_term(variables_set(:,i), num_conservative_variables)
-            residual_set(:,i) = residual_set(:,i) + element(:)
-        end do
-    end subroutine compute_source_term_objective_api
+        call an_eos%initialize(config)
+    end subroutine eos_initialize
 
     ! ### Riemann solver ###
-    subroutine riemann_solver_initialize(self, a_riemann_solver, config, num_conservative_variables, num_primitive_variables)
+    subroutine riemann_solver_initialize(self, a_riemann_solver, config, num_conservative_variables)
         class  (cellsystem    ), intent(inout) :: self
         class  (riemann_solver), intent(inout) :: a_riemann_solver
         class  (configuration ), intent(inout) :: config
         integer(int_kind      ), intent(in   ) :: num_conservative_variables
-        integer(int_kind      ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In riemann_solver_initialize(), cellsystem.")
 #endif
@@ -1646,12 +1551,12 @@ module class_cellsystem
     end subroutine riemann_solver_initialize
 
     ! ### Reconstructor ###
-    subroutine reconstructor_initialize(self, a_reconstructor, config, num_conservative_variables, num_primitive_variables)
+    subroutine reconstructor_initialize(self, a_reconstructor, config, num_conservative_variables)
         class  (cellsystem    ), intent(inout) :: self
         class  (reconstructor ), intent(inout) :: a_reconstructor
         class  (configuration ), intent(inout) :: config
         integer(int_kind      ), intent(in   ) :: num_conservative_variables
-        integer(int_kind      ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In reconstructor_initialize(), cellsystem.")
 #endif
@@ -1659,26 +1564,26 @@ module class_cellsystem
     end subroutine reconstructor_initialize
 
     ! ### Time stepping ###
-    subroutine time_stepping_initialize(self, a_time_stepping, config, num_conservative_variables, num_primitive_variables)
+    subroutine time_stepping_initialize(self, a_time_stepping, config, num_conservative_variables)
         class  (cellsystem   ), intent(inout) :: self
         class  (time_stepping), intent(inout) :: a_time_stepping
         class  (configuration), intent(inout) :: config
         integer(int_kind     ), intent(in   ) :: num_conservative_variables
-        integer(int_kind     ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In time_stepping_initialize(), cellsystem.")
 #endif
         call a_time_stepping%initialize(config, self%num_cells, num_conservative_variables)
     end subroutine time_stepping_initialize
 
-    subroutine compute_next_state(self, a_parallelizer, a_time_stepping, an_eos, state_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, &
+    subroutine compute_next_stage_with_primitive(self, a_parallelizer, a_time_stepping, an_eos, stage_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, &
         conservative_to_primitive_function)
 
         class  (cellsystem         ), intent(inout) :: self
         class  (parallelizer       ), intent(in   ) :: a_parallelizer
         class  (time_stepping      ), intent(inout) :: a_time_stepping
         class  (eos                ), intent(in   ) :: an_eos
-        integer(int_kind           ), intent(in   ) :: state_num
+        integer(int_kind           ), intent(in   ) :: stage_num
         real   (real_kind          ), intent(inout) :: conservative_variables_set(:,:)
         real   (real_kind          ), intent(inout) :: primitive_variables_set   (:,:)
         real   (real_kind          ), intent(inout) :: residual_set              (:,:)
@@ -1698,56 +1603,101 @@ module class_cellsystem
         integer(int_kind) :: i
 
 #ifdef _DEBUG
-        call write_debuginfo("In time_stepping_initialize(), cellsystem.")
+        call write_debuginfo("In compute_next_stage_with_primitive(), cellsystem.")
 #endif
 
 !$omp parallel do private(i)
         do i = 1, self%num_cells, 1
-            call a_time_stepping%compute_next_state(i, state_num, self%time_increment, conservative_variables_set(:,i), residual_set(:,i))
-            primitive_variables_set(:,i) = conservative_to_primitive_function(an_eos, conservative_variables_set(:,i), num_primitive_variables)
+            conservative_variables_set(:,i) = a_time_stepping%compute_next_stage(i, stage_num, self%time_increment, conservative_variables_set(:,i), residual_set(:,i))
+            residual_set              (:,i) = 0.d0
+            primitive_variables_set   (:,i) = conservative_to_primitive_function(an_eos, conservative_variables_set(:,i), num_primitive_variables)
         end do
-    end subroutine compute_next_state
+    end subroutine compute_next_stage_with_primitive
 
-    subroutine prepare_stepping(    &
+    subroutine compute_next_stage_without_primitive_2darray(self, a_parallelizer, a_time_stepping, stage_num, conservative_variables_set, residual_set)
+
+        class  (cellsystem         ), intent(inout) :: self
+        class  (parallelizer       ), intent(in   ) :: a_parallelizer
+        class  (time_stepping      ), intent(inout) :: a_time_stepping
+        integer(int_kind           ), intent(in   ) :: stage_num
+        real   (real_kind          ), intent(inout) :: conservative_variables_set(:,:)
+        real   (real_kind          ), intent(inout) :: residual_set              (:,:)
+
+        integer(int_kind) :: i
+
+#ifdef _DEBUG
+        call write_debuginfo("In compute_next_stage_without_primitive_2darray(), cellsystem.")
+#endif
+
+!$omp parallel do private(i)
+        do i = 1, self%num_cells, 1
+            conservative_variables_set(:,i) = a_time_stepping%compute_next_stage(i, stage_num, self%time_increment, conservative_variables_set(:,i), residual_set(:,i))
+            residual_set              (:,i) = 0.d0
+        end do
+    end subroutine compute_next_stage_without_primitive_2darray
+
+    subroutine compute_next_stage_without_primitive_1darray(self, a_parallelizer, a_time_stepping, stage_num, conservative_variable_set, residual_set)
+
+        class  (cellsystem         ), intent(inout) :: self
+        class  (parallelizer       ), intent(in   ) :: a_parallelizer
+        class  (time_stepping      ), intent(inout) :: a_time_stepping
+        integer(int_kind           ), intent(in   ) :: stage_num
+        real   (real_kind          ), intent(inout) :: conservative_variable_set(:)
+        real   (real_kind          ), intent(inout) :: residual_set             (:)
+
+        integer(int_kind) :: i
+
+#ifdef _DEBUG
+        call write_debuginfo("In compute_next_stage_without_primitive_1darray(), cellsystem.")
+#endif
+
+!$omp parallel do private(i)
+        do i = 1, self%num_cells, 1
+            ! Fortran cannot implicitly convert a 1-dimensional array of 1 elements to a scalar.
+            ! In the following, the built-in function sum is used to convert to a scalar.
+            conservative_variable_set(i) = sum( a_time_stepping%compute_next_stage(i, stage_num, self%time_increment, [conservative_variable_set(i)], [residual_set(i)]) )
+            residual_set             (i) = 0.d0
+        end do
+    end subroutine compute_next_stage_without_primitive_1darray
+
+    subroutine prepare_time_stepping(    &
         self                      , &
         a_parallelizer            , &
         a_time_stepping           , &
         conservative_variables_set, &
-        primitive_variables_set   , &
         residual_set                  )
         class(cellsystem   ), intent(inout) :: self
         class(parallelizer ), intent(in   ) :: a_parallelizer
         class(time_stepping), intent(inout) :: a_time_stepping
         real (real_kind    ), intent(inout) :: conservative_variables_set(:,:)
-        real (real_kind    ), intent(inout) :: primitive_variables_set   (:,:)
         real (real_kind    ), intent(inout) :: residual_set              (:,:)
 
         integer(int_kind) :: i
 
 #ifdef _DEBUG
-        call write_debuginfo("In prepare_stepping(), cellsystem.")
+        call write_debuginfo("In prepare_time_stepping(), cellsystem.")
 #endif
 
 !$omp parallel do private(i)
         do i = 1, self%num_cells, 1
-            call a_time_stepping%prepare_stepping(i, conservative_variables_set(:,i), primitive_variables_set(:,i), residual_set(:,i))
+            call a_time_stepping%prepare_time_stepping(i, conservative_variables_set(:,i), residual_set(:,i))
         end do
     end subroutine
 
-    pure function get_number_of_states(self, a_time_stepping) result(n)
+    pure function get_number_of_stages(self, a_time_stepping) result(n)
         class  (cellsystem   ), intent(in) :: self
         class  (time_stepping), intent(in) :: a_time_stepping
         integer(int_kind     )                :: n
-        n = a_time_stepping%get_number_of_states()
-    end function get_number_of_states
+        n = a_time_stepping%get_number_of_stages()
+    end function get_number_of_stages
 
     ! ###  Result writer ###
-    subroutine result_writer_initialize(self, writer, config, num_conservative_variables, num_primitive_variables)
+    subroutine result_writer_initialize(self, writer, config, num_conservative_variables)
         class  (cellsystem   ), intent(inout) :: self
         class  (result_writer), intent(inout) :: writer
         class  (configuration), intent(inout) :: config
         integer(int_kind     ), intent(in   ) :: num_conservative_variables
-        integer(int_kind     ), intent(in   ) :: num_primitive_variables
+
 #ifdef _DEBUG
         call write_debuginfo("In result_writer_initialize(), cellsystem.")
 #endif
@@ -1829,10 +1779,11 @@ module class_cellsystem
         ! allocate grid
         call self%initialise_faces              (parser%get_number_of_faces (), parser%get_number_of_ghost_cells())
         call self%initialise_cells              (parser%get_number_of_points(), parser%get_number_of_cells      ())
-        call self%initialise_boundary_references(parser%get_number_of_boundary_faces(outflow_face_type  ), &
+        call self%initialise_boundary_references(parser%get_number_of_boundary_faces(outflow_face_type     ), &
                                                  parser%get_number_of_boundary_faces(nonslip_wall_face_type), &
-                                                 parser%get_number_of_boundary_faces(slip_and_symmetric_face_type), &
-                                                 parser%get_number_of_boundary_faces(empty_face_type    )    )
+                                                 parser%get_number_of_boundary_faces(slip_wall_face_type   ), &
+                                                 parser%get_number_of_boundary_faces(symmetric_face_type   ), &
+                                                 parser%get_number_of_boundary_faces(empty_face_type       )    )
 
         ! get grid data
         call parser%get_cells          (self%cell_centor_positions, self%cell_volumes, self%is_real_cell)
@@ -1850,7 +1801,7 @@ module class_cellsystem
         call write_debuginfo("Read following mesh.")
         print *, "Number of cells          : ", self%num_cells
         print *, "Number of faces          : ", self%num_faces
-        print *, "Number of symmetric faces: ", self%num_slip_and_symmetric_faces
+        print *, "Number of symmetric faces: ", self%num_symmetric_face_indexes
         print *, "Number of empty faces    : ", self%num_empty_faces
 #endif
 
@@ -1903,11 +1854,17 @@ module class_cellsystem
         n = self%num_nonslip_wall_faces
     end function get_number_of_nonslip_wall_faces
 
-    pure function get_number_of_slip_and_symmetric_faces(self) result(n)
+    pure function get_number_of_slip_wall_faces(self) result(n)
         class(cellsystem), intent(in) :: self
         integer(int_kind) :: n
-        n = self%num_slip_and_symmetric_faces
-    end function get_number_of_slip_and_symmetric_faces
+        n = self%num_slip_wall_faces
+    end function get_number_of_slip_wall_faces
+
+    pure function get_number_of_symmetric_faces(self) result(n)
+        class(cellsystem), intent(in) :: self
+        integer(int_kind) :: n
+        n = self%num_symmetric_faces
+    end function get_number_of_symmetric_faces
 
     pure function get_number_of_empty_faces(self) result(n)
         class(cellsystem), intent(in) :: self
@@ -1949,7 +1906,7 @@ module class_cellsystem
         class  (cellsystem     ), intent(inout) :: self
         integer(boundary_face_type_kind), intent(in   ) :: face_types(:)
 
-        integer(int_kind) :: index, outflow_index, nonslip_wall_index, slip_and_symmetric_index, empty_index
+        integer(int_kind) :: index, outflow_index, nonslip_wall_index, slip_wall_index, empty_index, symmetric_index
 
 #ifdef _DEBUG
         call write_debuginfo("In assign_boundary(), cellsystem.")
@@ -1957,7 +1914,8 @@ module class_cellsystem
 
         outflow_index            = 0
         nonslip_wall_index       = 0
-        slip_and_symmetric_index = 0
+        slip_wall_index          = 0
+        symmetric_index          = 0
         empty_index              = 0
 
         do index = 1, self%num_faces, 1
@@ -1967,9 +1925,12 @@ module class_cellsystem
             else if (face_types(index) == nonslip_wall_face_type) then
                 nonslip_wall_index = nonslip_wall_index + 1
                 self%nonslip_wall_face_indexes(nonslip_wall_index) = index
-            else if (face_types(index) == slip_and_symmetric_face_type) then
-                slip_and_symmetric_index = slip_and_symmetric_index + 1
-                self%slip_and_symmetric_face_indexes(slip_and_symmetric_index) = index
+            else if (face_types(index) == slip_wall_face_type) then
+                nonslip_wall_index = slip_wall_index + 1
+                self%slip_wall_face_indexes(nonslip_wall_index) = index
+            else if (face_types(index) == symmetric_face_type) then
+                symmetric_index = symmetric_index + 1
+                self%symmetric_face_indexes(symmetric_index) = index
             else if (face_types(index) == empty_face_type) then
                 empty_index = empty_index + 1
                 self%empty_face_indexes(empty_index) = index
@@ -2080,10 +2041,11 @@ module class_cellsystem
         allocate(self%cell_types(self%num_cells))
     end subroutine initialise_cells
 
-    subroutine initialise_boundary_references(self, num_outflow_faces, num_nonslip_wall_faces, num_symetric_faces, num_empty_faces)
+    subroutine initialise_boundary_references(self, num_outflow_faces, num_nonslip_wall_faces, num_slip_wall_faces, num_symetric_faces, num_empty_faces)
         class(cellsystem), intent(inout) :: self
         integer(int_kind), intent(in) :: num_outflow_faces
         integer(int_kind), intent(in) :: num_nonslip_wall_faces
+        integer(int_kind), intent(in) :: num_slip_wall_faces
         integer(int_kind), intent(in) :: num_symetric_faces
         integer(int_kind), intent(in) :: num_empty_faces
 
@@ -2097,14 +2059,19 @@ module class_cellsystem
         self%num_outflow_faces = num_outflow_faces
 
         if(num_nonslip_wall_faces < 0)then
-            call call_error("Number of wall BC faces must be set over zero.")
+            call call_error("Number of nonslip wall BC faces must be set over zero.")
         end if
         self%num_nonslip_wall_faces = num_nonslip_wall_faces
+
+        if(num_slip_wall_faces < 0)then
+            call call_error("Number of slip wall BC faces must be set over zero.")
+        end if
+        self%num_slip_wall_faces = num_slip_wall_faces
 
         if(num_symetric_faces < 0)then
             call call_error("Number of symetric BC faces must be set over zero.")
         end if
-        self%num_slip_and_symmetric_faces = num_symetric_faces
+        self%num_symmetric_faces = num_symetric_faces
 
         if(num_empty_faces < 0)then
             call call_error("Number of empty BC faces must be set over zero.")
@@ -2121,10 +2088,15 @@ module class_cellsystem
         end if
         allocate(self%nonslip_wall_face_indexes(self%num_nonslip_wall_faces))
 
-        if(allocated(self%slip_and_symmetric_face_indexes))then
-            call call_error("Array slip_and_symmetric_face_indexes is already allocated. But you call the initialiser for boundary_reference.")
+        if(allocated(self%slip_wall_face_indexes))then
+            call call_error("Array slip_wall_face_indexes is already allocated. But you call the initialiser for boundary_reference.")
         end if
-        allocate(self%slip_and_symmetric_face_indexes(self%num_slip_and_symmetric_faces))
+        allocate(self%slip_wall_face_indexes(self%num_slip_wall_faces))
+
+        if(allocated(self%symmetric_face_indexes))then
+            call call_error("Array symmetric_face_indexes is already allocated. But you call the initialiser for boundary_reference.")
+        end if
+        allocate(self%symmetric_face_indexes(self%num_symmetric_faces))
 
         if(allocated(self%empty_face_indexes))then
             call call_error("Array empty_face_indexes is already allocated. But you call the initialiser for boundary_reference.")
@@ -2231,20 +2203,26 @@ module class_cellsystem
         end if
         deallocate(self%nonslip_wall_face_indexes)
 
-        if(.not. allocated(self%slip_and_symmetric_face_indexes))then
-            call call_error("Array slip_and_symmetric_face_indexes is not allocated. But you call the finalizer for boundary_reference module.")
+        if(.not. allocated(self%slip_wall_face_indexes))then
+            call call_error("Array slip_wall_face_indexes is not allocated. But you call the finalizer for boundary_reference module.")
         end if
-        deallocate(self%slip_and_symmetric_face_indexes)
+        deallocate(self%slip_wall_face_indexes)
+
+        if(.not. allocated(self%symmetric_face_indexes))then
+            call call_error("Array symmetric_face_indexes is not allocated. But you call the finalizer for boundary_reference module.")
+        end if
+        deallocate(self%symmetric_face_indexes)
 
         if(.not. allocated(self%empty_face_indexes))then
             call call_error("Array empty_face_indexes is not allocated. But you call the finalizer for boundary_reference module.")
         end if
         deallocate(self%empty_face_indexes)
 
-        self%num_local_cells     = 0
-        self%num_outflow_faces   = 0
-        self%num_nonslip_wall_faces  = 0
-        self%num_slip_and_symmetric_faces = 0
+        self%num_local_cells          = 0
+        self%num_outflow_faces        = 0
+        self%num_nonslip_wall_faces   = 0
+        self%num_slip_wall_faces      = 0
+        self%num_symmetric_faces      = 0
     end subroutine finalize_boundary_references
 
     pure function compute_boundary_gradient(self, lhc_variables, rhc_variables, lhc_position, rhc_position, num_variables) result(gradient_variables)
