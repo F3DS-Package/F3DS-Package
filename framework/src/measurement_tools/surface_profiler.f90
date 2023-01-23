@@ -53,35 +53,35 @@ module class_surface_profiler
         real     (real_kind       )                :: angle
         logical                                    :: found
 
-        call config%get_bool("Surface Profiler.Enable", self%is_enabled_, found, .false.)
-        if(.not. found) call write_warring("'Surface Profiler.Enable' is not found in configuration file you set. Disable this profiler.")
+        call config%get_bool("Surface profiler.Enable", self%is_enabled_, found, .false.)
+        if(.not. found) call write_warring("'Surface profiler.Enable' is not found in configuration file you set. Disable this profiler.")
 
         if (.not. self%is_enabled_) return
 
-        call config%get_real("Surface Profiler.Frequency", frequency, found, 1.d3)
-        if(.not. found) call write_warring("'Surface Profiler.Frequency' is not found in configuration file you set. The default value is set.")
+        call config%get_real("Surface profiler.Frequency", frequency, found, 1.d3)
+        if(.not. found) call write_warring("'Surface profiler.Frequency' is not found in configuration file you set. The default value is set.")
         self%output_timespan_      = 1.d0 / frequency
 
-        call config%get_real("Surface Profiler.Min point.x", min_point(1), found)
-        if(.not. found) call call_error("'Surface Profiler.Min point.x' is not found in configuration file you set.")
-        call config%get_real("Surface Profiler.Min point.y", min_point(2), found)
-        if(.not. found) call call_error("'Surface Profiler.Min point.y' is not found in configuration file you set.")
-        call config%get_real("Surface Profiler.Min point.z", min_point(3), found)
-        if(.not. found) call call_error("'Surface Profiler.Min point.z' is not found in configuration file you set.")
+        call config%get_real("Surface profiler.Min point.x", min_point(1), found)
+        if(.not. found) call call_error("'Surface profiler.Min point.x' is not found in configuration file you set.")
+        call config%get_real("Surface profiler.Min point.y", min_point(2), found)
+        if(.not. found) call call_error("'Surface profiler.Min point.y' is not found in configuration file you set.")
+        call config%get_real("Surface profiler.Min point.z", min_point(3), found)
+        if(.not. found) call call_error("'Surface profiler.Min point.z' is not found in configuration file you set.")
 
-        call config%get_real("Surface Profiler.Max point.x", max_point(1), found)
-        if(.not. found) call call_error("'Surface Profiler.Max point.x' is not found in configuration file you set.")
-        call config%get_real("Surface Profiler.Max point.y", max_point(2), found)
-        if(.not. found) call call_error("'Surface Profiler.Max point.y' is not found in configuration file you set.")
-        call config%get_real("Surface Profiler.Max point.z", max_point(3), found)
-        if(.not. found) call call_error("'Surface Profiler.Max point.z' is not found in configuration file you set.")
+        call config%get_real("Surface profiler.Max point.x", max_point(1), found)
+        if(.not. found) call call_error("'Surface profiler.Max point.x' is not found in configuration file you set.")
+        call config%get_real("Surface profiler.Max point.y", max_point(2), found)
+        if(.not. found) call call_error("'Surface profiler.Max point.y' is not found in configuration file you set.")
+        call config%get_real("Surface profiler.Max point.z", max_point(3), found)
+        if(.not. found) call call_error("'Surface profiler.Max point.z' is not found in configuration file you set.")
 
-        call config%get_real("Surface Profiler.Facial Direction.x", normal(1), found)
-        if(.not. found) call call_error("'Surface Profiler.Facial Direction' is not found in configuration file you set.")
-        call config%get_real("Surface Profiler.Facial Direction.y", normal(2), found)
-        if(.not. found) call call_error("'Surface Profiler.Facial Direction' is not found in configuration file you set.")
-        call config%get_real("Surface Profiler.Facial Direction.z", normal(3), found)
-        if(.not. found) call call_error("'Surface Profiler.Facial Direction' is not found in configuration file you set.")
+        call config%get_real("Surface profiler.Facial Direction.x", normal(1), found)
+        if(.not. found) call call_error("'Surface profiler.Facial Direction' is not found in configuration file you set.")
+        call config%get_real("Surface profiler.Facial Direction.y", normal(2), found)
+        if(.not. found) call call_error("'Surface profiler.Facial Direction' is not found in configuration file you set.")
+        call config%get_real("Surface profiler.Facial Direction.z", normal(3), found)
+        if(.not. found) call call_error("'Surface profiler.Facial Direction' is not found in configuration file you set.")
         
         self%output_timespan_      = 1.d0 / frequency
 
