@@ -117,7 +117,7 @@ We provide a fast, maintainable FVM library and solvers.
 #### Measurement Tools
 
 - [ ] Sensor (Probe)
-- [ ] Measurement surface profiler
+- [x] Surface profiler
 - [x] Line plotter
 - [x] Control volume profiler
 
