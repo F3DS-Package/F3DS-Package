@@ -336,7 +336,7 @@ module class_cellsystem
 #ifdef _DEBUG
         call write_debuginfo("In surface_profiler_write(), cellsystem.")
 #endif
-        call plotter%write(self%time, values_set, self%face_to_cell_indexes, self%face_areas)
+        call plotter%write(self%time, values_set, self%face_to_cell_indexes, self%face_areas, self%num_local_cells)
     end subroutine surface_profiler_write
 
     pure function surface_profiler_is_writable(self, plotter) result(juge)

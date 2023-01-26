@@ -89,17 +89,17 @@ module class_surface_profiler
         allocate(tmp_lhc_or_rhc(num_faces))
         n_out_surface = 0
         do face_index = 1, num_faces, 1
-            if(self%surface_is_included_in_aabb(face_centor_positions(face_index, :), max_point(1), min_point(1), max_point(2), min_point(2), max_point(3), min_point(3)))then
-                angle = vector_angle(normal, face_normal_vectors(face_index, :))
+            if(self%surface_is_included_in_aabb(face_centor_positions(:, face_index), max_point(1), min_point(1), max_point(2), min_point(2), max_point(3), min_point(3)))then
+                angle = vector_angle(normal, face_normal_vectors(:, face_index))
                 if(0.d0 - machine_epsilon <= angle .and. angle <= 0.d0 + machine_epsilon)then
-                    lhc_index = face_to_cell_index(face_index, num_local_cells+0)
+                    lhc_index = face_to_cell_index(num_local_cells+0, face_index)
                     if(is_real_cell(lhc_index))then
                         n_out_surface = n_out_surface + 1
                         tmp_face_ids  (n_out_surface) = face_index
                         tmp_lhc_or_rhc(n_out_surface) = 0
                     end if
                 else if(pi - machine_epsilon <= angle .and. angle <= pi + machine_epsilon)then
-                    rhc_index = face_to_cell_index(face_index, num_local_cells+1)
+                    rhc_index = face_to_cell_index(num_local_cells+1, face_index)
                     if(is_real_cell(rhc_index))then
                         n_out_surface = n_out_surface + 1
                         tmp_face_ids  (n_out_surface) = face_index
@@ -118,25 +118,24 @@ module class_surface_profiler
         call self%make_new_file(self%output_filename_)
     end subroutine initialize
 
-    subroutine write(self, time, values_set, face_to_cell_index, face_areas)
+    subroutine write(self, time, values_set, face_to_cell_index, face_areas, num_local_cells)
         class  (surface_profiler), intent(inout) :: self
         real   (real_kind          ), intent(in   ) :: time
         real   (real_kind          ), intent(in   ) :: values_set        (:,:)
         integer(int_kind           ), intent(in   ) :: face_to_cell_index(:,:)
         real   (real_kind          ), intent(in   ) :: face_areas        (:)
+        integer(int_kind           ), intent(in   ) :: num_local_cells
 
-        integer(int_kind           )                :: num_local_cells
         integer(int_kind           )                :: unit_number, id_index, cell_index, values_index, n_output_values
-        real   (real_kind          )                :: output_values(size(values_set(1,:)))
-
-        num_local_cells = size(face_to_cell_index(1, :)) / 2
+        real   (real_kind          )                :: output_values(size(values_set(:,1)))
 
         if(time >= self%next_output_time_)then
-            n_output_values = size(values_set(1,:))
+            n_output_values = size(values_set(:,1))
+            output_values(:) = 0.d0
             do id_index = 1, self%num_faces_, 1
                 cell_index = face_to_cell_index(self%face_ids_(id_index), num_local_cells+self%lhc_or_rhc_(id_index))
                 do values_index = 1, n_output_values, 1
-                    output_values(values_index) = output_values(values_index) + values_set(cell_index, values_index) * face_areas(self%face_ids_(id_index))
+                    output_values(values_index) = output_values(values_index) + values_set(values_index, cell_index) * face_areas(self%face_ids_(id_index))
                 end do
             end do
             open(newunit = unit_number, file="result/"//self%output_filename_, status = 'old', position = 'append')
