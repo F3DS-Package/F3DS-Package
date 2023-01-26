@@ -282,6 +282,178 @@ module class_cellsystem
         procedure, private, pass(self) :: compute_boundary_gradient ! TODO: Move it! Make 'compute_face_gradient' class!
     end type
 
+    ! ### Function interfaces
+    interface
+        function operator_function_interface(operated_variables, num_variables) result(destination_variables)
+            use typedef_module
+            real   (real_kind ), intent(in) :: operated_variables(:)
+            integer(int_kind  ), intent(in) :: num_variables
+            real   (real_kind )             :: destination_variables(num_variables)
+        end function operator_function_interface
+
+        function operator_with_subarray_function_interface(operated_variables, sub_variables, num_variables) result(destination_variables)
+            use typedef_module
+            real   (real_kind ), intent(in) :: operated_variables(:), sub_variables(:)
+            integer(int_kind  ), intent(in) :: num_variables
+            real   (real_kind )             :: destination_variables(num_variables)
+        end function operator_with_subarray_function_interface
+
+        function weight_function_interface(own_cell_position, neighbor_cell_position, own_variables, neighbor_variables) result(weight)
+            use typedef_module
+            real   (real_kind ), intent(in) :: own_cell_position     (3)
+            real   (real_kind ), intent(in) :: neighbor_cell_position(3)
+            real   (real_kind ), intent(in) :: own_variables         (:)
+            real   (real_kind ), intent(in) :: neighbor_variables    (:)
+            real   (real_kind )             :: weight
+        end function weight_function_interface
+
+        pure function compute_rotate_variables_function_interface( &
+            variables                                            , &
+            face_normal_vector                                   , &
+            face_tangential1_vector                              , &
+            face_tangential2_vector                              , &
+            num_variables                                            ) result(rotate_variables)
+
+            use typedef_module
+            real   (real_kind     ), intent(in)  :: variables               (:)
+            real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
+            real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
+            real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
+            integer(int_kind      ), intent(in)  :: num_variables
+            real   (real_kind     )              :: rotate_variables(num_variables)
+        end function compute_rotate_variables_function_interface
+
+        pure function compute_unrotate_variables_function_interface( &
+            variables                                              , &
+            face_normal_vector                                     , &
+            face_tangential1_vector                                , &
+            face_tangential2_vector                                , &
+            num_variables                                              ) result(unrotate_variables)
+
+            use typedef_module
+            real   (real_kind     ), intent(in)  :: variables               (:)
+            real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
+            real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
+            real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
+            integer(int_kind      ), intent(in)  :: num_variables
+            real   (real_kind     )              :: unrotate_variables(num_variables)
+        end function compute_unrotate_variables_function_interface
+
+        function boundary_condition_function_interface(inner_variables, num_variables) result(ghost_variables)
+            use typedef_module
+            real   (real_kind), intent(in) :: inner_variables(:)
+            integer(int_kind ), intent(in) :: num_variables
+            real   (real_kind)             :: ghost_variables(num_variables)
+        end function boundary_condition_function_interface
+
+        pure function primitive_to_conservative_function_interface(an_eos, primitive_variables, num_conservative_values) result(conservative_values)
+            use typedef_module
+            use abstract_eos
+            class  (eos      ), intent(in) :: an_eos
+            real   (real_kind), intent(in) :: primitive_variables(:)
+            integer(int_kind ), intent(in) :: num_conservative_values
+            real   (real_kind)             :: conservative_values(num_conservative_values)
+        end function primitive_to_conservative_function_interface
+
+        pure function conservative_to_primitive_function_interface(an_eos, conservative_variables, num_primitive_variables) result(primitive_variables)
+            use typedef_module
+            use abstract_eos
+            class  (eos      ), intent(in)  :: an_eos
+            real   (real_kind), intent(in)  :: conservative_variables(:)
+            integer(int_kind ), intent(in)  :: num_primitive_variables
+            real   (real_kind)              :: primitive_variables(num_primitive_variables)
+        end function conservative_to_primitive_function_interface
+
+        function spectral_radius_function_interface(an_eos, variables, length) result(r)
+            use abstract_eos
+            use typedef_module
+            class  (eos      ), intent(in) :: an_eos
+            real   (real_kind), intent(in) :: variables(:)
+            real   (real_kind), intent(in) :: length
+            real   (real_kind) :: r
+        end function spectral_radius_function_interface
+
+        pure function compute_source_term_function_interface(variables, num_conservative_variables) result(source)
+            use typedef_module
+            use abstract_eos
+            real   (real_kind), intent(in) :: variables(:)
+            integer(int_kind ), intent(in) :: num_conservative_variables
+            real   (real_kind)             :: source(num_conservative_variables)
+        end function compute_source_term_function_interface
+
+        function element_provided_with_rieman_function_interface( &
+            an_eos                                              , &
+            an_riemann_solver                                   , &
+            primitive_variables_lhc                             , &
+            primitive_variables_rhc                             , &
+            reconstructed_primitive_variables_lhc               , &
+            reconstructed_primitive_variables_rhc               , &
+            lhc_cell_volume                                     , &
+            rhc_cell_volume                                     , &
+            face_area                                           , &
+            face_normal_vector                                  , &
+            face_tangential1_vector                             , &
+            face_tangential2_vector                             , &
+            num_conservative_values                             , &
+            num_primitive_values                                    ) result(flux)
+            use typedef_module
+            use abstract_eos
+            use abstract_riemann_solver
+            class  (eos           ), intent(in) :: an_eos
+            class  (riemann_solver), intent(in) :: an_riemann_solver
+            real   (real_kind     ), intent(in) :: primitive_variables_lhc                  (:)
+            real   (real_kind     ), intent(in) :: primitive_variables_rhc                  (:)
+            real   (real_kind     ), intent(in) :: reconstructed_primitive_variables_lhc    (:)
+            real   (real_kind     ), intent(in) :: reconstructed_primitive_variables_rhc    (:)
+            real   (real_kind     ), intent(in) :: lhc_cell_volume
+            real   (real_kind     ), intent(in) :: rhc_cell_volume
+            real   (real_kind     ), intent(in) :: face_area
+            real   (real_kind     ), intent(in) :: face_normal_vector     (3)
+            real   (real_kind     ), intent(in) :: face_tangential1_vector(3)
+            real   (real_kind     ), intent(in) :: face_tangential2_vector(3)
+            integer(int_kind      ), intent(in) :: num_conservative_values
+            integer(int_kind      ), intent(in) :: num_primitive_values
+            real   (real_kind)                  :: flux(num_conservative_values, 1:2)
+        end function element_provided_with_rieman_function_interface
+
+        function element_provided_with_rieman_facegrad_function_interface(&
+            an_eos                                                      , &
+            an_riemann_solver                                           , &
+            primitive_variables_lhc                                     , &
+            primitive_variables_rhc                                     , &
+            reconstructed_primitive_variables_lhc                       , &
+            reconstructed_primitive_variables_rhc                       , &
+            face_gradient_primitive_variables                           , &
+            lhc_cell_volume                                             , &
+            rhc_cell_volume                                             , &
+            face_area                                                   , &
+            face_normal_vector                                          , &
+            face_tangential1_vector                                     , &
+            face_tangential2_vector                                     , &
+            num_conservative_variables                                  , &
+            num_primitive_variables                                         ) result(element)
+            use typedef_module
+            use abstract_eos
+            use abstract_riemann_solver
+            class  (eos           ), intent(in) :: an_eos
+            class  (riemann_solver), intent(in) :: an_riemann_solver
+            real   (real_kind     ), intent(in) :: primitive_variables_lhc              (:)
+            real   (real_kind     ), intent(in) :: primitive_variables_rhc              (:)
+            real   (real_kind     ), intent(in) :: reconstructed_primitive_variables_lhc(:)
+            real   (real_kind     ), intent(in) :: reconstructed_primitive_variables_rhc(:)
+            real   (real_kind     ), intent(in) :: face_gradient_primitive_variables    (:)
+            real   (real_kind     ), intent(in) :: lhc_cell_volume
+            real   (real_kind     ), intent(in) :: rhc_cell_volume
+            real   (real_kind     ), intent(in) :: face_area
+            real   (real_kind     ), intent(in) :: face_normal_vector     (3)
+            real   (real_kind     ), intent(in) :: face_tangential1_vector(3)
+            real   (real_kind     ), intent(in) :: face_tangential2_vector(3)
+            integer(int_kind      ), intent(in) :: num_conservative_variables
+            integer(int_kind      ), intent(in) :: num_primitive_variables
+            real   (real_kind     )             :: element(num_conservative_variables, 1:2)
+        end function element_provided_with_rieman_facegrad_function_interface
+    end interface
+
     contains
 
     ! ### Show infomaiton ###
@@ -425,16 +597,7 @@ module class_cellsystem
         class  (eos                      ), intent(in   ) :: an_eos
         real   (real_kind                ), intent(in   ) :: variables_set(:,:)
 
-        interface
-            function spectral_radius_function(an_eos, variables, length) result(r)
-                use abstract_eos
-                use typedef_module
-                class  (eos      ), intent(in) :: an_eos
-                real   (real_kind), intent(in) :: variables(:)
-                real   (real_kind), intent(in) :: length
-                real   (real_kind) :: r
-            end function spectral_radius_function
-        end interface
+        procedure(spectral_radius_function_interface) :: spectral_radius_function
 
         integer(int_kind ) :: i
 
@@ -496,46 +659,9 @@ module class_cellsystem
         real   (real_kind   ), intent(inout) :: variables_set(:,:)
         integer(int_kind    ), intent(in   ) :: num_variables
 
-        interface
-            pure function compute_rotate_variables_function( &
-                variables                                  , &
-                face_normal_vector                         , &
-                face_tangential1_vector                    , &
-                face_tangential2_vector                    , &
-                num_variables                                  ) result(rotate_variables)
-
-                use typedef_module
-                real   (real_kind     ), intent(in)  :: variables               (:)
-                real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
-                real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
-                real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
-                integer(int_kind      ), intent(in)  :: num_variables
-                real   (real_kind     )              :: rotate_variables(num_variables)
-            end function compute_rotate_variables_function
-
-            pure function compute_unrotate_variables_function( &
-                variables                                    , &
-                face_normal_vector                           , &
-                face_tangential1_vector                      , &
-                face_tangential2_vector                      , &
-                num_variables                                    ) result(unrotate_variables)
-
-                use typedef_module
-                real   (real_kind     ), intent(in)  :: variables               (:)
-                real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
-                real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
-                real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
-                integer(int_kind      ), intent(in)  :: num_variables
-                real   (real_kind     )              :: unrotate_variables(num_variables)
-            end function compute_unrotate_variables_function
-
-            function boundary_condition_function(inner_variables, num_variables) result(ghost_variables)
-                use typedef_module
-                real   (real_kind), intent(in) :: inner_variables(:)
-                integer(int_kind ), intent(in) :: num_variables
-                real   (real_kind)             :: ghost_variables(num_variables)
-            end function boundary_condition_function
-        end interface
+        procedure(compute_rotate_variables_function_interface  ) :: compute_rotate_variables_function
+        procedure(compute_unrotate_variables_function_interface) :: compute_unrotate_variables_function
+        procedure(boundary_condition_function_interface        ) :: boundary_condition_function
 
         integer :: i, face_index
 
@@ -568,46 +694,9 @@ module class_cellsystem
         real   (real_kind   ), intent(inout) :: variables_set(:,:)
         integer(int_kind    ), intent(in   ) :: num_variables
 
-        interface
-            pure function compute_rotate_variables_function( &
-                variables                                  , &
-                face_normal_vector                         , &
-                face_tangential1_vector                    , &
-                face_tangential2_vector                    , &
-                num_variables                                  ) result(rotate_variables)
-
-                use typedef_module
-                real   (real_kind     ), intent(in)  :: variables               (:)
-                real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
-                real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
-                real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
-                integer(int_kind      ), intent(in)  :: num_variables
-                real   (real_kind     )              :: rotate_variables(num_variables)
-            end function compute_rotate_variables_function
-
-            pure function compute_unrotate_variables_function( &
-                variables                                    , &
-                face_normal_vector                           , &
-                face_tangential1_vector                      , &
-                face_tangential2_vector                      , &
-                num_variables                                    ) result(unrotate_variables)
-
-                use typedef_module
-                real   (real_kind     ), intent(in)  :: variables               (:)
-                real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
-                real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
-                real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
-                integer(int_kind      ), intent(in)  :: num_variables
-                real   (real_kind     )              :: unrotate_variables(num_variables)
-            end function compute_unrotate_variables_function
-
-            function boundary_condition_function(inner_variables, num_variables) result(ghost_variables)
-                use typedef_module
-                real   (real_kind), intent(in) :: inner_variables(:)
-                integer(int_kind ), intent(in) :: num_variables
-                real   (real_kind)             :: ghost_variables(num_variables)
-            end function boundary_condition_function
-        end interface
+        procedure(compute_rotate_variables_function_interface  ) :: compute_rotate_variables_function
+        procedure(compute_unrotate_variables_function_interface) :: compute_unrotate_variables_function
+        procedure(boundary_condition_function_interface        ) :: boundary_condition_function
 
         integer :: i, face_index
 
@@ -640,46 +729,9 @@ module class_cellsystem
         real   (real_kind   ), intent(inout) :: variables_set(:,:)
         integer(int_kind    ), intent(in   ) :: num_variables
 
-        interface
-            pure function compute_rotate_variables_function( &
-                variables                                  , &
-                face_normal_vector                         , &
-                face_tangential1_vector                    , &
-                face_tangential2_vector                    , &
-                num_variables                                  ) result(rotate_variables)
-
-                use typedef_module
-                real   (real_kind     ), intent(in)  :: variables               (:)
-                real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
-                real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
-                real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
-                integer(int_kind      ), intent(in)  :: num_variables
-                real   (real_kind     )              :: rotate_variables(num_variables)
-            end function compute_rotate_variables_function
-
-            pure function compute_unrotate_variables_function( &
-                variables                                    , &
-                face_normal_vector                           , &
-                face_tangential1_vector                      , &
-                face_tangential2_vector                      , &
-                num_variables                                    ) result(unrotate_variables)
-
-                use typedef_module
-                real   (real_kind     ), intent(in)  :: variables               (:)
-                real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
-                real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
-                real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
-                integer(int_kind      ), intent(in)  :: num_variables
-                real   (real_kind     )              :: unrotate_variables(num_variables)
-            end function compute_unrotate_variables_function
-
-            function boundary_condition_function(inner_variables, num_variables) result(ghost_variables)
-                use typedef_module
-                real   (real_kind), intent(in) :: inner_variables(:)
-                integer(int_kind ), intent(in) :: num_variables
-                real   (real_kind)             :: ghost_variables(num_variables)
-            end function boundary_condition_function
-        end interface
+        procedure(compute_rotate_variables_function_interface  ) :: compute_rotate_variables_function
+        procedure(compute_unrotate_variables_function_interface) :: compute_unrotate_variables_function
+        procedure(boundary_condition_function_interface        ) :: boundary_condition_function
 
         integer :: i, face_index
 
@@ -712,46 +764,9 @@ module class_cellsystem
         real   (real_kind   ), intent(inout) :: variables_set(:,:)
         integer(int_kind    ), intent(in   ) :: num_variables
 
-        interface
-            pure function compute_rotate_variables_function( &
-                variables                                  , &
-                face_normal_vector                         , &
-                face_tangential1_vector                    , &
-                face_tangential2_vector                    , &
-                num_variables                                  ) result(rotate_variables)
-
-                use typedef_module
-                real   (real_kind     ), intent(in)  :: variables               (:)
-                real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
-                real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
-                real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
-                integer(int_kind      ), intent(in)  :: num_variables
-                real   (real_kind     )              :: rotate_variables(num_variables)
-            end function compute_rotate_variables_function
-
-            pure function compute_unrotate_variables_function( &
-                variables                                    , &
-                face_normal_vector                           , &
-                face_tangential1_vector                      , &
-                face_tangential2_vector                      , &
-                num_variables                                    ) result(unrotate_variables)
-
-                use typedef_module
-                real   (real_kind     ), intent(in)  :: variables               (:)
-                real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
-                real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
-                real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
-                integer(int_kind      ), intent(in)  :: num_variables
-                real   (real_kind     )              :: unrotate_variables(num_variables)
-            end function compute_unrotate_variables_function
-
-            function boundary_condition_function(inner_variables, num_variables) result(ghost_variables)
-                use typedef_module
-                real   (real_kind), intent(in) :: inner_variables(:)
-                integer(int_kind ), intent(in) :: num_variables
-                real   (real_kind)             :: ghost_variables(num_variables)
-            end function boundary_condition_function
-        end interface
+        procedure(compute_rotate_variables_function_interface  ) :: compute_rotate_variables_function
+        procedure(compute_unrotate_variables_function_interface) :: compute_unrotate_variables_function
+        procedure(boundary_condition_function_interface        ) :: boundary_condition_function
 
         integer :: i, face_index
 
@@ -784,46 +799,9 @@ module class_cellsystem
         real   (real_kind   ), intent(inout) :: variables_set(:,:)
         integer(int_kind    ), intent(in   ) :: num_variables
 
-        interface
-            pure function compute_rotate_variables_function( &
-                variables                                  , &
-                face_normal_vector                         , &
-                face_tangential1_vector                    , &
-                face_tangential2_vector                    , &
-                num_variables                                  ) result(rotate_variables)
-
-                use typedef_module
-                real   (real_kind     ), intent(in)  :: variables               (:)
-                real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
-                real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
-                real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
-                integer(int_kind      ), intent(in)  :: num_variables
-                real   (real_kind     )              :: rotate_variables(num_variables)
-            end function compute_rotate_variables_function
-
-            pure function compute_unrotate_variables_function( &
-                variables                                    , &
-                face_normal_vector                           , &
-                face_tangential1_vector                      , &
-                face_tangential2_vector                      , &
-                num_variables                                    ) result(unrotate_variables)
-
-                use typedef_module
-                real   (real_kind     ), intent(in)  :: variables               (:)
-                real   (real_kind     ), intent(in)  :: face_normal_vector      (3)
-                real   (real_kind     ), intent(in)  :: face_tangential1_vector (3)
-                real   (real_kind     ), intent(in)  :: face_tangential2_vector (3)
-                integer(int_kind      ), intent(in)  :: num_variables
-                real   (real_kind     )              :: unrotate_variables(num_variables)
-            end function compute_unrotate_variables_function
-
-            function boundary_condition_function(inner_variables, num_variables) result(ghost_variables)
-                use typedef_module
-                real   (real_kind), intent(in) :: inner_variables(:)
-                integer(int_kind ), intent(in) :: num_variables
-                real   (real_kind)             :: ghost_variables(num_variables)
-            end function boundary_condition_function
-        end interface
+        procedure(compute_rotate_variables_function_interface  ) :: compute_rotate_variables_function
+        procedure(compute_unrotate_variables_function_interface) :: compute_unrotate_variables_function
+        procedure(boundary_condition_function_interface        ) :: boundary_condition_function
 
         integer :: i, face_index
 
@@ -915,16 +893,8 @@ module class_cellsystem
         real   (real_kind               ), intent(in   ) :: conservative_variables_set(:,:)
         real   (real_kind               ), intent(inout) :: primitive_variables_set(:,:)
         integer(int_kind                ), intent(in   ) :: num_primitive_variables
-        interface
-            pure function conservative_to_primitive_function(an_eos, conservative_variables, num_primitive_variables) result(primitive_variables)
-                use typedef_module
-                use abstract_eos
-                class  (eos      ), intent(in)  :: an_eos
-                real   (real_kind), intent(in)  :: conservative_variables(:)
-                integer(int_kind ), intent(in)  :: num_primitive_variables
-                real   (real_kind)              :: primitive_variables(num_primitive_variables)
-            end function conservative_to_primitive_function
-        end interface
+
+        procedure(conservative_to_primitive_function_interface) :: conservative_to_primitive_function
 
         integer(int_kind) :: i
 
@@ -938,19 +908,13 @@ module class_cellsystem
         end do
     end subroutine conservative_to_primitive_variables_all
 
-    subroutine processes_variables_set_single_array(self, a_parallelizer, variables_set, num_variables, processing_function)
+    subroutine processes_variables_set_single_array(self, a_parallelizer, variables_set, num_variables, operator_function)
         class  (cellsystem  ), intent(inout) :: self
         class  (parallelizer), intent(in   ) :: a_parallelizer
         real   (real_kind   ), intent(inout) :: variables_set(:,:)
         integer(int_kind    ), intent(in   ) :: num_variables
-        interface
-            function processing_function(variables, num_variables) result(destination_variables)
-                use typedef_module
-                real   (real_kind ), intent(in) :: variables(:)
-                integer(int_kind  ), intent(in) :: num_variables
-                real   (real_kind )             :: destination_variables(num_variables)
-            end function processing_function
-        end interface
+
+        procedure(operator_function_interface) :: operator_function
 
         integer(int_kind) :: i
 
@@ -960,23 +924,17 @@ module class_cellsystem
 
 !$omp parallel do private(i)
         do i = 1, self%num_cells, 1
-            variables_set(:,i) = processing_function(variables_set(:,i), num_variables)
+            variables_set(:,i) = operator_function(variables_set(:,i), num_variables)
         end do
     end subroutine processes_variables_set_single_array
 
-    subroutine processes_variables_set_two_array(self, a_parallelizer, primary_variables_set, secondary_variables_set, num_variables, processing_function)
+    subroutine processes_variables_set_two_array(self, a_parallelizer, primary_variables_set, secondary_variables_set, num_variables, operator_function)
         class  (cellsystem  ), intent(inout) :: self
         class  (parallelizer), intent(in   ) :: a_parallelizer
         real   (real_kind   ), intent(inout) :: primary_variables_set(:,:), secondary_variables_set(:,:)
         integer(int_kind    ), intent(in   ) :: num_variables
-        interface
-            function processing_function(primary_variables, secondary_variables, num_variables) result(destination_variables)
-                use typedef_module
-                real   (real_kind ), intent(in) :: primary_variables(:), secondary_variables(:)
-                integer(int_kind  ), intent(in) :: num_variables
-                real   (real_kind )             :: destination_variables(num_variables)
-            end function processing_function
-        end interface
+
+        procedure(operator_with_subarray_function_interface) :: operator_function
 
         integer(int_kind) :: i
 
@@ -986,7 +944,7 @@ module class_cellsystem
 
 !$omp parallel do private(i)
         do i = 1, self%num_cells, 1
-            primary_variables_set(:,i) = processing_function(primary_variables_set(:,i), secondary_variables_set(:,i), num_variables)
+            primary_variables_set(:,i) = operator_function(primary_variables_set(:,i), secondary_variables_set(:,i), num_variables)
         end do
     end subroutine processes_variables_set_two_array
 
@@ -994,16 +952,7 @@ module class_cellsystem
         class  (cellsystem  ), intent(inout) :: self
         class  (parallelizer), intent(in   ) :: a_parallelizer
         real   (real_kind   ), intent(inout) :: variables_set(:,:)
-        interface
-            function weight_function(own_cell_position, neighbor_cell_position, own_variables, neighbor_variables) result(weight)
-                use typedef_module
-                real   (real_kind ), intent(in) :: own_cell_position     (3)
-                real   (real_kind ), intent(in) :: neighbor_cell_position(3)
-                real   (real_kind ), intent(in) :: own_variables         (:)
-                real   (real_kind ), intent(in) :: neighbor_variables    (:)
-                real   (real_kind )             :: weight
-            end function weight_function
-        end interface
+        procedure(weight_function_interface) :: weight_function
 
         integer(int_kind ) :: face_index, cell_index, rhc_index, lhc_index
         real   (real_kind) :: smoothed_variables_set(size(variables_set(:,1)), size(variables_set(1,:))), total_weight_set(size(variables_set(1,:)))
@@ -1251,9 +1200,9 @@ module class_cellsystem
         end do
     end subroutine compute_divergence_1darray
 
-    subroutine compute_divergence_nonviscous(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos,                        &
-                                           primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
-                                           primitive_to_conservative_function, flux_function                                )
+    subroutine compute_divergence_nonviscous(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos,                            &
+                                             primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
+                                             primitive_to_conservative_function, element_function)
 
         class  (cellsystem    ), intent(in   ) :: self
         class  (parallelizer  ), intent(in   ) :: a_parallelizer
@@ -1265,67 +1214,21 @@ module class_cellsystem
         integer(int_kind      ), intent(in   ) :: num_conservative_variables
         integer(int_kind      ), intent(in   ) :: num_primitive_variables
 
-        interface
-            pure function primitive_to_conservative_function(an_eos, primitive_variables, num_conservative_values) result(conservative_values)
-                use typedef_module
-                use abstract_eos
-                class  (eos      ), intent(in) :: an_eos
-                real   (real_kind), intent(in) :: primitive_variables(:)
-                integer(int_kind ), intent(in) :: num_conservative_values
-                real   (real_kind)             :: conservative_values(num_conservative_values)
-            end function primitive_to_conservative_function
-
-            function flux_function(           &
-                an_eos                                  , &
-                an_riemann_solver                       , &
-                primitive_variables_lhc                 , &
-                primitive_variables_rhc                 , &
-                reconstructed_primitive_variables_lhc   , &
-                reconstructed_primitive_variables_rhc   , &
-                lhc_cell_volume                         , &
-                rhc_cell_volume                         , &
-                face_area                               , &
-                face_normal_vector                      , &
-                face_tangential1_vector                 , &
-                face_tangential2_vector                 , &
-                num_conservative_values                 , &
-                num_primitive_values                        ) result(flux)
-
-                use typedef_module
-                use abstract_eos
-                use abstract_riemann_solver
-
-                class  (eos           ), intent(in) :: an_eos
-                class  (riemann_solver), intent(in) :: an_riemann_solver
-                real   (real_kind     ), intent(in) :: primitive_variables_lhc                  (:)
-                real   (real_kind     ), intent(in) :: primitive_variables_rhc                  (:)
-                real   (real_kind     ), intent(in) :: reconstructed_primitive_variables_lhc    (:)
-                real   (real_kind     ), intent(in) :: reconstructed_primitive_variables_rhc    (:)
-                real   (real_kind     ), intent(in) :: lhc_cell_volume
-                real   (real_kind     ), intent(in) :: rhc_cell_volume
-                real   (real_kind     ), intent(in) :: face_area
-                real   (real_kind     ), intent(in) :: face_normal_vector     (3)
-                real   (real_kind     ), intent(in) :: face_tangential1_vector(3)
-                real   (real_kind     ), intent(in) :: face_tangential2_vector(3)
-                integer(int_kind      ), intent(in) :: num_conservative_values
-                integer(int_kind      ), intent(in) :: num_primitive_values
-
-                real   (real_kind)                  :: flux(num_conservative_values, 1:2)
-            end function flux_function
-        end interface
+        procedure(primitive_to_conservative_function_interface   ) :: primitive_to_conservative_function
+        procedure(element_provided_with_rieman_function_interface) :: element_function
 
         integer(int_kind ) :: i
         integer(int_kind ) :: lhc_index
         integer(int_kind ) :: rhc_index
         real   (real_kind) :: reconstructed_primitive_variables_lhc   (num_primitive_variables)
         real   (real_kind) :: reconstructed_primitive_variables_rhc   (num_primitive_variables)
-        real   (real_kind) :: flux                        (num_conservative_variables, 1:2)
+        real   (real_kind) :: element                                 (num_conservative_variables, 1:2)
 
 #ifdef _DEBUG
         call write_debuginfo("In compute_divergence_nonviscous (), cellsystem.")
 #endif
 
-!$omp parallel do private(i,lhc_index,rhc_index,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,flux)
+!$omp parallel do private(i,lhc_index,rhc_index,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,element)
         do i = 1, self%num_faces, 1
             lhc_index = self%face_to_cell_indexes(self%num_local_cells+0, i)
             rhc_index = self%face_to_cell_indexes(self%num_local_cells+1, i)
@@ -1339,7 +1242,7 @@ module class_cellsystem
                 i, self%num_local_cells, num_primitive_variables                                                     &
             )
 
-            flux(:,:) = flux_function(&
+            element(:,:) = element_function(&
                 an_eos                                      , &
                 a_riemann_solver                            , &
                 primitive_variables_set       (:,lhc_index) , &
@@ -1356,14 +1259,14 @@ module class_cellsystem
                 num_primitive_variables                       &
             )
 
-            residual_set(:,lhc_index) = residual_set(:,lhc_index) + flux(:, 1)
-            residual_set(:,rhc_index) = residual_set(:,rhc_index) + flux(:, 2)
+            residual_set(:,lhc_index) = residual_set(:,lhc_index) + element(:, 1)
+            residual_set(:,rhc_index) = residual_set(:,rhc_index) + element(:, 2)
         end do
     end subroutine compute_divergence_nonviscous
 
     subroutine compute_divergence_viscous(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos, a_face_gradient_interpolator,                                &
                                         primitive_variables_set, gradient_primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
-                                        primitive_to_conservative_function, flux_function)
+                                        primitive_to_conservative_function, element_function)
 
         class  (cellsystem                ), intent(in   ) :: self
         class  (parallelizer              ), intent(in   ) :: a_parallelizer
@@ -1377,68 +1280,20 @@ module class_cellsystem
         integer(int_kind                  ), intent(in   ) :: num_conservative_variables
         integer(int_kind                  ), intent(in   ) :: num_primitive_variables
 
-        interface
-            pure function primitive_to_conservative_function(an_eos, primitive_variables, num_conservative_values) result(conservative_values)
-                use typedef_module
-                use abstract_eos
-                class  (eos      ), intent(in) :: an_eos
-                real   (real_kind), intent(in) :: primitive_variables(:)
-                integer(int_kind ), intent(in) :: num_conservative_values
-                real   (real_kind)             :: conservative_values(num_conservative_values)
-            end function primitive_to_conservative_function
-
-            function flux_function(           &
-                an_eos                                  , &
-                an_riemann_solver                       , &
-                primitive_variables_lhc                 , &
-                primitive_variables_rhc                 , &
-                reconstructed_primitive_variables_lhc   , &
-                reconstructed_primitive_variables_rhc   , &
-                face_gradient_primitive_variables       , &
-                lhc_cell_volume                         , &
-                rhc_cell_volume                         , &
-                face_area                               , &
-                face_normal_vector                      , &
-                face_tangential1_vector                 , &
-                face_tangential2_vector                 , &
-                num_conservative_variables              , &
-                num_primitive_variables                     ) result(flux)
-
-                use typedef_module
-                use abstract_eos
-                use abstract_riemann_solver
-
-                class  (eos           ), intent(in) :: an_eos
-                class  (riemann_solver), intent(in) :: an_riemann_solver
-                real   (real_kind     ), intent(in) :: primitive_variables_lhc              (:)
-                real   (real_kind     ), intent(in) :: primitive_variables_rhc              (:)
-                real   (real_kind     ), intent(in) :: reconstructed_primitive_variables_lhc(:)
-                real   (real_kind     ), intent(in) :: reconstructed_primitive_variables_rhc(:)
-                real   (real_kind     ), intent(in) :: face_gradient_primitive_variables    (:)
-                real   (real_kind     ), intent(in) :: lhc_cell_volume
-                real   (real_kind     ), intent(in) :: rhc_cell_volume
-                real   (real_kind     ), intent(in) :: face_area
-                real   (real_kind     ), intent(in) :: face_normal_vector     (3)
-                real   (real_kind     ), intent(in) :: face_tangential1_vector(3)
-                real   (real_kind     ), intent(in) :: face_tangential2_vector(3)
-                integer(int_kind      ), intent(in) :: num_conservative_variables
-                integer(int_kind      ), intent(in) :: num_primitive_variables
-
-                real   (real_kind)                  :: flux(num_conservative_variables, 1:2)
-            end function flux_function
-        end interface
+        procedure(primitive_to_conservative_function_interface            ) :: primitive_to_conservative_function
+        procedure(element_provided_with_rieman_facegrad_function_interface) :: element_function
 
         integer(int_kind ) :: i
         real   (real_kind) :: reconstructed_primitive_variables_lhc   (num_primitive_variables)
         real   (real_kind) :: reconstructed_primitive_variables_rhc   (num_primitive_variables)
         real   (real_kind) :: face_gradient_primitive_variables       (num_primitive_variables*3)
-        real   (real_kind) :: flux                        (num_conservative_variables, 1:2)
+        real   (real_kind) :: element                                 (num_conservative_variables, 1:2)
 
 #ifdef _DEBUG
         call write_debuginfo("In compute_divergence_viscous (), cellsystem.")
 #endif
 
-!$omp parallel do private(i,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,face_gradient_primitive_variables,flux)
+!$omp parallel do private(i,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,face_gradient_primitive_variables,element)
         do i = 1, self%num_faces, 1
             associate(                                                             &
                 lhc_index => self%face_to_cell_indexes(self%num_local_cells+0, i), &
@@ -1468,7 +1323,7 @@ module class_cellsystem
                     )
                 end if
 
-                flux(:,:) = flux_function(        &
+                element(:,:) = element_function(        &
                     an_eos                                              , &
                     a_riemann_solver                                    , &
                     primitive_variables_set              (:,lhc_index)  , &
@@ -1486,8 +1341,8 @@ module class_cellsystem
                     num_primitive_variables                               &
                 )
 
-                residual_set(:,lhc_index) = residual_set(:,lhc_index) + flux(:, 1)
-                residual_set(:,rhc_index) = residual_set(:,rhc_index) + flux(:, 2)
+                residual_set(:,lhc_index) = residual_set(:,lhc_index) + element(:, 1)
+                residual_set(:,rhc_index) = residual_set(:,rhc_index) + element(:, 2)
             end associate
         end do
     end subroutine compute_divergence_viscous
@@ -1499,16 +1354,7 @@ module class_cellsystem
         real   (real_kind   ), intent(inout) :: residual_set (:,:)
         integer(int_kind    ), intent(in   ) :: num_conservative_variables
 
-        interface
-            function compute_source_term_function(variables, num_conservative_variables) result(source)
-                use typedef_module
-                use abstract_eos
-
-                real   (real_kind), intent(in) :: variables(:)
-                integer(int_kind ), intent(in) :: num_conservative_variables
-                real   (real_kind)             :: source(num_conservative_variables)
-            end function compute_source_term_function
-        end interface
+        procedure(compute_source_term_function_interface) :: compute_source_term_function
 
         integer(int_kind ) :: i
         integer(int_kind ) :: element(num_conservative_variables)
@@ -1589,16 +1435,7 @@ module class_cellsystem
         real   (real_kind          ), intent(inout) :: residual_set              (:,:)
         integer(int_kind           ), intent(in   ) :: num_primitive_variables
 
-        interface
-            pure function conservative_to_primitive_function(an_eos, conservative_variables, num_primitive_variables) result(primitive_variables)
-                use typedef_module
-                use abstract_eos
-                class  (eos      ), intent(in)  :: an_eos
-                real   (real_kind), intent(in)  :: conservative_variables(:)
-                integer(int_kind ), intent(in)  :: num_primitive_variables
-                real   (real_kind)              :: primitive_variables(num_primitive_variables)
-            end function conservative_to_primitive_function
-        end interface
+        procedure(conservative_to_primitive_function_interface) :: conservative_to_primitive_function
 
         integer(int_kind) :: i
 
