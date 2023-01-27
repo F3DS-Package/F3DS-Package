@@ -8,7 +8,7 @@ module viscous_five_equation_model_boundary_condition_module
     private
 
     public :: outflow_bc, nonslip_wall_bc, slip_and_symmetric_bc, empty_bc
-    public :: surface_normal_bc, surface_normal_bc_nonslip_wall
+    public :: surface_normal_bc, surface_normal_wall_bc
 
     contains
 
@@ -54,7 +54,7 @@ module viscous_five_equation_model_boundary_condition_module
         ghost_gradient_values(2:3) =         inner_gradient_values(2:3)
     end function surface_normal_bc
 
-    pure function surface_normal_bc_nonslip_wall(inner_gradient_values, num_gradient_values) result(ghost_gradient_values)
+    pure function surface_normal_wall_bc(inner_gradient_values, num_gradient_values) result(ghost_gradient_values)
         real   (real_kind), intent(in) :: inner_gradient_values(:)
         integer(int_kind ), intent(in) :: num_gradient_values
         real   (real_kind)             :: ghost_gradient_values(num_gradient_values)
@@ -64,5 +64,5 @@ module viscous_five_equation_model_boundary_condition_module
 
         wall_tangetal(1:3) = inner_gradient_values - (vector_multiply(wall_normal, inner_gradient_values) / vector_multiply(wall_normal, wall_normal)) * wall_normal
         ghost_gradient_values(1:3) = wall_normal(1:3) * cos(contact_angle) + wall_tangetal(1:3) * sin(contact_angle)
-    end function surface_normal_bc_nonslip_wall
+    end function surface_normal_wall_bc
 end module viscous_five_equation_model_boundary_condition_module

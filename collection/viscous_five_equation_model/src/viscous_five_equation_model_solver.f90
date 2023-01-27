@@ -187,27 +187,41 @@ program viscous_five_equation_model_solver
         call a_cellsystem%prepare_time_stepping(a_parallelizer, a_time_stepping, conservative_variables_set, residual_set)
 
         do stage_num = 1, a_cellsystem%get_number_of_stages(a_time_stepping), 1
-            call a_cellsystem%apply_empty_condition       (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, empty_bc             )
-            call a_cellsystem%apply_outflow_condition     (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, outflow_bc           )
-            call a_cellsystem%apply_nonslip_wall_condition(a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, nonslip_wall_bc      )
-            call a_cellsystem%apply_slip_wall_condition   (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, slip_and_symmetric_bc)
-            call a_cellsystem%apply_symmetric_condition   (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, slip_and_symmetric_bc)
+            call a_cellsystem%apply_boundary_condition(                  &
+                a_parallelizer                                         , &
+                primitive_variables_set                                , &
+                num_primitive_variables                                , &
+                rotate_primitive                                       , &
+                unrotate_primitive                                     , &
+                empty_condition_function        = empty_bc             , &
+                symmetric_condition_function    = slip_and_symmetric_bc, &
+                nonslip_wall_condition_function = nonslip_wall_bc      , &
+                slip_wall_condition_function    = slip_and_symmetric_bc, &
+                outflow_condition_function      = outflow_bc             &
+            )
 
             ! Compute gradient primitive variables
             call a_cellsystem%compute_gradient(a_parallelizer, a_gradient_calculator, primitive_variables_set(:,:), gradient_primitive_variables_set(:,:), num_primitive_variables)
 
             if(apply_surface_tension())then
-                ! Compute normarize gradient volume fraction
+                ! Compute normarized gradient volume fraction
                 call a_cellsystem%operate_cellwise(a_parallelizer, surface_tension_variables_set, primitive_variables_set, num_surface_tension_variables, compute_smoothed_volume_fraction)
                 call a_cellsystem%compute_gradient(a_parallelizer, a_gradient_calculator, surface_tension_variables_set(1,:), surface_tension_variables_set(2:4,:))
                 call a_cellsystem%operate_cellwise(a_parallelizer, surface_tension_variables_set, num_surface_tension_variables, normalize_gradient_volume_fraction)
 
-                ! Apply BC for normalized volume flaction
-                call a_cellsystem%apply_empty_condition       (a_parallelizer, surface_tension_variables_set(2:4, :), 3, rotate_gradient_value, unrotate_gradient_value, surface_normal_bc)
-                call a_cellsystem%apply_outflow_condition     (a_parallelizer, surface_tension_variables_set(2:4, :), 3, rotate_gradient_value, unrotate_gradient_value, surface_normal_bc)
-                call a_cellsystem%apply_nonslip_wall_condition(a_parallelizer, surface_tension_variables_set(2:4, :), 3, rotate_gradient_value, unrotate_gradient_value, surface_normal_bc_nonslip_wall)
-                call a_cellsystem%apply_slip_wall_condition   (a_parallelizer, surface_tension_variables_set(2:4, :), 3, rotate_gradient_value, unrotate_gradient_value, surface_normal_bc)
-                call a_cellsystem%apply_symmetric_condition   (a_parallelizer, surface_tension_variables_set(2:4, :), 3, rotate_gradient_value, unrotate_gradient_value, surface_normal_bc)
+                ! Apply BC for normalized gradient volume flaction
+                call a_cellsystem%apply_boundary_condition(                   &
+                    a_parallelizer                                          , &
+                    surface_tension_variables_set(2:4, :)                   , &
+                    3                                                       , &
+                    rotate_gradient_value                                   , &
+                    unrotate_gradient_value                                 , &
+                    empty_condition_function        = surface_normal_bc     , &
+                    symmetric_condition_function    = surface_normal_bc     , &
+                    nonslip_wall_condition_function = surface_normal_wall_bc, &
+                    slip_wall_condition_function    = surface_normal_wall_bc, &
+                    outflow_condition_function      = surface_normal_bc       &
+                )
 
                 ! Compute a negative heavest fluid curvature
                 call a_cellsystem%compute_divergence(a_parallelizer, a_interpolator, surface_tension_variables_set(2:4, :), surface_tension_variables_set(5, :))
@@ -219,14 +233,21 @@ program viscous_five_equation_model_solver
                 call a_cellsystem%operate_cellwise(a_parallelizer, primitive_variables_set, surface_tension_variables_set, num_primitive_variables, curvature_preprocessing)
 
                 ! Re apply BC for curvature
-                call a_cellsystem%apply_empty_condition       (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, empty_bc             )
-                call a_cellsystem%apply_outflow_condition     (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, outflow_bc           )
-                call a_cellsystem%apply_nonslip_wall_condition(a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, nonslip_wall_bc      )
-                call a_cellsystem%apply_slip_wall_condition   (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, slip_and_symmetric_bc)
-                call a_cellsystem%apply_symmetric_condition   (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, slip_and_symmetric_bc)
+                call a_cellsystem%apply_boundary_condition(                  &
+                    a_parallelizer                                         , &
+                    primitive_variables_set                                , &
+                    num_primitive_variables                                , &
+                    rotate_primitive                                       , &
+                    unrotate_primitive                                     , &
+                    empty_condition_function        = empty_bc             , &
+                    symmetric_condition_function    = slip_and_symmetric_bc, &
+                    nonslip_wall_condition_function = nonslip_wall_bc      , &
+                    slip_wall_condition_function    = slip_and_symmetric_bc, &
+                    outflow_condition_function      = outflow_bc             &
+                )
             end if
 
-            call a_cellsystem%compute_divergence(   &
+            call a_cellsystem%compute_divergence( &
                 a_parallelizer                  , &
                 a_reconstructor                 , &
                 a_riemann_solver                , &

@@ -210,6 +210,8 @@ module class_cellsystem
         procedure, public, pass(self) :: satisfy_termination_criterion
 
         ! ### Boundary Condition ###
+        procedure, public, pass(self) :: apply_boundary_condition
+        ! TODO: Remove below:
         procedure, public, pass(self) :: apply_outflow_condition
         procedure, public, pass(self) :: apply_nonslip_wall_condition
         procedure, public, pass(self) :: apply_symmetric_condition
@@ -224,7 +226,7 @@ module class_cellsystem
 
         ! ### Divergence Calculator ###
         ! godunov: Compute flux by Godunov scheme.
-        ! facegrad: Provide a face gradient(s) to a element function.
+        ! facegrad: Provide a face gradient variable(s) to a element function.
         procedure, public, pass(self) :: compute_divergence_rank1
         procedure, public, pass(self) :: compute_divergence_rank2
         procedure, public, pass(self) :: compute_divergence_godunov_rank2
@@ -654,6 +656,80 @@ module class_cellsystem
     end function satisfy_termination_criterion
 
     ! ### Boundary Condition ###
+    subroutine apply_boundary_condition(self, a_parallelizer, variables_set, num_variables, &
+                                        compute_rotate_variables_function                 , &
+                                        compute_unrotate_variables_function               , &
+                                        empty_condition_function                          , &
+                                        symmetric_condition_function                      , &
+                                        nonslip_wall_condition_function                   , &
+                                        slip_wall_condition_function                      , &
+                                        outflow_condition_function                             )
+        class  (cellsystem  ), intent(inout) :: self
+        class  (parallelizer), intent(in   ) :: a_parallelizer
+        real   (real_kind   ), intent(inout) :: variables_set(:,:)
+        integer(int_kind    ), intent(in   ) :: num_variables
+
+        procedure(compute_rotate_variables_function_interface  ) :: compute_rotate_variables_function
+        procedure(compute_unrotate_variables_function_interface) :: compute_unrotate_variables_function
+
+        procedure(boundary_condition_function_interface        ), optional :: empty_condition_function
+        procedure(boundary_condition_function_interface        ), optional :: symmetric_condition_function
+        procedure(boundary_condition_function_interface        ), optional :: nonslip_wall_condition_function
+        procedure(boundary_condition_function_interface        ), optional :: slip_wall_condition_function
+        procedure(boundary_condition_function_interface        ), optional :: outflow_condition_function
+
+        integer :: i, face_index
+
+#ifdef _DEBUG
+        call write_debuginfo("In apply_boundary_condition(), cellsystem.")
+#endif
+
+        if (present(empty_condition_function)) call self%apply_empty_condition( &
+            a_parallelizer                                                    , &
+            variables_set                                                     , &
+            num_variables                                                     , &
+            compute_rotate_variables_function                                 , &
+            compute_unrotate_variables_function                               , &
+            empty_condition_function                                            &
+        )
+
+        if (present(symmetric_condition_function)) call self%apply_symmetric_condition( &
+            a_parallelizer                                                            , &
+            variables_set                                                             , &
+            num_variables                                                             , &
+            compute_rotate_variables_function                                         , &
+            compute_unrotate_variables_function                                       , &
+            symmetric_condition_function                                                &
+        )
+
+        if (present(nonslip_wall_condition_function)) call self%apply_nonslip_wall_condition( &
+            a_parallelizer                                                                  , &
+            variables_set                                                                   , &
+            num_variables                                                                   , &
+            compute_rotate_variables_function                                               , &
+            compute_unrotate_variables_function                                             , &
+            nonslip_wall_condition_function                                                   &
+        )
+
+        if (present(slip_wall_condition_function)) call self%apply_slip_wall_condition( &
+            a_parallelizer                                                            , &
+            variables_set                                                             , &
+            num_variables                                                             , &
+            compute_rotate_variables_function                                         , &
+            compute_unrotate_variables_function                                       , &
+            slip_wall_condition_function                                                &
+        )
+
+        if (present(outflow_condition_function)) call self%apply_outflow_condition( &
+            a_parallelizer                                                        , &
+            variables_set                                                         , &
+            num_variables                                                         , &
+            compute_rotate_variables_function                                     , &
+            compute_unrotate_variables_function                                   , &
+            outflow_condition_function                                              &
+        )
+    end subroutine apply_boundary_condition
+
     subroutine apply_outflow_condition(self, a_parallelizer, variables_set, num_variables, &
         compute_rotate_variables_function, compute_unrotate_variables_function, boundary_condition_function)
         class  (cellsystem  ), intent(inout) :: self
