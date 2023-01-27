@@ -163,7 +163,7 @@ program viscous_five_equation_model_solver
     call initialize_model(a_configuration, primitive_variables_set, a_cellsystem%get_number_of_cells())
 
     ! Timestepping loop
-    do while ( .not. a_cellsystem%satisfies_termination_criterion(a_termination_criterion) )
+    do while ( .not. a_cellsystem%satisfy_termination_criterion(a_termination_criterion) )
         call a_cellsystem%update_time_increment(a_time_increment_controller, an_eos, primitive_variables_set, spectral_radius)
 
         if ( a_cellsystem%is_writable(a_result_writer) ) then
@@ -198,9 +198,9 @@ program viscous_five_equation_model_solver
 
             if(apply_surface_tension())then
                 ! Compute normarize gradient volume fraction
-                call a_cellsystem%processes_variables_set(a_parallelizer, surface_tension_variables_set, primitive_variables_set, num_surface_tension_variables, compute_smoothed_volume_fraction)
+                call a_cellsystem%operate_cellwise(a_parallelizer, surface_tension_variables_set, primitive_variables_set, num_surface_tension_variables, compute_smoothed_volume_fraction)
                 call a_cellsystem%compute_gradient(a_parallelizer, a_gradient_calculator, surface_tension_variables_set(1,:), surface_tension_variables_set(2:4,:))
-                call a_cellsystem%processes_variables_set(a_parallelizer, surface_tension_variables_set, num_surface_tension_variables, normalize_gradient_volume_fraction)
+                call a_cellsystem%operate_cellwise(a_parallelizer, surface_tension_variables_set, num_surface_tension_variables, normalize_gradient_volume_fraction)
 
                 ! Apply BC for normalized volume flaction
                 call a_cellsystem%apply_empty_condition       (a_parallelizer, surface_tension_variables_set(2:4, :), 3, rotate_gradient_value, unrotate_gradient_value, surface_normal_bc)
@@ -216,7 +216,7 @@ program viscous_five_equation_model_solver
                 call a_cellsystem%smooth_variables(a_parallelizer, surface_tension_variables_set, curvature_smoothing_weight)
 
                 ! Curvature is copied to {@code primitive_variables_set}.
-                call a_cellsystem%processes_variables_set(a_parallelizer, primitive_variables_set, surface_tension_variables_set, num_primitive_variables, curvature_preprocessing)
+                call a_cellsystem%operate_cellwise(a_parallelizer, primitive_variables_set, surface_tension_variables_set, num_primitive_variables, curvature_preprocessing)
 
                 ! Re apply BC for curvature
                 call a_cellsystem%apply_empty_condition       (a_parallelizer, primitive_variables_set, num_primitive_variables, rotate_primitive, unrotate_primitive, empty_bc             )

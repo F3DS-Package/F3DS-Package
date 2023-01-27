@@ -132,7 +132,7 @@ program five_equation_model_solver
     call initialize_model(a_configuration)
 
     ! Timestepping loop
-    do while ( .not. a_cellsystem%satisfies_termination_criterion(a_termination_criterion) )
+    do while ( .not. a_cellsystem%satisfy_termination_criterion(a_termination_criterion) )
         call a_cellsystem%update_time_increment(a_time_increment_controller, an_eos, primitive_variables_set, spectral_radius)
 
         if ( a_cellsystem%is_writable(a_result_writer) ) then

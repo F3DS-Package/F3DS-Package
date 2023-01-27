@@ -197,17 +197,17 @@ module class_cellsystem
         ! ### Vatiables ###
         procedure, public, pass(self) :: read_initial_condition
         procedure, public, pass(self) :: conservative_to_primitive_variables_all
-        procedure, public, pass(self) :: processes_variables_set_single_array
-        procedure, public, pass(self) :: processes_variables_set_two_array
-        generic  , public             :: processes_variables_set => processes_variables_set_single_array, &
-                                                                    processes_variables_set_two_array
+        procedure, public, pass(self) :: operate_cellwise_rank2
+        procedure, public, pass(self) :: operate_cellwise_subarray_rank2
+        generic  , public             :: operate_cellwise => operate_cellwise_rank2, &
+                                                             operate_cellwise_subarray_rank2
         procedure, public, pass(self) :: smooth_variables
 
         ! ### Time increment control ###
         procedure, public, pass(self) :: update_time_increment
 
         ! ### Termination criterion ###
-        procedure, public, pass(self) :: satisfies_termination_criterion
+        procedure, public, pass(self) :: satisfy_termination_criterion
 
         ! ### Boundary Condition ###
         procedure, public, pass(self) :: apply_outflow_condition
@@ -217,31 +217,33 @@ module class_cellsystem
         procedure, public, pass(self) :: apply_empty_condition
 
         ! ### Gradient Calculator ###
-        procedure, public, pass(self) :: compute_gradient_1darray
-        procedure, public, pass(self) :: compute_gradient_2darray
-        generic  , public             :: compute_gradient => compute_gradient_1darray, &
-                                                             compute_gradient_2darray
+        procedure, public, pass(self) :: compute_gradient_rank1
+        procedure, public, pass(self) :: compute_gradient_rank2
+        generic  , public             :: compute_gradient => compute_gradient_rank1, &
+                                                             compute_gradient_rank2
 
         ! ### Divergence Calculator ###
-        procedure, public, pass(self) :: compute_divergence_1darray
-        procedure, public, pass(self) :: compute_divergence_2darray
-        procedure, public, pass(self) :: compute_divergence_nonviscous
-        procedure, public, pass(self) :: compute_divergence_viscous
-        generic  , public             :: compute_divergence => compute_divergence_1darray, &
-                                                               compute_divergence_2darray, &
-                                                               compute_divergence_nonviscous , &
-                                                               compute_divergence_viscous
+        ! godunov: Compute flux by Godunov scheme.
+        ! facegrad: Provide a face gradient(s) to a element function.
+        procedure, public, pass(self) :: compute_divergence_rank1
+        procedure, public, pass(self) :: compute_divergence_rank2
+        procedure, public, pass(self) :: compute_divergence_godunov_rank2
+        procedure, public, pass(self) :: compute_divergence_godunov_facegrad_rank2
+        generic  , public             :: compute_divergence => compute_divergence_rank1, &
+                                                               compute_divergence_rank2, &
+                                                               compute_divergence_godunov_rank2, &
+                                                               compute_divergence_godunov_facegrad_rank2
 
         ! ### Sorce Term
         procedure, public, pass(self) :: compute_source_term
 
         ! ### Time Stepping ###
-        procedure, public, pass(self) :: compute_next_stage_with_primitive
-        procedure, public, pass(self) :: compute_next_stage_without_primitive_2darray
-        procedure, public, pass(self) :: compute_next_stage_without_primitive_1darray
-        generic  , public             :: compute_next_stage => compute_next_stage_with_primitive           , &
-                                                               compute_next_stage_without_primitive_2darray, &
-                                                               compute_next_stage_without_primitive_1darray
+        procedure, public, pass(self) :: compute_next_stage_primitive_rank2
+        procedure, public, pass(self) :: compute_next_stage_rank2
+        procedure, public, pass(self) :: compute_next_stage_rank1
+        generic  , public             :: compute_next_stage => compute_next_stage_primitive_rank2, &
+                                                               compute_next_stage_rank2          , &
+                                                               compute_next_stage_rank1
         procedure, public, pass(self) :: prepare_time_stepping
         procedure, public, pass(self) :: get_number_of_stages
 
@@ -282,7 +284,7 @@ module class_cellsystem
         procedure, private, pass(self) :: compute_boundary_gradient ! TODO: Move it! Make 'compute_face_gradient' class!
     end type
 
-    ! ### Function interfaces
+    ! ### Function interfaces ###
     interface
         function operator_function_interface(operated_variables, num_variables) result(destination_variables)
             use typedef_module
@@ -373,7 +375,7 @@ module class_cellsystem
             real   (real_kind) :: r
         end function spectral_radius_function_interface
 
-        pure function compute_source_term_function_interface(variables, num_conservative_variables) result(source)
+        function compute_source_term_function_interface(variables, num_conservative_variables) result(source)
             use typedef_module
             use abstract_eos
             real   (real_kind), intent(in) :: variables(:)
@@ -381,21 +383,21 @@ module class_cellsystem
             real   (real_kind)             :: source(num_conservative_variables)
         end function compute_source_term_function_interface
 
-        function element_provided_with_rieman_function_interface( &
-            an_eos                                              , &
-            an_riemann_solver                                   , &
-            primitive_variables_lhc                             , &
-            primitive_variables_rhc                             , &
-            reconstructed_primitive_variables_lhc               , &
-            reconstructed_primitive_variables_rhc               , &
-            lhc_cell_volume                                     , &
-            rhc_cell_volume                                     , &
-            face_area                                           , &
-            face_normal_vector                                  , &
-            face_tangential1_vector                             , &
-            face_tangential2_vector                             , &
-            num_conservative_values                             , &
-            num_primitive_values                                    ) result(flux)
+        function element_provided_with_riemann_function_interface( &
+            an_eos                                               , &
+            an_riemann_solver                                    , &
+            primitive_variables_lhc                              , &
+            primitive_variables_rhc                              , &
+            reconstructed_primitive_variables_lhc                , &
+            reconstructed_primitive_variables_rhc                , &
+            lhc_cell_volume                                      , &
+            rhc_cell_volume                                      , &
+            face_area                                            , &
+            face_normal_vector                                   , &
+            face_tangential1_vector                              , &
+            face_tangential2_vector                              , &
+            num_conservative_values                              , &
+            num_primitive_values                                     ) result(flux)
             use typedef_module
             use abstract_eos
             use abstract_riemann_solver
@@ -414,24 +416,24 @@ module class_cellsystem
             integer(int_kind      ), intent(in) :: num_conservative_values
             integer(int_kind      ), intent(in) :: num_primitive_values
             real   (real_kind)                  :: flux(num_conservative_values, 1:2)
-        end function element_provided_with_rieman_function_interface
+        end function element_provided_with_riemann_function_interface
 
-        function element_provided_with_rieman_facegrad_function_interface(&
-            an_eos                                                      , &
-            an_riemann_solver                                           , &
-            primitive_variables_lhc                                     , &
-            primitive_variables_rhc                                     , &
-            reconstructed_primitive_variables_lhc                       , &
-            reconstructed_primitive_variables_rhc                       , &
-            face_gradient_primitive_variables                           , &
-            lhc_cell_volume                                             , &
-            rhc_cell_volume                                             , &
-            face_area                                                   , &
-            face_normal_vector                                          , &
-            face_tangential1_vector                                     , &
-            face_tangential2_vector                                     , &
-            num_conservative_variables                                  , &
-            num_primitive_variables                                         ) result(element)
+        function element_provided_with_riemann_facegrad_function_interface(&
+            an_eos                                                       , &
+            an_riemann_solver                                            , &
+            primitive_variables_lhc                                      , &
+            primitive_variables_rhc                                      , &
+            reconstructed_primitive_variables_lhc                        , &
+            reconstructed_primitive_variables_rhc                        , &
+            face_gradient_primitive_variables                            , &
+            lhc_cell_volume                                              , &
+            rhc_cell_volume                                              , &
+            face_area                                                    , &
+            face_normal_vector                                           , &
+            face_tangential1_vector                                      , &
+            face_tangential2_vector                                      , &
+            num_conservative_variables                                   , &
+            num_primitive_variables                                          ) result(element)
             use typedef_module
             use abstract_eos
             use abstract_riemann_solver
@@ -451,7 +453,7 @@ module class_cellsystem
             integer(int_kind      ), intent(in) :: num_conservative_variables
             integer(int_kind      ), intent(in) :: num_primitive_variables
             real   (real_kind     )             :: element(num_conservative_variables, 1:2)
-        end function element_provided_with_rieman_facegrad_function_interface
+        end function element_provided_with_riemann_facegrad_function_interface
     end interface
 
     contains
@@ -644,12 +646,12 @@ module class_cellsystem
         call criterion%initialize(config)
     end subroutine termination_criterion_initialize
 
-    pure function satisfies_termination_criterion(self, criterion) result(judge)
+    pure function satisfy_termination_criterion(self, criterion) result(judge)
         class(cellsystem           ), intent(in) :: self
         class(termination_criterion), intent(in) :: criterion
         logical :: judge
         judge = criterion%is_satisfied(self%time, self%num_steps)
-    end function satisfies_termination_criterion
+    end function satisfy_termination_criterion
 
     ! ### Boundary Condition ###
     subroutine apply_outflow_condition(self, a_parallelizer, variables_set, num_variables, &
@@ -908,7 +910,7 @@ module class_cellsystem
         end do
     end subroutine conservative_to_primitive_variables_all
 
-    subroutine processes_variables_set_single_array(self, a_parallelizer, variables_set, num_variables, operator_function)
+    subroutine operate_cellwise_rank2(self, a_parallelizer, variables_set, num_variables, operator_function)
         class  (cellsystem  ), intent(inout) :: self
         class  (parallelizer), intent(in   ) :: a_parallelizer
         real   (real_kind   ), intent(inout) :: variables_set(:,:)
@@ -919,16 +921,16 @@ module class_cellsystem
         integer(int_kind) :: i
 
 #ifdef _DEBUG
-        call write_debuginfo("In processes_variables_set_single_array(), cellsystem.")
+        call write_debuginfo("In operate_cellwise_rank2(), cellsystem.")
 #endif
 
 !$omp parallel do private(i)
         do i = 1, self%num_cells, 1
             variables_set(:,i) = operator_function(variables_set(:,i), num_variables)
         end do
-    end subroutine processes_variables_set_single_array
+    end subroutine operate_cellwise_rank2
 
-    subroutine processes_variables_set_two_array(self, a_parallelizer, primary_variables_set, secondary_variables_set, num_variables, operator_function)
+    subroutine operate_cellwise_subarray_rank2(self, a_parallelizer, primary_variables_set, secondary_variables_set, num_variables, operator_function)
         class  (cellsystem  ), intent(inout) :: self
         class  (parallelizer), intent(in   ) :: a_parallelizer
         real   (real_kind   ), intent(inout) :: primary_variables_set(:,:), secondary_variables_set(:,:)
@@ -939,14 +941,14 @@ module class_cellsystem
         integer(int_kind) :: i
 
 #ifdef _DEBUG
-        call write_debuginfo("In processes_variables_set_two_array(), cellsystem.")
+        call write_debuginfo("In operate_cellwise_subarray_rank2(), cellsystem.")
 #endif
 
 !$omp parallel do private(i)
         do i = 1, self%num_cells, 1
             primary_variables_set(:,i) = operator_function(primary_variables_set(:,i), secondary_variables_set(:,i), num_variables)
         end do
-    end subroutine processes_variables_set_two_array
+    end subroutine operate_cellwise_subarray_rank2
 
     subroutine smooth_variables(self, a_parallelizer, variables_set, weight_function)
         class  (cellsystem  ), intent(inout) :: self
@@ -1017,7 +1019,7 @@ module class_cellsystem
         call a_gradient_calculator%initialize(config)
     end subroutine gradient_calculator_initialize
 
-    subroutine compute_gradient_2darray(self, a_parallelizer, a_gradient_calculator, variables_set, gradient_variables_set, num_variables)
+    subroutine compute_gradient_rank2(self, a_parallelizer, a_gradient_calculator, variables_set, gradient_variables_set, num_variables)
         class  (cellsystem         ), intent(inout) :: self
         class  (parallelizer       ), intent(in   ) :: a_parallelizer
         class  (gradient_calculator), intent(inout) :: a_gradient_calculator
@@ -1028,7 +1030,7 @@ module class_cellsystem
         integer(int_kind ) :: face_index, cell_index, rhc_index, lhc_index, var_index
 
 #ifdef _DEBUG
-        call write_debuginfo("In compute_gradient_2darray(), cellsystem.")
+        call write_debuginfo("In compute_gradient_rank2(), cellsystem.")
 #endif
 
 !$omp parallel do private(cell_index)
@@ -1061,9 +1063,9 @@ module class_cellsystem
                 end associate
             end do
         end do
-    end subroutine compute_gradient_2darray
+    end subroutine compute_gradient_rank2
 
-    subroutine compute_gradient_1darray(self, a_parallelizer, a_gradient_calculator, variable_set, gradient_variable_set)
+    subroutine compute_gradient_rank1(self, a_parallelizer, a_gradient_calculator, variable_set, gradient_variable_set)
         class(cellsystem         ), intent(inout) :: self
         class(parallelizer       ), intent(in   ) :: a_parallelizer
         class(gradient_calculator), intent(inout) :: a_gradient_calculator
@@ -1073,7 +1075,7 @@ module class_cellsystem
         integer(int_kind) :: face_index, cell_index, rhc_index, lhc_index
 
 #ifdef _DEBUG
-        call write_debuginfo("In compute_gradient_1darray(), cellsystem.")
+        call write_debuginfo("In compute_gradient_rank1(), cellsystem.")
 #endif
 
 !$omp parallel do private(cell_index)
@@ -1103,7 +1105,7 @@ module class_cellsystem
                                                  + (1.d0 / self%cell_volumes(lhc_index)) * residual
             end associate
         end do
-    end subroutine compute_gradient_1darray
+    end subroutine compute_gradient_rank1
 
     ! ### Divergence Calculator ###
     subroutine interpolator_initialize(self, a_interpolator, config, num_conservative_variables)
@@ -1118,7 +1120,7 @@ module class_cellsystem
         call a_interpolator%initialize(config)
     end subroutine interpolator_initialize
 
-    subroutine compute_divergence_2darray(self, a_parallelizer, a_interpolator, variables_set, divergence_variables_set, num_variables)
+    subroutine compute_divergence_rank2(self, a_parallelizer, a_interpolator, variables_set, divergence_variables_set, num_variables)
         class  (cellsystem  ), intent(inout) :: self
         class  (parallelizer), intent(in   ) :: a_parallelizer
         class  (interpolator), intent(inout) :: a_interpolator
@@ -1130,7 +1132,7 @@ module class_cellsystem
         real   (real_kind) :: face_variables(3)
 
 #ifdef _DEBUG
-        call write_debuginfo("In compute_divergence_2darray(), cellsystem.")
+        call write_debuginfo("In compute_divergence_rank2(), cellsystem.")
 #endif
 
 !$omp parallel do private(cell_index)
@@ -1165,9 +1167,9 @@ module class_cellsystem
                 end associate
             end do
         end do
-    end subroutine compute_divergence_2darray
+    end subroutine compute_divergence_rank2
 
-    subroutine compute_divergence_1darray(self, a_parallelizer, a_interpolator, variable_set, divergence_variable_set)
+    subroutine compute_divergence_rank1(self, a_parallelizer, a_interpolator, variable_set, divergence_variable_set)
         class(cellsystem   ), intent(inout) :: self
         class(parallelizer ), intent(in   ) :: a_parallelizer
         class(interpolator ), intent(inout) :: a_interpolator
@@ -1178,7 +1180,7 @@ module class_cellsystem
         real   (real_kind) :: face_variables(3)
 
 #ifdef _DEBUG
-        call write_debuginfo("In compute_divergence_1darray(), cellsystem.")
+        call write_debuginfo("In compute_divergence_rank1(), cellsystem.")
 #endif
 
 !$omp parallel do private(cell_index)
@@ -1198,9 +1200,9 @@ module class_cellsystem
             divergence_variable_set(rhc_index) = divergence_variable_set(rhc_index)               &
                                                - (1.d0 / self%cell_volumes(rhc_index)) * vector_multiply(face_variables(1:3), self%face_normal_vectors(1:3, face_index) * self%face_areas(face_index))
         end do
-    end subroutine compute_divergence_1darray
+    end subroutine compute_divergence_rank1
 
-    subroutine compute_divergence_nonviscous(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos,                            &
+    subroutine compute_divergence_godunov_rank2(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos,                            &
                                              primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
                                              primitive_to_conservative_function, element_function)
 
@@ -1215,7 +1217,7 @@ module class_cellsystem
         integer(int_kind      ), intent(in   ) :: num_primitive_variables
 
         procedure(primitive_to_conservative_function_interface   ) :: primitive_to_conservative_function
-        procedure(element_provided_with_rieman_function_interface) :: element_function
+        procedure(element_provided_with_riemann_function_interface) :: element_function
 
         integer(int_kind ) :: i
         integer(int_kind ) :: lhc_index
@@ -1225,7 +1227,7 @@ module class_cellsystem
         real   (real_kind) :: element                                 (num_conservative_variables, 1:2)
 
 #ifdef _DEBUG
-        call write_debuginfo("In compute_divergence_nonviscous (), cellsystem.")
+        call write_debuginfo("In compute_divergence_godunov_rank2 (), cellsystem.")
 #endif
 
 !$omp parallel do private(i,lhc_index,rhc_index,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,element)
@@ -1262,9 +1264,9 @@ module class_cellsystem
             residual_set(:,lhc_index) = residual_set(:,lhc_index) + element(:, 1)
             residual_set(:,rhc_index) = residual_set(:,rhc_index) + element(:, 2)
         end do
-    end subroutine compute_divergence_nonviscous
+    end subroutine compute_divergence_godunov_rank2
 
-    subroutine compute_divergence_viscous(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos, a_face_gradient_interpolator,                                &
+    subroutine compute_divergence_godunov_facegrad_rank2(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos, a_face_gradient_interpolator,                                &
                                         primitive_variables_set, gradient_primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
                                         primitive_to_conservative_function, element_function)
 
@@ -1281,7 +1283,7 @@ module class_cellsystem
         integer(int_kind                  ), intent(in   ) :: num_primitive_variables
 
         procedure(primitive_to_conservative_function_interface            ) :: primitive_to_conservative_function
-        procedure(element_provided_with_rieman_facegrad_function_interface) :: element_function
+        procedure(element_provided_with_riemann_facegrad_function_interface) :: element_function
 
         integer(int_kind ) :: i
         real   (real_kind) :: reconstructed_primitive_variables_lhc   (num_primitive_variables)
@@ -1290,7 +1292,7 @@ module class_cellsystem
         real   (real_kind) :: element                                 (num_conservative_variables, 1:2)
 
 #ifdef _DEBUG
-        call write_debuginfo("In compute_divergence_viscous (), cellsystem.")
+        call write_debuginfo("In compute_divergence_godunov_facegrad_rank2 (), cellsystem.")
 #endif
 
 !$omp parallel do private(i,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,face_gradient_primitive_variables,element)
@@ -1345,7 +1347,7 @@ module class_cellsystem
                 residual_set(:,rhc_index) = residual_set(:,rhc_index) + element(:, 2)
             end associate
         end do
-    end subroutine compute_divergence_viscous
+    end subroutine compute_divergence_godunov_facegrad_rank2
 
     subroutine compute_source_term(self, a_parallelizer, variables_set, residual_set, num_conservative_variables, compute_source_term_function)
         class  (cellsystem  ), intent(in   ) :: self
@@ -1422,7 +1424,7 @@ module class_cellsystem
         call a_time_stepping%initialize(config, self%num_cells, num_conservative_variables)
     end subroutine time_stepping_initialize
 
-    subroutine compute_next_stage_with_primitive(self, a_parallelizer, a_time_stepping, an_eos, stage_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, &
+    subroutine compute_next_stage_primitive_rank2(self, a_parallelizer, a_time_stepping, an_eos, stage_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, &
         conservative_to_primitive_function)
 
         class  (cellsystem         ), intent(inout) :: self
@@ -1440,7 +1442,7 @@ module class_cellsystem
         integer(int_kind) :: i
 
 #ifdef _DEBUG
-        call write_debuginfo("In compute_next_stage_with_primitive(), cellsystem.")
+        call write_debuginfo("In compute_next_stage_primitive_rank2(), cellsystem.")
 #endif
 
 !$omp parallel do private(i)
@@ -1449,9 +1451,9 @@ module class_cellsystem
             residual_set              (:,i) = 0.d0
             primitive_variables_set   (:,i) = conservative_to_primitive_function(an_eos, conservative_variables_set(:,i), num_primitive_variables)
         end do
-    end subroutine compute_next_stage_with_primitive
+    end subroutine compute_next_stage_primitive_rank2
 
-    subroutine compute_next_stage_without_primitive_2darray(self, a_parallelizer, a_time_stepping, stage_num, conservative_variables_set, residual_set)
+    subroutine compute_next_stage_rank2(self, a_parallelizer, a_time_stepping, stage_num, conservative_variables_set, residual_set)
 
         class  (cellsystem         ), intent(inout) :: self
         class  (parallelizer       ), intent(in   ) :: a_parallelizer
@@ -1463,7 +1465,7 @@ module class_cellsystem
         integer(int_kind) :: i
 
 #ifdef _DEBUG
-        call write_debuginfo("In compute_next_stage_without_primitive_2darray(), cellsystem.")
+        call write_debuginfo("In compute_next_stage_rank2(), cellsystem.")
 #endif
 
 !$omp parallel do private(i)
@@ -1471,9 +1473,9 @@ module class_cellsystem
             conservative_variables_set(:,i) = a_time_stepping%compute_next_stage(i, stage_num, self%time_increment, conservative_variables_set(:,i), residual_set(:,i))
             residual_set              (:,i) = 0.d0
         end do
-    end subroutine compute_next_stage_without_primitive_2darray
+    end subroutine compute_next_stage_rank2
 
-    subroutine compute_next_stage_without_primitive_1darray(self, a_parallelizer, a_time_stepping, stage_num, conservative_variable_set, residual_set)
+    subroutine compute_next_stage_rank1(self, a_parallelizer, a_time_stepping, stage_num, conservative_variable_set, residual_set)
 
         class  (cellsystem         ), intent(inout) :: self
         class  (parallelizer       ), intent(in   ) :: a_parallelizer
@@ -1485,7 +1487,7 @@ module class_cellsystem
         integer(int_kind) :: i
 
 #ifdef _DEBUG
-        call write_debuginfo("In compute_next_stage_without_primitive_1darray(), cellsystem.")
+        call write_debuginfo("In compute_next_stage_rank1(), cellsystem.")
 #endif
 
 !$omp parallel do private(i)
@@ -1495,7 +1497,7 @@ module class_cellsystem
             conservative_variable_set(i) = sum( a_time_stepping%compute_next_stage(i, stage_num, self%time_increment, [conservative_variable_set(i)], [residual_set(i)]) )
             residual_set             (i) = 0.d0
         end do
-    end subroutine compute_next_stage_without_primitive_1darray
+    end subroutine compute_next_stage_rank1
 
     subroutine prepare_time_stepping(    &
         self                      , &
