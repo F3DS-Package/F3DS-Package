@@ -92,8 +92,10 @@ module class_line_plotter
             ! Nearest neighbor search
             neighbor_distance = 1.d0 / machine_epsilon
             do j = 1, num_cells, 1
+                if(.not. is_real_cell(j)) cycle
+
                 distance = vector_distance(points(:,i), cell_positions(:,j))
-                if (distance < neighbor_distance .and. is_real_cell(j)) then
+                if (distance < neighbor_distance) then
                     neighbor_distance = distance
                     neighbor_id = j
                 end if
