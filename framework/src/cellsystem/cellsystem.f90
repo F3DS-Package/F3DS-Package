@@ -208,8 +208,8 @@ module class_cellsystem
                                                        substitute_rank2
         procedure, public, pass(self) :: substitute_zeros_rank1
         procedure, public, pass(self) :: substitute_zeros_rank2
-        generic  , public             :: substitute => substitute_zeros_rank1, &
-                                                       substitute_zeros_rank2
+        generic  , public             :: substitute_zeros => substitute_zeros_rank1, &
+                                                             substitute_zeros_rank2
 
         ! ### Time increment control ###
         procedure, public, pass(self) :: update_time_increment
@@ -1170,16 +1170,11 @@ module class_cellsystem
         real   (real_kind          ), intent(inout) :: gradient_variables_set   (:,:)
         integer(int_kind           ), intent(in   ) :: num_variables
 
-        integer(int_kind ) :: face_index, cell_index, rhc_index, lhc_index, var_index
+        integer(int_kind ) :: face_index, rhc_index, lhc_index, var_index
 
 #ifdef _DEBUG
         call write_debuginfo("In compute_gradient_rank2(), cellsystem.")
 #endif
-
-!$omp parallel do private(cell_index)
-        do cell_index = 1, self%num_cells, 1
-            gradient_variables_set(:,cell_index) = 0.d0
-        end do
 
 !$omp parallel do private(face_index, rhc_index, lhc_index, var_index)
         do face_index = 1, self%num_faces, 1
@@ -1215,16 +1210,11 @@ module class_cellsystem
         real (real_kind          ), intent(in   ) :: variable_set            (:)
         real (real_kind          ), intent(inout) :: gradient_variable_set   (:,:)
 
-        integer(int_kind) :: face_index, cell_index, rhc_index, lhc_index
+        integer(int_kind) :: face_index, rhc_index, lhc_index
 
 #ifdef _DEBUG
         call write_debuginfo("In compute_gradient_rank1(), cellsystem.")
 #endif
-
-!$omp parallel do private(cell_index)
-        do cell_index = 1, self%num_cells, 1
-            gradient_variable_set(:,cell_index) = 0.d0
-        end do
 
 !$omp parallel do private(face_index, rhc_index, lhc_index)
         do face_index = 1, self%num_faces, 1
@@ -1271,17 +1261,12 @@ module class_cellsystem
         real   (real_kind   ), intent(inout) :: divergence_variables_set(:,:)
         integer(int_kind    ), intent(in   ) :: num_variables
 
-        integer(int_kind ) :: face_index, cell_index, rhc_index, lhc_index, var_index, num_divergence_variables
+        integer(int_kind ) :: face_index, rhc_index, lhc_index, var_index, num_divergence_variables
         real   (real_kind) :: face_variables(3)
 
 #ifdef _DEBUG
         call write_debuginfo("In compute_divergence_rank2(), cellsystem.")
 #endif
-
-!$omp parallel do private(cell_index)
-        do cell_index = 1, self%num_cells, 1
-            divergence_variables_set(:,cell_index) = 0.d0
-        end do
 
         num_divergence_variables = num_variables/3
 
@@ -1319,17 +1304,12 @@ module class_cellsystem
         real (real_kind    ), intent(in   ) :: variable_set              (:,:)
         real (real_kind    ), intent(inout) :: divergence_variable_set   (:)
 
-        integer(int_kind ) :: face_index, cell_index, rhc_index, lhc_index
+        integer(int_kind ) :: face_index, rhc_index, lhc_index
         real   (real_kind) :: face_variables(3)
 
 #ifdef _DEBUG
         call write_debuginfo("In compute_divergence_rank1(), cellsystem.")
 #endif
-
-!$omp parallel do private(cell_index)
-        do cell_index = 1, self%num_cells, 1
-            divergence_variable_set(cell_index) = 0.d0
-        end do
 
 !$omp parallel do private(face_index, rhc_index, lhc_index, face_variables)
         do face_index = 1, self%num_faces, 1
@@ -1435,7 +1415,7 @@ module class_cellsystem
         real   (real_kind) :: element                                 (num_conservative_variables, 1:2)
 
 #ifdef _DEBUG
-        call write_debuginfo("In compute_divergence_godunov_facegrad_rank2 (), cellsystem.")
+        call write_debuginfo("In compute_divergence_godunov_facegrad_rank2(), cellsystem.")
 #endif
 
 !$omp parallel do private(i,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,face_gradient_primitive_variables,element)
@@ -1783,7 +1763,7 @@ module class_cellsystem
         call write_debuginfo("Read following mesh.")
         print *, "Number of cells          : ", self%num_cells
         print *, "Number of faces          : ", self%num_faces
-        print *, "Number of symmetric faces: ", self%num_symmetric_face_indexes
+        print *, "Number of symmetric faces: ", self%num_symmetric_faces
         print *, "Number of empty faces    : ", self%num_empty_faces
 #endif
 

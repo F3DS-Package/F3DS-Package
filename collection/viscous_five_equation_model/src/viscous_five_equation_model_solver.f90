@@ -201,9 +201,13 @@ program viscous_five_equation_model_solver
             )
 
             ! Compute gradient primitive variables
+            call a_cellsystem%substitute_zeros(a_parallelizer, gradient_primitive_variables_set)
             call a_cellsystem%compute_gradient(a_parallelizer, a_gradient_calculator, primitive_variables_set(:,:), gradient_primitive_variables_set(:,:), num_primitive_variables)
 
             if(apply_surface_tension())then
+                ! Initialize
+                call a_cellsystem%substitute_zeros(a_parallelizer, surface_tension_variables_set)
+
                 ! Compute normarized gradient volume fraction
                 call a_cellsystem%operate_cellwise(a_parallelizer, surface_tension_variables_set, primitive_variables_set, num_surface_tension_variables, compute_smoothed_volume_fraction)
                 call a_cellsystem%compute_gradient(a_parallelizer, a_gradient_calculator, surface_tension_variables_set(1,:), surface_tension_variables_set(2:4,:))
