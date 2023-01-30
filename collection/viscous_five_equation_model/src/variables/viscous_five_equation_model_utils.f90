@@ -125,6 +125,8 @@ module viscous_five_equation_model_utils_module
                 primitive_variables(5) = rho_w / rho
                 primitive_variables(6) = an_eos%compute_pressure(ie, rho, primitive_variables(7))
             endif
+
+            primitive_variables(8) = 0.0_real_kind
         end associate
     end function conservative_to_primitive
 
