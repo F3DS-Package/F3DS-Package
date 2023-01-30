@@ -140,38 +140,38 @@ module class_cellsystem
 
         contains
         ! ### Common ###
-        procedure, public, pass(self) :: result_writer_initialize
-        procedure, public, pass(self) :: time_stepping_initialize
-        procedure, public, pass(self) :: reconstructor_initialize
-        procedure, public, pass(self) :: riemann_solver_initialize
-        procedure, public, pass(self) :: eos_initialize
-        procedure, public, pass(self) :: gradient_calculator_initialize
-        procedure, public, pass(self) :: variables_initialize
-        procedure, public, pass(self) :: variables_1darray_initialize
-        procedure, public, pass(self) :: termination_criterion_initialize
-        procedure, public, pass(self) :: time_increment_controller_initialize
-        procedure, public, pass(self) :: interpolator_initialize
-        procedure, public, pass(self) :: line_plotter_initialize
-        procedure, public, pass(self) :: control_volume_profiler_initialize
-        procedure, public, pass(self) :: surface_profiler_initialize
-        procedure, public, pass(self) :: face_gradient_interpolator_initialize
-        procedure, public, pass(self) :: parallelizer_initialize
-        generic  , public             :: initialize  => result_writer_initialize             , &
-                                                        time_stepping_initialize             , &
-                                                        reconstructor_initialize             , &
-                                                        riemann_solver_initialize            , &
-                                                        eos_initialize                       , &
-                                                        gradient_calculator_initialize       , &
-                                                        variables_initialize                 , &
-                                                        variables_1darray_initialize         , &
-                                                        termination_criterion_initialize     , &
-                                                        time_increment_controller_initialize , &
-                                                        interpolator_initialize              , &
-                                                        line_plotter_initialize              , &
-                                                        control_volume_profiler_initialize   , &
-                                                        surface_profiler_initialize          , &
-                                                        face_gradient_interpolator_initialize, &
-                                                        parallelizer_initialize
+        procedure, public, pass(self) :: initialize_result_writer
+        procedure, public, pass(self) :: initialize_time_stepping
+        procedure, public, pass(self) :: initialize_reconstructor
+        procedure, public, pass(self) :: initialize_riemann_solver
+        procedure, public, pass(self) :: initialize_eos
+        procedure, public, pass(self) :: initialize_gradient_calculator
+        procedure, public, pass(self) :: initialize_variables_rank2
+        procedure, public, pass(self) :: initialize_variables_rank1
+        procedure, public, pass(self) :: initialize_termination_ctiterion
+        procedure, public, pass(self) :: initialize_time_increment_controller
+        procedure, public, pass(self) :: initialize_interpolator
+        procedure, public, pass(self) :: initialize_line_plotter
+        procedure, public, pass(self) :: initialize_control_volume_profiler
+        procedure, public, pass(self) :: initialize_surface_profiler
+        procedure, public, pass(self) :: initialize_face_gradient_interpolator
+        procedure, public, pass(self) :: initialize_parallelizer
+        generic  , public             :: initialize  => initialize_result_writer             , &
+                                                        initialize_time_stepping             , &
+                                                        initialize_reconstructor             , &
+                                                        initialize_riemann_solver            , &
+                                                        initialize_eos                       , &
+                                                        initialize_gradient_calculator       , &
+                                                        initialize_variables_rank2           , &
+                                                        initialize_variables_rank1           , &
+                                                        initialize_termination_ctiterion     , &
+                                                        initialize_time_increment_controller , &
+                                                        initialize_interpolator              , &
+                                                        initialize_line_plotter              , &
+                                                        initialize_control_volume_profiler   , &
+                                                        initialize_surface_profiler          , &
+                                                        initialize_face_gradient_interpolator, &
+                                                        initialize_parallelizer
         procedure, public, pass(self) :: result_writer_open_file
         generic  , public             :: open_file   => result_writer_open_file
         procedure, public, pass(self) :: result_writer_close_file
@@ -202,6 +202,14 @@ module class_cellsystem
         generic  , public             :: operate_cellwise => operate_cellwise_rank2, &
                                                              operate_cellwise_subarray_rank2
         procedure, public, pass(self) :: smooth_variables
+        procedure, public, pass(self) :: substitute_rank1
+        procedure, public, pass(self) :: substitute_rank2
+        generic  , public             :: substitute => substitute_rank1, &
+                                                       substitute_rank2
+        procedure, public, pass(self) :: substitute_zeros_rank1
+        procedure, public, pass(self) :: substitute_zeros_rank2
+        generic  , public             :: substitute => substitute_zeros_rank1, &
+                                                       substitute_zeros_rank2
 
         ! ### Time increment control ###
         procedure, public, pass(self) :: update_time_increment
@@ -210,7 +218,7 @@ module class_cellsystem
         procedure, public, pass(self) :: satisfy_termination_criterion
 
         ! ### Boundary Condition ###
-        procedure, public, pass(self) :: apply_boundary_condition
+        procedure, public , pass(self) :: apply_boundary_condition
         procedure, private, pass(self) :: apply_outflow_condition
         procedure, private, pass(self) :: apply_nonslip_wall_condition
         procedure, private, pass(self) :: apply_symmetric_condition
@@ -466,43 +474,43 @@ module class_cellsystem
     end subroutine show_timestepping_infomation
 
     ! ### Parallelizer ###
-    subroutine parallelizer_initialize(self, a_parallelizer, config, num_conservative_variables)
+    subroutine initialize_parallelizer(self, a_parallelizer, config, num_conservative_variables)
         class   (cellsystem   ), intent(inout) :: self
         class   (parallelizer ), intent(inout) :: a_parallelizer
         class   (configuration), intent(inout) :: config
         integer (int_kind     ), intent(in   ) :: num_conservative_variables
 
 #ifdef _DEBUG
-        call write_debuginfo("In parallelizer_initialize(), cellsystem.")
+        call write_debuginfo("In initialize_parallelizer(), cellsystem.")
 #endif
         call a_parallelizer%initialize(config)
     end subroutine
 
     ! ### Face gradient interpolator ###
-    subroutine face_gradient_interpolator_initialize(self, a_face_gradient_interpolator, config, num_conservative_variables)
+    subroutine initialize_face_gradient_interpolator(self, a_face_gradient_interpolator, config, num_conservative_variables)
         class   (cellsystem                ), intent(inout) :: self
         class   (face_gradient_interpolator), intent(inout) :: a_face_gradient_interpolator
         class   (configuration             ), intent(inout) :: config
         integer (int_kind                  ), intent(in   ) :: num_conservative_variables
 
 #ifdef _DEBUG
-        call write_debuginfo("In face_gradient_interpolator_initialize(), cellsystem.")
+        call write_debuginfo("In initialize_face_gradient_interpolator(), cellsystem.")
 #endif
         call a_face_gradient_interpolator%initialize(config)
-    end subroutine face_gradient_interpolator_initialize
+    end subroutine initialize_face_gradient_interpolator
 
     ! ### Surface profiler ###
-    subroutine surface_profiler_initialize(self, plotter, config, num_conservative_variables)
+    subroutine initialize_surface_profiler(self, plotter, config, num_conservative_variables)
         class  (cellsystem      ), intent(inout) :: self
         class  (surface_profiler), intent(inout) :: plotter
         class  (configuration   ), intent(inout) :: config
         integer(int_kind        ), intent(in   ) :: num_conservative_variables
 
 #ifdef _DEBUG
-        call write_debuginfo("In surface_profiler_initialize(), cellsystem.")
+        call write_debuginfo("In initialize_surface_profiler(), cellsystem.")
 #endif
         call plotter%initialize(config, self%face_to_cell_indexes, self%face_positions, self%face_normal_vectors, self%is_real_cell, self%num_faces, self%num_local_cells)
-    end subroutine surface_profiler_initialize
+    end subroutine initialize_surface_profiler
 
     subroutine surface_profiler_write(self, plotter, values_set)
         class(cellsystem      ), intent(inout) :: self
@@ -522,17 +530,17 @@ module class_cellsystem
     end function surface_profiler_is_writable
 
     ! ### Control volume profiler ###
-    subroutine control_volume_profiler_initialize(self, plotter, config, num_conservative_variables)
+    subroutine initialize_control_volume_profiler(self, plotter, config, num_conservative_variables)
         class(cellsystem             ), intent(inout) :: self
         class(control_volume_profiler), intent(inout) :: plotter
         class(configuration          ), intent(inout) :: config
         integer(int_kind             ), intent(in   ) :: num_conservative_variables
 
 #ifdef _DEBUG
-        call write_debuginfo("In control_volume_profiler_initialize(), cellsystem.")
+        call write_debuginfo("In initialize_control_volume_profiler(), cellsystem.")
 #endif
         call plotter%initialize(config, self%cell_centor_positions, self%is_real_cell, self%num_cells)
-    end subroutine control_volume_profiler_initialize
+    end subroutine initialize_control_volume_profiler
 
     subroutine control_volume_profiler_write(self, plotter, values_set)
         class(cellsystem             ), intent(inout) :: self
@@ -552,17 +560,17 @@ module class_cellsystem
     end function control_volume_profiler_is_writable
 
     ! ### Line plotter ###
-    subroutine line_plotter_initialize(self, plotter, config, num_conservative_variables)
+    subroutine initialize_line_plotter(self, plotter, config, num_conservative_variables)
         class(cellsystem   ), intent(inout) :: self
         class(line_plotter ), intent(inout) :: plotter
         class(configuration), intent(inout) :: config
         integer(int_kind   ), intent(in   ) :: num_conservative_variables
 
 #ifdef _DEBUG
-        call write_debuginfo("In line_plotter_initialize(), cellsystem.")
+        call write_debuginfo("In initialize_line_plotter(), cellsystem.")
 #endif
         call plotter%initialize(config, self%cell_centor_positions, self%is_real_cell, self%num_cells)
-    end subroutine line_plotter_initialize
+    end subroutine initialize_line_plotter
 
     subroutine line_plotter_write(self, plotter, values_set)
         class(cellsystem  ), intent(inout) :: self
@@ -582,17 +590,17 @@ module class_cellsystem
     end function line_plotter_is_writable
 
     ! ### Time increment control ###
-    subroutine time_increment_controller_initialize(self, controller, config, num_conservative_variables)
+    subroutine initialize_time_increment_controller(self, controller, config, num_conservative_variables)
         class(cellsystem               ), intent(inout) :: self
         class(time_increment_controller), intent(inout) :: controller
         class(configuration            ), intent(inout) :: config
         integer(int_kind               ), intent(in   ) :: num_conservative_variables
 
 #ifdef _DEBUG
-        call write_debuginfo("In time_increment_controller_initialize(), cellsystem.")
+        call write_debuginfo("In initialize_time_increment_controller(), cellsystem.")
 #endif
         call controller%initialize(config)
-    end subroutine time_increment_controller_initialize
+    end subroutine initialize_time_increment_controller
 
     subroutine update_time_increment(self, controller, an_eos, variables_set, spectral_radius_function)
         class  (cellsystem               ), intent(inout) :: self
@@ -635,17 +643,17 @@ module class_cellsystem
     end subroutine update_time_increment
 
     ! ### Termination criterion ###
-    subroutine termination_criterion_initialize(self, criterion, config, num_conservative_variables)
+    subroutine initialize_termination_ctiterion(self, criterion, config, num_conservative_variables)
         class  (cellsystem           ), intent(inout) :: self
         class  (termination_criterion), intent(inout) :: criterion
         class  (configuration        ), intent(inout) :: config
         integer(int_kind             ), intent(in   ) :: num_conservative_variables
 
 #ifdef _DEBUG
-        call write_debuginfo("In termination_criterion_initialize(), cellsystem.")
+        call write_debuginfo("In initialize_termination_ctiterion(), cellsystem.")
 #endif
         call criterion%initialize(config)
-    end subroutine termination_criterion_initialize
+    end subroutine initialize_termination_ctiterion
 
     pure function satisfy_termination_criterion(self, criterion) result(judge)
         class(cellsystem           ), intent(in) :: self
@@ -905,13 +913,13 @@ module class_cellsystem
     end subroutine apply_empty_condition
 
     ! ### Variables ###
-    subroutine variables_initialize(self, variables_set, num_variables)
+    subroutine initialize_variables_rank2(self, variables_set, num_variables)
         class  (cellsystem), intent(inout)              :: self
         real   (real_kind ), intent(inout), allocatable :: variables_set(:,:)
         integer(int_kind  ), intent(in   )              :: num_variables
 
 #ifdef _DEBUG
-        call write_debuginfo("In variables_initialize(), cellsystem.")
+        call write_debuginfo("In initialize_variables_rank2(), cellsystem.")
 #endif
 
         if(.not. self%read_cellsystem) call call_error("'read' subroutine is not called. You should call with following steps: first you call 'read' subroutine, next you initialze variables with 'initialze' subroutine. Please check your cord.")
@@ -921,14 +929,14 @@ module class_cellsystem
         end if
         allocate(variables_set(1:num_variables, 1:self%num_cells))
         variables_set(:,:) = 0.d0
-    end subroutine variables_initialize
+    end subroutine initialize_variables_rank2
 
-    subroutine variables_1darray_initialize(self, variables_set)
+    subroutine initialize_variables_rank1(self, variables_set)
         class  (cellsystem), intent(inout)              :: self
         real   (real_kind ), intent(inout), allocatable :: variables_set(:)
 
 #ifdef _DEBUG
-        call write_debuginfo("In variables_1darray_initialize(), cellsystem.")
+        call write_debuginfo("In initialize_variables_rank1(), cellsystem.")
 #endif
 
         if(.not. self%read_cellsystem) call call_error("'read' subroutine is not called. You should call with following steps: first you call 'read' subroutine, next you initialze variables with 'initialze' subroutine. Please check your cord.")
@@ -938,7 +946,7 @@ module class_cellsystem
         end if
         allocate(variables_set(1:self%num_cells))
         variables_set(:) = 0.d0
-    end subroutine variables_1darray_initialize
+    end subroutine initialize_variables_rank1
 
     subroutine read_initial_condition(self, an_initial_condition_parser, config, conservative_variables_set)
         class  (cellsystem              ), intent(inout) :: self
@@ -1081,18 +1089,78 @@ module class_cellsystem
         end do
     end subroutine smooth_variables
 
+    subroutine substitute_rank2(self, a_parallelizer, variables, val)
+        class(cellsystem  ), intent(inout) :: self
+        class(parallelizer), intent(in   ) :: a_parallelizer
+        real (real_kind   ), intent(inout) :: variables(:,:)
+        real (real_kind   ), intent(in   ) :: val
+
+        integer(int_kind) :: i
+
+#ifdef _DEBUG
+        call write_debuginfo("In substitute_rank2(), cellsystem.")
+#endif
+!$omp parallel do private(i)
+        do i = 1, self%num_cells, 1
+            variables(:,i) = val
+        end do
+    end subroutine substitute_rank2
+
+    subroutine substitute_zeros_rank2(self, a_parallelizer, variables)
+        class(cellsystem  ), intent(inout) :: self
+        class(parallelizer), intent(in   ) :: a_parallelizer
+        real (real_kind   ), intent(inout) :: variables(:,:)
+
+        integer(int_kind) :: i
+
+#ifdef _DEBUG
+        call write_debuginfo("In substitute_zeros_rank2(), cellsystem.")
+#endif
+        call self%substitute_rank2(a_parallelizer, variables, 0._real_kind)
+    end subroutine substitute_zeros_rank2
+
+    subroutine substitute_rank1(self, a_parallelizer, variables, val)
+        class(cellsystem  ), intent(inout) :: self
+        class(parallelizer), intent(in   ) :: a_parallelizer
+        real (real_kind   ), intent(inout) :: variables(:)
+        real (real_kind   ), intent(in   ) :: val
+
+        integer(int_kind) :: i
+
+#ifdef _DEBUG
+        call write_debuginfo("In substitute_rank1(), cellsystem.")
+#endif
+!$omp parallel do private(i)
+        do i = 1, self%num_cells, 1
+            variables(i) = val
+        end do
+    end subroutine substitute_rank1
+
+    subroutine substitute_zeros_rank1(self, a_parallelizer, variables)
+        class(cellsystem  ), intent(inout) :: self
+        class(parallelizer), intent(in   ) :: a_parallelizer
+        real (real_kind   ), intent(inout) :: variables(:)
+
+        integer(int_kind) :: i
+
+#ifdef _DEBUG
+        call write_debuginfo("In substitute_zeros_rank1(), cellsystem.")
+#endif
+        call self%substitute_rank1(a_parallelizer, variables, 0._real_kind)
+    end subroutine substitute_zeros_rank1
+
     ! ### Gradient Calculator ###
-    subroutine gradient_calculator_initialize(self, a_gradient_calculator, config, num_conservative_variables)
+    subroutine initialize_gradient_calculator(self, a_gradient_calculator, config, num_conservative_variables)
         class  (cellsystem         ), intent(inout) :: self
         class  (gradient_calculator), intent(inout) :: a_gradient_calculator
         class  (configuration      ), intent(inout) :: config
         integer(int_kind           ), intent(in   ) :: num_conservative_variables
 
 #ifdef _DEBUG
-        call write_debuginfo("In gradient_calculator_initialize(), cellsystem.")
+        call write_debuginfo("In initialize_gradient_calculator(), cellsystem.")
 #endif
         call a_gradient_calculator%initialize(config)
-    end subroutine gradient_calculator_initialize
+    end subroutine initialize_gradient_calculator
 
     subroutine compute_gradient_rank2(self, a_parallelizer, a_gradient_calculator, variables_set, gradient_variables_set, num_variables)
         class  (cellsystem         ), intent(inout) :: self
@@ -1183,17 +1251,17 @@ module class_cellsystem
     end subroutine compute_gradient_rank1
 
     ! ### Divergence Calculator ###
-    subroutine interpolator_initialize(self, a_interpolator, config, num_conservative_variables)
+    subroutine initialize_interpolator(self, a_interpolator, config, num_conservative_variables)
         class  (cellsystem   ), intent(inout) :: self
         class  (interpolator ), intent(inout) :: a_interpolator
         class  (configuration), intent(inout) :: config
         integer(int_kind     ), intent(in   ) :: num_conservative_variables
 
 #ifdef _DEBUG
-        call write_debuginfo("In interpolator_initialize(), cellsystem.")
+        call write_debuginfo("In initialize_interpolator(), cellsystem.")
 #endif
         call a_interpolator%initialize(config)
-    end subroutine interpolator_initialize
+    end subroutine initialize_interpolator
 
     subroutine compute_divergence_rank2(self, a_parallelizer, a_interpolator, variables_set, divergence_variables_set, num_variables)
         class  (cellsystem  ), intent(inout) :: self
@@ -1448,56 +1516,56 @@ module class_cellsystem
     end subroutine compute_source_term
 
     ! ### EoS ###
-    subroutine eos_initialize(self, an_eos, config, num_conservative_variables)
+    subroutine initialize_eos(self, an_eos, config, num_conservative_variables)
         class  (cellsystem    ), intent(inout) :: self
         class  (eos           ), intent(inout) :: an_eos
         class  (configuration ), intent(inout) :: config
         integer(int_kind      ), intent(in   ) :: num_conservative_variables
 
 #ifdef _DEBUG
-        call write_debuginfo("In eos_initialize(), cellsystem.")
+        call write_debuginfo("In initialize_eos(), cellsystem.")
 #endif
         call an_eos%initialize(config)
-    end subroutine eos_initialize
+    end subroutine initialize_eos
 
     ! ### Riemann solver ###
-    subroutine riemann_solver_initialize(self, a_riemann_solver, config, num_conservative_variables)
+    subroutine initialize_riemann_solver(self, a_riemann_solver, config, num_conservative_variables)
         class  (cellsystem    ), intent(inout) :: self
         class  (riemann_solver), intent(inout) :: a_riemann_solver
         class  (configuration ), intent(inout) :: config
         integer(int_kind      ), intent(in   ) :: num_conservative_variables
 
 #ifdef _DEBUG
-        call write_debuginfo("In riemann_solver_initialize(), cellsystem.")
+        call write_debuginfo("In initialize_riemann_solver(), cellsystem.")
 #endif
         call a_riemann_solver%initialize(config)
-    end subroutine riemann_solver_initialize
+    end subroutine initialize_riemann_solver
 
     ! ### Reconstructor ###
-    subroutine reconstructor_initialize(self, a_reconstructor, config, num_conservative_variables)
+    subroutine initialize_reconstructor(self, a_reconstructor, config, num_conservative_variables)
         class  (cellsystem    ), intent(inout) :: self
         class  (reconstructor ), intent(inout) :: a_reconstructor
         class  (configuration ), intent(inout) :: config
         integer(int_kind      ), intent(in   ) :: num_conservative_variables
 
 #ifdef _DEBUG
-        call write_debuginfo("In reconstructor_initialize(), cellsystem.")
+        call write_debuginfo("In initialize_reconstructor(), cellsystem.")
 #endif
         call a_reconstructor%initialize(config)
-    end subroutine reconstructor_initialize
+    end subroutine initialize_reconstructor
 
     ! ### Time stepping ###
-    subroutine time_stepping_initialize(self, a_time_stepping, config, num_conservative_variables)
+    subroutine initialize_time_stepping(self, a_time_stepping, config, num_conservative_variables)
         class  (cellsystem   ), intent(inout) :: self
         class  (time_stepping), intent(inout) :: a_time_stepping
         class  (configuration), intent(inout) :: config
         integer(int_kind     ), intent(in   ) :: num_conservative_variables
 
 #ifdef _DEBUG
-        call write_debuginfo("In time_stepping_initialize(), cellsystem.")
+        call write_debuginfo("In initialize_time_stepping(), cellsystem.")
 #endif
         call a_time_stepping%initialize(config, self%num_cells, num_conservative_variables)
-    end subroutine time_stepping_initialize
+    end subroutine initialize_time_stepping
 
     subroutine compute_next_stage_primitive_rank2(self, a_parallelizer, a_time_stepping, an_eos, stage_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, &
         conservative_to_primitive_function)
@@ -1606,17 +1674,17 @@ module class_cellsystem
     end function get_number_of_stages
 
     ! ###  Result writer ###
-    subroutine result_writer_initialize(self, writer, config, num_conservative_variables)
+    subroutine initialize_result_writer(self, writer, config, num_conservative_variables)
         class  (cellsystem   ), intent(inout) :: self
         class  (result_writer), intent(inout) :: writer
         class  (configuration), intent(inout) :: config
         integer(int_kind     ), intent(in   ) :: num_conservative_variables
 
 #ifdef _DEBUG
-        call write_debuginfo("In result_writer_initialize(), cellsystem.")
+        call write_debuginfo("In initialize_result_writer(), cellsystem.")
 #endif
         call writer%initialize(self%num_cells, self%num_points, self%is_real_cell, self%cell_geometries, self%cell_types, config)
-    end subroutine result_writer_initialize
+    end subroutine initialize_result_writer
 
     subroutine result_writer_open_file(self, writer)
         class(cellsystem   ), intent(inout) :: self
