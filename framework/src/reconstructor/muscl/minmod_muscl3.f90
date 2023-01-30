@@ -111,7 +111,7 @@ module class_minmod_muscl3
         real   (real_kind) :: cell_cell_distance, cell_face_distanse, s
 
         do i = 1, num_primitive_variables, 1
-            associate(                                                                                  &
+            associate(                                                                                 &
                 v_m1 => primitive_variables_set(i, face_to_cell_index(num_local_cells+0, face_index)), &
                 v    => primitive_variables_set(i, face_to_cell_index(num_local_cells+1, face_index)), &
                 v_p1 => primitive_variables_set(i, face_to_cell_index(num_local_cells+2, face_index))  &

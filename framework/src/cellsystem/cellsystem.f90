@@ -211,12 +211,11 @@ module class_cellsystem
 
         ! ### Boundary Condition ###
         procedure, public, pass(self) :: apply_boundary_condition
-        ! TODO: Remove below:
-        procedure, public, pass(self) :: apply_outflow_condition
-        procedure, public, pass(self) :: apply_nonslip_wall_condition
-        procedure, public, pass(self) :: apply_symmetric_condition
-        procedure, public, pass(self) :: apply_slip_wall_condition
-        procedure, public, pass(self) :: apply_empty_condition
+        procedure, private, pass(self) :: apply_outflow_condition
+        procedure, private, pass(self) :: apply_nonslip_wall_condition
+        procedure, private, pass(self) :: apply_symmetric_condition
+        procedure, private, pass(self) :: apply_slip_wall_condition
+        procedure, private, pass(self) :: apply_empty_condition
 
         ! ### Gradient Calculator ###
         procedure, public, pass(self) :: compute_gradient_rank1
