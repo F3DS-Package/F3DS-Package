@@ -1,6 +1,7 @@
 module viscous_five_equation_model_module
     use vector_module
     use typedef_module
+    use math_constant_module
     use stdio_module
     use string_utils_module
     use abstract_configuration
@@ -129,6 +130,41 @@ module viscous_five_equation_model_module
             fixed_reconstructed_primitive_variables(8) = kappa
         end associate
     end function fix_reconstructed_primitive_variables
+
+    pure function compute_soundspeed(an_eos, pressure, densities, volume_fractions) result(c)
+        class(eos      ), intent(in) :: an_eos
+        real (real_kind), intent(in) :: pressure
+        real (real_kind), intent(in) :: densities(:)
+        real (real_kind), intent(in) :: volume_fractions(:)
+        real (real_kind) :: c
+
+        if(ignore_kdivu_)then
+            c = an_eos%compute_mixture_soundspeed(pressure, densities, volume_fractions)
+        else
+            c = an_eos%compute_wood_soundspeed(pressure, densities, volume_fractions)
+        endif
+    end function
+
+    pure function compute_k(an_eos, pressure, densities, volume_fraction) result(k)
+        class(eos      ), intent(in) :: an_eos
+        real (real_kind), intent(in) :: pressure
+        real (real_kind), intent(in) :: densities(:)
+        real (real_kind), intent(in) :: volume_fraction
+        real (real_kind) :: k
+
+        if((volume_fraction <= machine_epsilon) .or. (1.0_real_kind <= volume_fraction))then
+            k = 0.0_real_kind
+            return
+        endif
+
+        associate(                                                                                            &
+            rho1_powc1 => densities(1) * an_eos%compute_soundspeed(pressure, densities(1), 1)**2.0_real_kind, &
+            rho2_powc2 => densities(2) * an_eos%compute_soundspeed(pressure, densities(2), 2)**2.0_real_kind  &
+        )
+            k = (volume_fraction * (1.0_real_kind - volume_fraction) * (rho2_powc2 * rho1_powc1)) &
+              / (volume_fraction * rho2_powc2 + (1.0_real_kind - volume_fraction) * rho1_powc1)
+        end associate
+    end function compute_k
 
     subroutine initialize_model(a_configuration, primitive_variables_set, num_cells)
         class  (configuration), intent(inout) :: a_configuration
@@ -322,36 +358,34 @@ module viscous_five_equation_model_module
         interface_curvature = 0.5d0 * (primitive_variables_lhc(8) + primitive_variables_rhc(8))
 
         ! # compute EoS, main velosity, and fluxs
-        associate(                                                 &
-                rho1    => local_coordinate_primitives_lhc(1),     &
-                rho2    => local_coordinate_primitives_lhc(2),     &
-                u       => local_coordinate_primitives_lhc(3),     &
-                v       => local_coordinate_primitives_lhc(4),     &
-                w       => local_coordinate_primitives_lhc(5),     &
-                p       => local_coordinate_primitives_lhc(6),     &
-                z1      => local_coordinate_primitives_lhc(7),     &
-                curv    => local_coordinate_primitives_lhc(8)      &
+        associate(                                              &
+                rhos    => local_coordinate_primitives_rhc(1:2), &
+                u       => local_coordinate_primitives_lhc(3)  , &
+                v       => local_coordinate_primitives_lhc(4)  , &
+                w       => local_coordinate_primitives_lhc(5)  , &
+                p       => local_coordinate_primitives_lhc(6)  , &
+                z1      => local_coordinate_primitives_lhc(7)  , &
+                curv    => local_coordinate_primitives_lhc(8)    &
             )
-            lhc_density    = rho1 * z1 + rho2 * (1.d0 - z1)
-            lhc_pressure   = p
-            lhc_soundspeed = an_eos%compute_soundspeed(p, lhc_density, z1)
+            lhc_density       = rhos(1) * z1 + rhos(2) * (1.d0 - z1)
+            lhc_pressure      = p
+            lhc_soundspeed    = compute_soundspeed(an_eos, p, rhos, [z1, 1.0_real_kind - z1])
             lhc_main_velocity = u
             lhc_alpha_heavy   = get_heavest_volume_fraction(z1)
             lhc_pressure_jump = compute_pressure_jump(z1, lhc_alpha_heavy, interface_curvature)
         end associate
-        associate(                                             &
-                rho1    => local_coordinate_primitives_rhc(1), &
-                rho2    => local_coordinate_primitives_rhc(2), &
-                u       => local_coordinate_primitives_rhc(3), &
-                v       => local_coordinate_primitives_rhc(4), &
-                w       => local_coordinate_primitives_rhc(5), &
-                p       => local_coordinate_primitives_rhc(6), &
-                z1      => local_coordinate_primitives_rhc(7), &
-                curv    => local_coordinate_primitives_rhc(8)  &
+        associate(                                               &
+                rhos    => local_coordinate_primitives_rhc(1:2), &
+                u       => local_coordinate_primitives_rhc(3)  , &
+                v       => local_coordinate_primitives_rhc(4)  , &
+                w       => local_coordinate_primitives_rhc(5)  , &
+                p       => local_coordinate_primitives_rhc(6)  , &
+                z1      => local_coordinate_primitives_rhc(7)  , &
+                curv    => local_coordinate_primitives_rhc(8)    &
             )
-            rhc_density    = rho1 * z1 + rho2 * (1.d0 - z1)
-            rhc_pressure   = p
-            rhc_soundspeed = an_eos%compute_soundspeed(p, rhc_density, z1)
+            rhc_density       = rhos(1) * z1 + rhos(2) * (1.d0 - z1)
+            rhc_pressure      = p
+            rhc_soundspeed    = compute_soundspeed(an_eos, p, rhos, [z1, 1.0_real_kind - z1])
             rhc_main_velocity = u
             rhc_alpha_heavy   = get_heavest_volume_fraction(z1)
             rhc_pressure_jump = compute_pressure_jump(z1, rhc_alpha_heavy, interface_curvature)
@@ -477,22 +511,24 @@ module viscous_five_equation_model_module
         associate(                                       &
             lhc_rhos    => primitive_variables_lhc(1:2), &
             lhc_p       => primitive_variables_lhc(6)  , &
-            lhc_z1      => primitive_variables_lhc(7)  , &
+            lhc_alpha1  => primitive_variables_lhc(7)  , &
             rhc_rhos    => primitive_variables_rhc(1:2), &
             rhc_p       => primitive_variables_rhc(6)  , &
-            rhc_z1      => primitive_variables_rhc(7)    &
+            rhc_alpha1  => primitive_variables_rhc(7)    &
         )
+
             if(ignore_kdivu_)then
                 lhc_k = 0.d0
                 rhc_k = 0.d0
             else
-                lhc_k = an_eos%compute_k(lhc_p, lhc_rhos, lhc_z1)
-                rhc_k = an_eos%compute_k(rhc_p, rhc_rhos, rhc_z1)
+                lhc_k = compute_k(an_eos, lhc_p, lhc_rhos, lhc_alpha1)
+                rhc_k = compute_k(an_eos, rhc_p, rhc_rhos, rhc_alpha1)
             end if
+
             flux(7, 1) = flux(7, 1) &
-                                   + (lhc_z1 + lhc_k) * (1.d0 / lhc_cell_volume) * numerical_velocity * face_area
+                                   + (lhc_alpha1 + lhc_k) * (1.d0 / lhc_cell_volume) * numerical_velocity * face_area
             flux(7, 2) = flux(7, 2) &
-                                   - (rhc_z1 + rhc_k) * (1.d0 / rhc_cell_volume) * numerical_velocity * face_area
+                                   - (rhc_alpha1 + rhc_k) * (1.d0 / rhc_cell_volume) * numerical_velocity * face_area
         end associate
 
         ! # surface tension term
@@ -588,13 +624,14 @@ module viscous_five_equation_model_module
         real (real_kind), intent(in) :: length
         real (real_kind) :: r
 
-        associate(                                                         &
-            density  => compute_mixture_density(primitive_variables), &
-            velocity => primitive_variables(3:5)                         , &
-            pressure => primitive_variables(6)                           , &
-            alpha1   => primitive_variables(7)                             &
+        associate(                                 &
+            densities => primitive_variables(1:2), &
+            velocity  => primitive_variables(3:5), &
+            pressure  => primitive_variables(6)  , &
+            alpha1    => primitive_variables(7)  , &
+            density   => compute_mixture_density(primitive_variables) &
         )
-            r = an_eos%compute_soundspeed(pressure, density, alpha1) + vector_magnitude(velocity) + mixture_dynamic_viscosity(alpha1) / (density * length)
+            r = compute_soundspeed(an_eos, pressure, densities, [alpha1, 1.0_real_kind - alpha1]) + vector_magnitude(velocity) + mixture_dynamic_viscosity(alpha1) / (density * length)
         end associate
     end function spectral_radius
 

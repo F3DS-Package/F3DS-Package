@@ -58,22 +58,21 @@ module five_equation_model_utils_module
 
         real(8) :: rho
 
-        associate(                                 &
-                rho1    => primitive_variables(1), &
-                rho2    => primitive_variables(2), &
-                u       => primitive_variables(3), &
-                v       => primitive_variables(4), &
-                w       => primitive_variables(5), &
-                p       => primitive_variables(6), &
-                z1      => primitive_variables(7)  &
+        associate(                                   &
+                rhos    => primitive_variables(1:2), &
+                u       => primitive_variables(3)  , &
+                v       => primitive_variables(4)  , &
+                w       => primitive_variables(5)  , &
+                p       => primitive_variables(6)  , &
+                z1      => primitive_variables(7)    &
             )
-            rho = rho1 * z1 + rho2 * (1.d0 - z1)
-            conservative_variables(1) = rho1 * z1
-            conservative_variables(2) = rho2 * (1.d0 - z1)
+            rho = rhos(1) * z1 + rhos(2) * (1.d0 - z1)
+            conservative_variables(1) = rhos(1) * z1
+            conservative_variables(2) = rhos(2) * (1.d0 - z1)
             conservative_variables(3) = u  * rho
             conservative_variables(4) = v  * rho
             conservative_variables(5) = w  * rho
-            conservative_variables(6) = an_eos%compute_internal_energy_density(p, rho, z1) + 0.5d0 * (u**2.d0 + v**2.d0 + w**2.d0) * rho
+            conservative_variables(6) = an_eos%compute_isobaric_internal_energy_density(p, rhos, [z1, 1.0_real_kind - z1]) + 0.5d0 * (u**2.d0 + v**2.d0 + w**2.d0) * rho
             conservative_variables(7) = z1
         end associate
     end function primitive_to_conservative
@@ -118,7 +117,7 @@ module five_equation_model_utils_module
                 primitive_variables(3) = rho_u / rho
                 primitive_variables(4) = rho_v / rho
                 primitive_variables(5) = rho_w / rho
-                primitive_variables(6) = an_eos%compute_pressure(ie, rho, primitive_variables(7))
+                primitive_variables(6) = an_eos%compute_isobaric_pressure(ie, primitive_variables(1:2), [primitive_variables(7), 1.0_real_kind - primitive_variables(7)])
             endif
         end associate
     end function conservative_to_primitive

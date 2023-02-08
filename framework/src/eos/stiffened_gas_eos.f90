@@ -21,16 +21,17 @@ module class_stiffened_gas_eos
 
         procedure, public, pass(self) :: initialize
         procedure, public, pass(self) :: compute_pressure
+        procedure, public, pass(self) :: compute_isobaric_pressure
         procedure, public, pass(self) :: compute_internal_energy_density
+        procedure, public, pass(self) :: compute_isobaric_internal_energy_density
         procedure, public, pass(self) :: compute_soundspeed
-        !procedure, public, pass(self) :: compute_mixture_soundspeed
-        !procedure, public, pass(self) :: compute_frozen_soundspeed
+        procedure, public, pass(self) :: compute_mixture_soundspeed
+        procedure, public, pass(self) :: compute_frozen_soundspeed
         procedure, public, pass(self) :: compute_wood_soundspeed
-        procedure, public, pass(self) :: compute_k
 
-        procedure, pass(self) :: compute_mixture_specific_heat_ratio
-        procedure, pass(self) :: compute_mixture_reference_pressure
-        procedure, pass(self) :: compute_phi
+        procedure, pass(self) :: compute_pi
+        procedure, pass(self) :: compute_gamma
+        procedure, pass(self) :: compute_mixture_density
     end type stiffened_gas_eos
 
     contains
@@ -59,110 +60,174 @@ module class_stiffened_gas_eos
         end do
     end subroutine
 
-    pure function compute_pressure(self, specific_internal_energy, density, volume_fraction) result(pressure)
-        class(stiffened_gas_eos), intent(in) :: self
-        real(real_kind), intent(in) :: specific_internal_energy
-        real(real_kind), intent(in) :: density
-        real(real_kind), intent(in) :: volume_fraction
-        real(real_kind)             :: pressure
-        real(real_kind)             :: g, pref
+    pure function compute_pressure(self, specific_internal_energy, density, phase_num) result(pressure)
+        class  (stiffened_gas_eos), intent(in)           :: self
+        real   (real_kind        ), intent(in)           :: specific_internal_energy
+        real   (real_kind        ), intent(in)           :: density
+        integer(int_kind         ), intent(in), optional :: phase_num
+        real   (real_kind        )                       :: pressure
 
-        g    = self%compute_mixture_specific_heat_ratio(volume_fraction)
-        pref = self%compute_mixture_reference_pressure (volume_fraction, g)
+        integer :: n
+        if(present(phase_num))then
+            n = phase_num
+        else
+            n = 1
+        endif
 
-        pressure = (g - 1.d0) * specific_internal_energy * density - g * pref
+        pressure = (self%specific_heat_ratio_(n) - 1.0_real_kind) * specific_internal_energy * density &
+                 - self%specific_heat_ratio_ (n) * self%reference_pressure_(n)
     end function compute_pressure
 
-    pure function compute_soundspeed(self, pressure, density, volume_fraction) result(soundspeed)
+    pure function compute_isobaric_pressure(self, specific_internal_energy, densities, volume_fractions) result(pressure)
         class(stiffened_gas_eos), intent(in) :: self
-        real(real_kind), intent(in) :: pressure
-        real(real_kind), intent(in) :: density
-        real(real_kind), intent(in) :: volume_fraction
-        real(real_kind)             :: soundspeed
-        real(real_kind)             :: g, pref
+        real (real_kind        ), intent(in) :: specific_internal_energy
+        real (real_kind        ), intent(in) :: densities(:)
+        real (real_kind        ), intent(in) :: volume_fractions(:)
+        real (real_kind        )             :: pressure
 
-        g    = self%compute_mixture_specific_heat_ratio(volume_fraction)
-        pref = self%compute_mixture_reference_pressure (volume_fraction, g)
-        soundspeed = sqrt(g * (pressure + pref) / density)
-    end function compute_soundspeed
+        pressure = (specific_internal_energy * self%compute_mixture_density(densities, volume_fractions) - self%compute_pi(volume_fractions)) / self%compute_gamma(volume_fractions)
+    end function compute_isobaric_pressure
 
-    pure function compute_internal_energy_density(self, pressure, density, volume_fraction) result(specific_internal_energy)
-        class(stiffened_gas_eos), intent(in) :: self
-        real(real_kind), intent(in) :: pressure
-        real(real_kind), intent(in) :: density
-        real(real_kind), intent(in) :: volume_fraction
-        real(real_kind)             :: specific_internal_energy
-        real(real_kind)             :: g, pref
+    pure function compute_internal_energy_density(self, pressure, density, phase_num) result(energy_density)
+        class  (stiffened_gas_eos), intent(in)           :: self
+        real   (real_kind        ), intent(in)           :: pressure
+        real   (real_kind        ), intent(in)           :: density
+        integer(int_kind         ), intent(in), optional :: phase_num
+        real   (real_kind        )                       :: energy_density
 
-        g    = self%compute_mixture_specific_heat_ratio(volume_fraction)
-        pref = self%compute_mixture_reference_pressure (volume_fraction, g)
-        specific_internal_energy = (pressure + g * pref) / (g - 1.d0)
+        integer :: n
+        if(present(phase_num))then
+            n = phase_num
+        else
+            n = 1
+        endif
+
+        energy_density = (pressure + self%specific_heat_ratio_(n) * self%reference_pressure_(n)) &
+                       / (self%specific_heat_ratio_(n) - 1.0_real_kind)
     end function compute_internal_energy_density
 
-    pure function compute_wood_soundspeed(self, pressure, densities, volume_fraction) result(soundspeed)
-        class(stiffened_gas_eos), intent(in) :: self
-        real(real_kind), intent(in) :: pressure
-        real(real_kind), intent(in) :: densities(:)
-        real(real_kind), intent(in) :: volume_fraction
-        real(real_kind)             :: soundspeed
-        real(real_kind)             :: g1, pref1, g2, pref2
-        real(real_kind)             :: squared_c1, squared_c2
+    pure function compute_isobaric_internal_energy_density(self, pressure, densities, volume_fractions) result(energy_density)
+        class  (stiffened_gas_eos), intent(in) :: self
+        real   (real_kind        ), intent(in) :: pressure
+        real   (real_kind        ), intent(in) :: densities(:)
+        real   (real_kind        ), intent(in) :: volume_fractions(:)
+        real   (real_kind        )             :: energy_density
 
-        if (volume_fraction < machine_epsilon) then
-            squared_c2 = self%specific_heat_ratio_(2) * (pressure + self%reference_pressure_(2)) / densities(2)
-            soundspeed = 1.d0 / densities(2) * squared_c2
-        else if (1.d0 - machine_epsilon < volume_fraction) then
-            squared_c1 = self%specific_heat_ratio_(1) * (pressure + self%reference_pressure_(2)) / densities(2)
-            soundspeed = 1.d0 / densities(1) * squared_c1
+        energy_density = self%compute_gamma(volume_fractions) * pressure + self%compute_pi(volume_fractions)
+    end function compute_isobaric_internal_energy_density
+
+    pure function compute_soundspeed(self, pressure, density, phase_num) result(soundspeed)
+        class  (stiffened_gas_eos), intent(in)           :: self
+        real   (real_kind        ), intent(in)           :: pressure
+        real   (real_kind        ), intent(in)           :: density
+        integer(int_kind         ), intent(in), optional :: phase_num
+        real   (real_kind        )                       :: soundspeed
+
+        integer :: n
+        if(present(phase_num))then
+            n = phase_num
         else
-            squared_c1 = self%specific_heat_ratio_(1) * (pressure + self%reference_pressure_(1)) / densities(1)
-            squared_c2 = self%specific_heat_ratio_(2) * (pressure + self%reference_pressure_(2)) / densities(2)
-            soundspeed = volume_fraction / densities(1) * squared_c1 + (1.d0 - volume_fraction)  / densities(2) * squared_c2
-        end if
+            n = 1
+        endif
+
+        soundspeed = sqrt(self%specific_heat_ratio_(n) * (pressure + self%reference_pressure_(n)) / max(density, machine_epsilon))
+    end function compute_soundspeed
+
+    pure function compute_mixture_soundspeed(self, pressure, densities, volume_fractions) result(soundspeed)
+        class(stiffened_gas_eos), intent(in) :: self
+        real (real_kind        ), intent(in) :: pressure
+        real (real_kind        ), intent(in) :: densities(:)
+        real (real_kind        ), intent(in) :: volume_fractions(:)
+        real (real_kind        )             :: soundspeed
+
+        real   (real_kind) :: sigma
+        integer(int_kind ) :: n
+
+        sigma = 0.0_real_kind
+        do n = 1, self%num_phase_, 1
+            sigma = sigma &
+                  + volume_fractions(n) * densities(n) * self%compute_soundspeed(pressure, densities(n), n) ** 2.0_real_kind &
+                  / (self%specific_heat_ratio_(n) - 1.0_real_kind)
+        end do
+        soundspeed = sqrt(sigma / (self%compute_mixture_density(densities, volume_fractions) * self%compute_gamma(volume_fractions)))
+    end function compute_mixture_soundspeed
+
+    pure function compute_frozen_soundspeed(self, pressures, densities, volume_fractions) result(soundspeed)
+        class(stiffened_gas_eos), intent(in) :: self
+        real (real_kind        ), intent(in) :: pressures(:)
+        real (real_kind        ), intent(in) :: densities(:)
+        real (real_kind        ), intent(in) :: volume_fractions(:)
+        real (real_kind        )             :: soundspeed
+
+        real   (real_kind) :: sigma, mixture_density
+        integer(int_kind ) :: n
+
+        mixture_density = self%compute_mixture_density(densities, volume_fractions)
+
+        sigma = 0.0_real_kind
+        do n = 1, self%num_phase_, 1
+            associate(mass_fraction => (volume_fractions(n) * densities(n) / mixture_density))
+                sigma = sigma + mass_fraction * self%compute_soundspeed(pressures(n), densities(n), n) ** 2.0_real_kind
+            end associate
+        end do
+        soundspeed = sqrt(sigma)
+    end function compute_frozen_soundspeed
+
+    pure function compute_wood_soundspeed(self, pressure, densities, volume_fractions) result(soundspeed)
+        class(stiffened_gas_eos), intent(in) :: self
+        real (real_kind        ), intent(in) :: pressure
+        real (real_kind        ), intent(in) :: densities(:)
+        real (real_kind        ), intent(in) :: volume_fractions(:)
+        real (real_kind        )             :: soundspeed
+
+        real   (real_kind) :: sigma
+        integer(int_kind ) :: n
+
+        sigma = 0.0_real_kind
+        do n = 1, self%num_phase_, 1
+            if(densities(n) <= 0.0_real_kind)cycle
+            sigma = sigma + volume_fractions(n) / (densities(n) * self%compute_soundspeed(pressure, densities(n), n))
+        end do
+        soundspeed = (self%compute_mixture_density(densities, volume_fractions) * sigma)**(-0.5_real_kind)
     end function compute_wood_soundspeed
 
-    pure function compute_k(self, pressure, densities, volume_fraction) result(k)
+    pure function compute_pi(self, volume_fractions) result(pi)
         class(stiffened_gas_eos), intent(in) :: self
-        real(real_kind), intent(in) :: pressure
-        real(real_kind), intent(in) :: densities(:)
-        real(real_kind), intent(in) :: volume_fraction
-        real(real_kind)             :: k
-        real(real_kind)             :: g1, pref1, g2, pref2
-        real(real_kind)             :: squared_c1, squared_c2
+        real (real_kind        ), intent(in) :: volume_fractions(:)
+        real (real_kind        )             :: pi
 
-        if (volume_fraction < machine_epsilon) then
-            k = 0.d0
-        else if (1.d0 - machine_epsilon < volume_fraction) then
-            k = 0.d0
-        else
-            squared_c1 = self%specific_heat_ratio_(1) * (pressure + self%reference_pressure_(1)) / densities(1)
-            squared_c2 = self%specific_heat_ratio_(2) * (pressure + self%reference_pressure_(2)) / densities(2)
-            k = volume_fraction * (1.d0 - volume_fraction) * (densities(2) * squared_c2 - densities(1) * squared_c1) &
-              / (volume_fraction * densities(2) * squared_c2 + (1.d0 - volume_fraction) * densities(1) * squared_c1)
-        end if
-    end function compute_k
+        integer :: n
 
-    pure function compute_mixture_specific_heat_ratio(self, volume_fraction) result(g)
+        pi = 0.0_real_kind
+        do n = 1, self%num_phase_, 1
+            pi = pi + volume_fractions(n) * self%specific_heat_ratio_(n) * self%reference_pressure_(n) / (self%specific_heat_ratio_(n) - 1.0_real_kind)
+        end do
+    end function compute_pi
+
+    pure function compute_gamma(self, volume_fractions) result(gamma)
         class(stiffened_gas_eos), intent(in) :: self
-        real(real_kind), intent(in) :: volume_fraction
-        real(real_kind)             :: g
-        g = 1.d0 + ((self%specific_heat_ratio_(1) - 1.d0) * (self%specific_heat_ratio_(2) - 1.d0)) &
-                 / (volume_fraction * (self%specific_heat_ratio_(2) - 1.d0) + (1.d0 - volume_fraction) * (self%specific_heat_ratio_(1) - 1.d0))
-    end function compute_mixture_specific_heat_ratio
+        real (real_kind        ), intent(in) :: volume_fractions(:)
+        real (real_kind        )             :: gamma
 
-    pure function compute_mixture_reference_pressure(self, volume_fraction, mixture_specific_heat_ratio) result(p)
-        class(stiffened_gas_eos), intent(in) :: self
-        real(real_kind), intent(in) :: volume_fraction, mixture_specific_heat_ratio
-        real(real_kind)             :: p
-        p = (mixture_specific_heat_ratio - 1.d0) / mixture_specific_heat_ratio &
-          * self%compute_phi(volume_fraction)
-    end function compute_mixture_reference_pressure
+        integer :: n
 
-    pure function compute_phi(self, volume_fraction) result(phi)
+        gamma = 0.0_real_kind
+        do n = 1, self%num_phase_, 1
+            gamma = gamma + volume_fractions(n) / (self%specific_heat_ratio_(n) - 1.0_real_kind)
+        end do
+    end function compute_gamma
+
+    pure function compute_mixture_density(self, densities, volume_fractions) result(density)
         class(stiffened_gas_eos), intent(in) :: self
-        real(real_kind), intent(in) :: volume_fraction
-        real(real_kind)             :: phi
-        phi =         volume_fraction  * self%specific_heat_ratio_(1) * self%reference_pressure_(1) / (self%specific_heat_ratio_(1) - 1.d0) &
-            + (1.d0 - volume_fraction) * self%specific_heat_ratio_(2) * self%reference_pressure_(2) / (self%specific_heat_ratio_(2) - 1.d0)
-    end function compute_phi
+        real (real_kind        ), intent(in) :: densities(:)
+        real (real_kind        ), intent(in) :: volume_fractions(:)
+        real (real_kind        )             :: density
+
+        integer :: n
+
+        density = 0.0_real_kind
+        do n = 1, self%num_phase_, 1
+            density = density + densities(n) * volume_fractions(n)
+        end do
+    end function compute_mixture_density
 end module class_stiffened_gas_eos
