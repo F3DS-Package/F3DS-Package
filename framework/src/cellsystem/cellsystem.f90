@@ -20,6 +20,7 @@ module class_cellsystem
     use abstract_time_increment_controller
     use abstract_initial_condition_parser
     use abstract_face_gradient_interpolator
+    use abstract_face_gradient_calculator
     use abstract_parallelizer
     use class_line_plotter
     use class_control_volume_profiler
@@ -155,6 +156,7 @@ module class_cellsystem
         procedure, public, pass(self) :: initialize_control_volume_profiler
         procedure, public, pass(self) :: initialize_surface_profiler
         procedure, public, pass(self) :: initialize_face_gradient_interpolator
+        procedure, public, pass(self) :: initialize_face_gradient_calculator
         procedure, public, pass(self) :: initialize_parallelizer
         generic  , public             :: initialize  => initialize_result_writer             , &
                                                         initialize_time_stepping             , &
@@ -171,6 +173,7 @@ module class_cellsystem
                                                         initialize_control_volume_profiler   , &
                                                         initialize_surface_profiler          , &
                                                         initialize_face_gradient_interpolator, &
+                                                        initialize_face_gradient_calculator  , &
                                                         initialize_parallelizer
         procedure, public, pass(self) :: result_writer_open_file
         generic  , public             :: open_file   => result_writer_open_file
@@ -498,6 +501,19 @@ module class_cellsystem
 #endif
         call a_face_gradient_interpolator%initialize(config)
     end subroutine initialize_face_gradient_interpolator
+
+    ! ### Face gradient calculator ###
+    subroutine initialize_face_gradient_calculator(self, a_face_gradient_calculator, config, num_conservative_variables)
+        class   (cellsystem              ), intent(inout) :: self
+        class   (face_gradient_calculator), intent(inout) :: a_face_gradient_calculator
+        class   (configuration           ), intent(inout) :: config
+        integer (int_kind                ), intent(in   ) :: num_conservative_variables
+
+#ifdef _DEBUG
+        call write_debuginfo("In initialize_face_gradient_calculator(), cellsystem.")
+#endif
+        call a_face_gradient_calculator%initialize(config)
+    end subroutine initialize_face_gradient_calculator
 
     ! ### Surface profiler ###
     subroutine initialize_surface_profiler(self, plotter, config, num_conservative_variables)
@@ -1389,7 +1405,7 @@ module class_cellsystem
         end do
     end subroutine compute_divergence_godunov_rank2
 
-    subroutine compute_divergence_godunov_facegrad_rank2(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos, a_face_gradient_interpolator,                                &
+    subroutine compute_divergence_godunov_facegrad_rank2(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos, a_face_gradient_interpolator, a_face_gradient_calculator, &
                                         primitive_variables_set, gradient_primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
                                         primitive_to_conservative_function, element_function)
 
@@ -1399,6 +1415,7 @@ module class_cellsystem
         class  (riemann_solver            ), intent(in   ) :: a_riemann_solver
         class  (eos                       ), intent(in   ) :: an_eos
         class  (face_gradient_interpolator), intent(in   ) :: a_face_gradient_interpolator
+        class  (face_gradient_calculator  ), intent(in   ) :: a_face_gradient_calculator
         real   (real_kind                 ), intent(in   ) :: primitive_variables_set          (:,:)
         real   (real_kind                 ), intent(in   ) :: gradient_primitive_variables_set (:,:)
         real   (real_kind                 ), intent(inout) :: residual_set                     (:,:)
@@ -1433,13 +1450,13 @@ module class_cellsystem
                     i, self%num_local_cells, num_primitive_variables                                                     &
                 )
 
-                if(.not. self%is_real_cell(rhc_index))then
-                    face_gradient_primitive_variables(:) = self%compute_boundary_gradient(                &
+                if(.not. self%is_real_cell(rhc_index))then ! It's boundary face!
+                    face_gradient_primitive_variables(:) = a_face_gradient_calculator%compute(            &
                         primitive_variables_set   (:,lhc_index), primitive_variables_set   (:,rhc_index), &
                         self%cell_centor_positions(:,lhc_index), self%cell_centor_positions(:,rhc_index), &
                         num_primitive_variables                                                           &
                     )
-                else ! It's boundary face!
+                else
                     face_gradient_primitive_variables(:) = a_face_gradient_interpolator%interpolate(                  &
                         gradient_primitive_variables_set(:,lhc_index), gradient_primitive_variables_set(:,rhc_index), &
                         primitive_variables_set         (:,lhc_index), primitive_variables_set         (:,rhc_index), &

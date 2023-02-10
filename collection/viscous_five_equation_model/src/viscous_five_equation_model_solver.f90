@@ -14,6 +14,7 @@ program viscous_five_equation_model_solver
     use class_midpoint_interpolator
     ! Face gradient
     use class_midpoint_face_gradient_interpolator
+    use class_central_difference_face_gradient_calculator
     ! Time stepping
     use abstract_time_stepping
     use time_stepping_generator_module
@@ -107,6 +108,7 @@ program viscous_five_equation_model_solver
     type(green_gauss                                  ) :: a_gradient_calculator
     type(midpoint_interpolator                        ) :: a_interpolator
     type(midpoint_face_gradient_interpolator          ) :: a_face_gradient_interpolator
+    type(central_difference_face_gradient_calculator  ) :: a_face_gradient_calculator
     type(vtk_result_writer                            ) :: a_result_writer
     type(end_time_criterion                           ) :: a_termination_criterion
     type(openmp_parallelizer                          ) :: a_parallelizer
@@ -153,6 +155,7 @@ program viscous_five_equation_model_solver
     call a_cellsystem%initialize(a_line_plotter              , a_configuration, num_conservative_variables)
     call a_cellsystem%initialize(a_control_volume_profiler   , a_configuration, num_conservative_variables)
     call a_cellsystem%initialize(a_face_gradient_interpolator, a_configuration, num_conservative_variables)
+    call a_cellsystem%initialize(a_face_gradient_calculator  , a_configuration, num_conservative_variables)
     call a_cellsystem%initialize(a_surface_profiler          , a_configuration, num_conservative_variables)
 
     ! Set initial condition
@@ -257,6 +260,7 @@ program viscous_five_equation_model_solver
                 a_riemann_solver                , &
                 an_eos                          , &
                 a_face_gradient_interpolator    , &
+                a_face_gradient_calculator      , &
                 primitive_variables_set         , &
                 gradient_primitive_variables_set, &
                 residual_set                    , &
