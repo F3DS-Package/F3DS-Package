@@ -33,8 +33,6 @@ program viscous_five_equation_model_solver
     ! Time increment control
     use abstract_time_increment_controller
     use time_increment_controller_generator_module
-    ! Parallel computing support
-    use class_openmp_parallelizer
     ! Measurements
     use class_line_plotter
     use class_control_volume_profiler
@@ -111,7 +109,6 @@ program viscous_five_equation_model_solver
     type(central_difference_face_gradient_calculator  ) :: a_face_gradient_calculator
     type(vtk_result_writer                            ) :: a_result_writer
     type(end_time_criterion                           ) :: a_termination_criterion
-    type(openmp_parallelizer                          ) :: a_parallelizer
     type(line_plotter                                 ) :: a_line_plotter
     type(control_volume_profiler                      ) :: a_control_volume_profiler
     type(surface_profiler                             ) :: a_surface_profiler
@@ -126,6 +123,9 @@ program viscous_five_equation_model_solver
 
     ! Read config
     call a_configuration%parse("config.json")
+
+    ! Initialize cellsystem
+    call a_cellsystem%initialize(a_configuration)
 
     ! Allocate schemes
     call f3ds_time_stepping_generator               (a_configuration, a_time_stepping            )
@@ -142,7 +142,6 @@ program viscous_five_equation_model_solver
     call a_cellsystem%initialize(gradient_primitive_variables_set, num_gradient_primitive_variables)
     call a_cellsystem%initialize(surface_tension_variables_set   , num_surface_tension_variables   )
     ! Initialize schemes & utils
-    call a_cellsystem%initialize(a_parallelizer              , a_configuration, num_conservative_variables)
     call a_cellsystem%initialize(an_eos                      , a_configuration, num_conservative_variables)
     call a_cellsystem%initialize(a_riemann_solver            , a_configuration, num_conservative_variables)
     call a_cellsystem%initialize(a_time_stepping             , a_configuration, num_conservative_variables)
@@ -160,7 +159,7 @@ program viscous_five_equation_model_solver
 
     ! Set initial condition
     call a_cellsystem%read_initial_condition(an_initial_condition_parser, a_configuration, conservative_variables_set)
-    call a_cellsystem%conservative_to_primitive_variables_all(a_parallelizer, an_eos, conservative_variables_set, primitive_variables_set, num_primitive_variables, conservative_to_primitive)
+    call a_cellsystem%conservative_to_primitive_variables_all(an_eos, conservative_variables_set, primitive_variables_set, num_primitive_variables, conservative_to_primitive)
 
     ! Initialize model
     call initialize_model(a_configuration, primitive_variables_set, a_cellsystem%get_number_of_cells())
@@ -187,11 +186,10 @@ program viscous_five_equation_model_solver
 
         call a_cellsystem%show_timestepping_infomation()
 
-        call a_cellsystem%prepare_time_stepping(a_parallelizer, a_time_stepping, conservative_variables_set, residual_set)
+        call a_cellsystem%prepare_time_stepping(a_time_stepping, conservative_variables_set, residual_set)
 
         do stage_num = 1, a_cellsystem%get_number_of_stages(a_time_stepping), 1
             call a_cellsystem%apply_boundary_condition(                  &
-                a_parallelizer                                         , &
                 primitive_variables_set                                , &
                 num_primitive_variables                                , &
                 rotate_primitive                                       , &
@@ -204,21 +202,20 @@ program viscous_five_equation_model_solver
             )
 
             ! Compute gradient primitive variables
-            call a_cellsystem%substitute_zeros(a_parallelizer, gradient_primitive_variables_set)
-            call a_cellsystem%compute_gradient(a_parallelizer, a_gradient_calculator, primitive_variables_set(:,:), gradient_primitive_variables_set(:,:), num_primitive_variables)
+            call a_cellsystem%substitute_zeros(gradient_primitive_variables_set)
+            call a_cellsystem%compute_gradient(a_gradient_calculator, primitive_variables_set(:,:), gradient_primitive_variables_set(:,:), num_primitive_variables)
 
             if(apply_surface_tension())then
                 ! Initialize
-                call a_cellsystem%substitute_zeros(a_parallelizer, surface_tension_variables_set)
+                call a_cellsystem%substitute_zeros(surface_tension_variables_set)
 
                 ! Compute normarized gradient volume fraction
-                call a_cellsystem%operate_cellwise(a_parallelizer, surface_tension_variables_set, primitive_variables_set, num_surface_tension_variables, compute_smoothed_volume_fraction)
-                call a_cellsystem%compute_gradient(a_parallelizer, a_gradient_calculator, surface_tension_variables_set(1,:), surface_tension_variables_set(2:4,:))
-                call a_cellsystem%operate_cellwise(a_parallelizer, surface_tension_variables_set, num_surface_tension_variables, normalize_gradient_volume_fraction)
+                call a_cellsystem%operate_cellwise(surface_tension_variables_set, primitive_variables_set, num_surface_tension_variables, compute_smoothed_volume_fraction)
+                call a_cellsystem%compute_gradient(a_gradient_calculator, surface_tension_variables_set(1,:), surface_tension_variables_set(2:4,:))
+                call a_cellsystem%operate_cellwise(surface_tension_variables_set, num_surface_tension_variables, normalize_gradient_volume_fraction)
 
                 ! Apply BC for normalized gradient volume flaction
                 call a_cellsystem%apply_boundary_condition(                   &
-                    a_parallelizer                                          , &
                     surface_tension_variables_set(2:4, :)                   , &
                     3                                                       , &
                     rotate_gradient_value                                   , &
@@ -231,17 +228,16 @@ program viscous_five_equation_model_solver
                 )
 
                 ! Compute a negative heavest fluid curvature
-                call a_cellsystem%compute_divergence(a_parallelizer, a_interpolator, surface_tension_variables_set(2:4, :), surface_tension_variables_set(5, :))
+                call a_cellsystem%compute_divergence(a_interpolator, surface_tension_variables_set(2:4, :), surface_tension_variables_set(5, :))
 
                 ! Smoothing curvature
-                call a_cellsystem%smooth_variables(a_parallelizer, surface_tension_variables_set, curvature_smoothing_weight)
+                call a_cellsystem%smooth_variables(surface_tension_variables_set, curvature_smoothing_weight)
 
                 ! Curvature is copied to {@code primitive_variables_set}.
-                call a_cellsystem%operate_cellwise(a_parallelizer, primitive_variables_set, surface_tension_variables_set, num_primitive_variables, curvature_preprocessing)
+                call a_cellsystem%operate_cellwise(primitive_variables_set, surface_tension_variables_set, num_primitive_variables, curvature_preprocessing)
 
                 ! Re apply BC for curvature
                 call a_cellsystem%apply_boundary_condition(                  &
-                    a_parallelizer                                         , &
                     primitive_variables_set                                , &
                     num_primitive_variables                                , &
                     rotate_primitive                                       , &
@@ -255,7 +251,6 @@ program viscous_five_equation_model_solver
             end if
 
             call a_cellsystem%compute_divergence( &
-                a_parallelizer                  , &
                 a_reconstructor                 , &
                 a_riemann_solver                , &
                 an_eos                          , &
@@ -270,9 +265,9 @@ program viscous_five_equation_model_solver
                 flux_function                     &
             )
 
-            call a_cellsystem%compute_source_term(a_parallelizer, primitive_variables_set, residual_set, num_conservative_variables, compute_source_term)
+            call a_cellsystem%compute_source_term(primitive_variables_set, residual_set, num_conservative_variables, compute_source_term)
 
-            call a_cellsystem%compute_next_stage(a_parallelizer, a_time_stepping, an_eos, stage_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, conservative_to_primitive)
+            call a_cellsystem%compute_next_stage(a_time_stepping, an_eos, stage_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, conservative_to_primitive)
         end do
 
         call a_cellsystem%increment_time()

@@ -21,10 +21,12 @@ module class_cellsystem
     use abstract_initial_condition_parser
     use abstract_face_gradient_interpolator
     use abstract_face_gradient_calculator
-    use abstract_parallelizer
     use class_line_plotter
     use class_control_volume_profiler
     use class_surface_profiler
+#ifdef _OPENMP
+    use omp_lib
+#endif
 
     implicit none
 
@@ -45,6 +47,9 @@ module class_cellsystem
     !                                            (boundary/inner face)
     type, public :: cellsystem
         private
+
+        ! Parallel computing
+        integer, private :: num_threads = 1
 
         ! Time
         integer(int_kind ) :: num_steps      = 0
@@ -141,6 +146,7 @@ module class_cellsystem
 
         contains
         ! ### Common ###
+        procedure, public, pass(self) :: initilaize_cellsystem
         procedure, public, pass(self) :: initialize_result_writer
         procedure, public, pass(self) :: initialize_time_stepping
         procedure, public, pass(self) :: initialize_reconstructor
@@ -157,8 +163,8 @@ module class_cellsystem
         procedure, public, pass(self) :: initialize_surface_profiler
         procedure, public, pass(self) :: initialize_face_gradient_interpolator
         procedure, public, pass(self) :: initialize_face_gradient_calculator
-        procedure, public, pass(self) :: initialize_parallelizer
-        generic  , public             :: initialize  => initialize_result_writer             , &
+        generic  , public             :: initialize  => initilaize_cellsystem                , &
+                                                        initialize_result_writer             , &
                                                         initialize_time_stepping             , &
                                                         initialize_reconstructor             , &
                                                         initialize_riemann_solver            , &
@@ -173,8 +179,7 @@ module class_cellsystem
                                                         initialize_control_volume_profiler   , &
                                                         initialize_surface_profiler          , &
                                                         initialize_face_gradient_interpolator, &
-                                                        initialize_face_gradient_calculator  , &
-                                                        initialize_parallelizer
+                                                        initialize_face_gradient_calculator
         procedure, public, pass(self) :: result_writer_open_file
         generic  , public             :: open_file   => result_writer_open_file
         procedure, public, pass(self) :: result_writer_close_file
@@ -470,24 +475,25 @@ module class_cellsystem
 
     contains
 
-    ! ### Show infomaiton ###
+    ! ### Cellsystem ###
+    subroutine initilaize_cellsystem(self, config)
+        class(cellsystem   ), intent(inout) :: self
+        class(configuration), intent(inout) :: config
+
+        logical           :: found
+
+#ifdef _OPENMP
+        call config%get_int                ("Parallel computing.Number of threads", self%num_threads, found, 1)
+        if(.not. found) call write_warring("'Parallel computing.Number of threads' is not found in configuration file you set. Solver is executed a single thread.")
+
+        call omp_set_num_threads(self%num_threads)
+#endif
+    end subroutine initilaize_cellsystem
+
     subroutine show_timestepping_infomation(self)
         class(cellsystem), intent(inout) :: self
         print '(3(a, g0))', "Step: ", self%num_steps, ", Time increment: ", self%time_increment, ", Time: ", self%time
     end subroutine show_timestepping_infomation
-
-    ! ### Parallelizer ###
-    subroutine initialize_parallelizer(self, a_parallelizer, config, num_conservative_variables)
-        class   (cellsystem   ), intent(inout) :: self
-        class   (parallelizer ), intent(inout) :: a_parallelizer
-        class   (configuration), intent(inout) :: config
-        integer (int_kind     ), intent(in   ) :: num_conservative_variables
-
-#ifdef _DEBUG
-        call write_debuginfo("In initialize_parallelizer(), cellsystem.")
-#endif
-        call a_parallelizer%initialize(config)
-    end subroutine
 
     ! ### Face gradient interpolator ###
     subroutine initialize_face_gradient_interpolator(self, a_face_gradient_interpolator, config, num_conservative_variables)
@@ -679,16 +685,15 @@ module class_cellsystem
     end function satisfy_termination_criterion
 
     ! ### Boundary Condition ###
-    subroutine apply_boundary_condition(self, a_parallelizer, variables_set, num_variables, &
-                                        compute_rotate_variables_function                 , &
-                                        compute_unrotate_variables_function               , &
-                                        empty_condition_function                          , &
-                                        symmetric_condition_function                      , &
-                                        nonslip_wall_condition_function                   , &
-                                        slip_wall_condition_function                      , &
-                                        outflow_condition_function                             )
+    subroutine apply_boundary_condition(self, variables_set, num_variables  , &
+                                        compute_rotate_variables_function   , &
+                                        compute_unrotate_variables_function , &
+                                        empty_condition_function            , &
+                                        symmetric_condition_function        , &
+                                        nonslip_wall_condition_function     , &
+                                        slip_wall_condition_function        , &
+                                        outflow_condition_function               )
         class  (cellsystem  ), intent(inout) :: self
-        class  (parallelizer), intent(in   ) :: a_parallelizer
         real   (real_kind   ), intent(inout) :: variables_set(:,:)
         integer(int_kind    ), intent(in   ) :: num_variables
 
@@ -708,7 +713,6 @@ module class_cellsystem
 #endif
 
         if (present(empty_condition_function)) call self%apply_empty_condition( &
-            a_parallelizer                                                    , &
             variables_set                                                     , &
             num_variables                                                     , &
             compute_rotate_variables_function                                 , &
@@ -717,7 +721,6 @@ module class_cellsystem
         )
 
         if (present(symmetric_condition_function)) call self%apply_symmetric_condition( &
-            a_parallelizer                                                            , &
             variables_set                                                             , &
             num_variables                                                             , &
             compute_rotate_variables_function                                         , &
@@ -726,7 +729,6 @@ module class_cellsystem
         )
 
         if (present(nonslip_wall_condition_function)) call self%apply_nonslip_wall_condition( &
-            a_parallelizer                                                                  , &
             variables_set                                                                   , &
             num_variables                                                                   , &
             compute_rotate_variables_function                                               , &
@@ -735,7 +737,6 @@ module class_cellsystem
         )
 
         if (present(slip_wall_condition_function)) call self%apply_slip_wall_condition( &
-            a_parallelizer                                                            , &
             variables_set                                                             , &
             num_variables                                                             , &
             compute_rotate_variables_function                                         , &
@@ -744,7 +745,6 @@ module class_cellsystem
         )
 
         if (present(outflow_condition_function)) call self%apply_outflow_condition( &
-            a_parallelizer                                                        , &
             variables_set                                                         , &
             num_variables                                                         , &
             compute_rotate_variables_function                                     , &
@@ -753,10 +753,9 @@ module class_cellsystem
         )
     end subroutine apply_boundary_condition
 
-    subroutine apply_outflow_condition(self, a_parallelizer, variables_set, num_variables, &
+    subroutine apply_outflow_condition(self, variables_set, num_variables, &
         compute_rotate_variables_function, compute_unrotate_variables_function, boundary_condition_function)
         class  (cellsystem  ), intent(inout) :: self
-        class  (parallelizer), intent(in   ) :: a_parallelizer
         real   (real_kind   ), intent(inout) :: variables_set(:,:)
         integer(int_kind    ), intent(in   ) :: num_variables
 
@@ -788,10 +787,9 @@ module class_cellsystem
         end do
     end subroutine apply_outflow_condition
 
-    subroutine apply_nonslip_wall_condition(self, a_parallelizer, variables_set, num_variables, &
+    subroutine apply_nonslip_wall_condition(self, variables_set, num_variables, &
         compute_rotate_variables_function, compute_unrotate_variables_function, boundary_condition_function)
         class  (cellsystem  ), intent(inout) :: self
-        class  (parallelizer), intent(in   ) :: a_parallelizer
         real   (real_kind   ), intent(inout) :: variables_set(:,:)
         integer(int_kind    ), intent(in   ) :: num_variables
 
@@ -823,10 +821,9 @@ module class_cellsystem
         end do
     end subroutine apply_nonslip_wall_condition
 
-    subroutine apply_symmetric_condition(self, a_parallelizer, variables_set, num_variables, &
+    subroutine apply_symmetric_condition(self, variables_set, num_variables, &
         compute_rotate_variables_function, compute_unrotate_variables_function, boundary_condition_function)
         class  (cellsystem  ), intent(inout) :: self
-        class  (parallelizer), intent(in   ) :: a_parallelizer
         real   (real_kind   ), intent(inout) :: variables_set(:,:)
         integer(int_kind    ), intent(in   ) :: num_variables
 
@@ -858,10 +855,9 @@ module class_cellsystem
         end do
     end subroutine apply_symmetric_condition
 
-    subroutine apply_slip_wall_condition(self, a_parallelizer, variables_set, num_variables, &
+    subroutine apply_slip_wall_condition(self, variables_set, num_variables, &
         compute_rotate_variables_function, compute_unrotate_variables_function, boundary_condition_function)
         class  (cellsystem  ), intent(inout) :: self
-        class  (parallelizer), intent(in   ) :: a_parallelizer
         real   (real_kind   ), intent(inout) :: variables_set(:,:)
         integer(int_kind    ), intent(in   ) :: num_variables
 
@@ -893,10 +889,9 @@ module class_cellsystem
         end do
     end subroutine apply_slip_wall_condition
 
-    subroutine apply_empty_condition(self, a_parallelizer, variables_set, num_variables, &
+    subroutine apply_empty_condition(self, variables_set, num_variables, &
         compute_rotate_variables_function, compute_unrotate_variables_function, boundary_condition_function)
         class  (cellsystem  ), intent(inout) :: self
-        class  (parallelizer), intent(in   ) :: a_parallelizer
         real   (real_kind   ), intent(inout) :: variables_set(:,:)
         integer(int_kind    ), intent(in   ) :: num_variables
 
@@ -987,9 +982,8 @@ module class_cellsystem
         call an_initial_condition_parser%close()
     end subroutine read_initial_condition
 
-    subroutine conservative_to_primitive_variables_all(self, a_parallelizer, an_eos, conservative_variables_set, primitive_variables_set, num_primitive_variables, conservative_to_primitive_function)
+    subroutine conservative_to_primitive_variables_all(self, an_eos, conservative_variables_set, primitive_variables_set, num_primitive_variables, conservative_to_primitive_function)
         class  (cellsystem              ), intent(inout) :: self
-        class  (parallelizer            ), intent(in   ) :: a_parallelizer
         class  (eos                     ), intent(in   ) :: an_eos
         real   (real_kind               ), intent(in   ) :: conservative_variables_set(:,:)
         real   (real_kind               ), intent(inout) :: primitive_variables_set(:,:)
@@ -1009,9 +1003,8 @@ module class_cellsystem
         end do
     end subroutine conservative_to_primitive_variables_all
 
-    subroutine operate_cellwise_rank2(self, a_parallelizer, variables_set, num_variables, operator_function)
+    subroutine operate_cellwise_rank2(self, variables_set, num_variables, operator_function)
         class  (cellsystem  ), intent(inout) :: self
-        class  (parallelizer), intent(in   ) :: a_parallelizer
         real   (real_kind   ), intent(inout) :: variables_set(:,:)
         integer(int_kind    ), intent(in   ) :: num_variables
 
@@ -1029,9 +1022,8 @@ module class_cellsystem
         end do
     end subroutine operate_cellwise_rank2
 
-    subroutine operate_cellwise_subarray_rank2(self, a_parallelizer, primary_variables_set, secondary_variables_set, num_variables, operator_function)
+    subroutine operate_cellwise_subarray_rank2(self, primary_variables_set, secondary_variables_set, num_variables, operator_function)
         class  (cellsystem  ), intent(inout) :: self
-        class  (parallelizer), intent(in   ) :: a_parallelizer
         real   (real_kind   ), intent(inout) :: primary_variables_set(:,:), secondary_variables_set(:,:)
         integer(int_kind    ), intent(in   ) :: num_variables
 
@@ -1049,9 +1041,8 @@ module class_cellsystem
         end do
     end subroutine operate_cellwise_subarray_rank2
 
-    subroutine smooth_variables(self, a_parallelizer, variables_set, weight_function)
+    subroutine smooth_variables(self, variables_set, weight_function)
         class  (cellsystem  ), intent(inout) :: self
-        class  (parallelizer), intent(in   ) :: a_parallelizer
         real   (real_kind   ), intent(inout) :: variables_set(:,:)
         procedure(weight_function_interface) :: weight_function
 
@@ -1105,9 +1096,8 @@ module class_cellsystem
         end do
     end subroutine smooth_variables
 
-    subroutine substitute_rank2(self, a_parallelizer, variables, val)
+    subroutine substitute_rank2(self, variables, val)
         class(cellsystem  ), intent(inout) :: self
-        class(parallelizer), intent(in   ) :: a_parallelizer
         real (real_kind   ), intent(inout) :: variables(:,:)
         real (real_kind   ), intent(in   ) :: val
 
@@ -1122,9 +1112,8 @@ module class_cellsystem
         end do
     end subroutine substitute_rank2
 
-    subroutine substitute_zeros_rank2(self, a_parallelizer, variables)
+    subroutine substitute_zeros_rank2(self, variables)
         class(cellsystem  ), intent(inout) :: self
-        class(parallelizer), intent(in   ) :: a_parallelizer
         real (real_kind   ), intent(inout) :: variables(:,:)
 
         integer(int_kind) :: i
@@ -1132,12 +1121,11 @@ module class_cellsystem
 #ifdef _DEBUG
         call write_debuginfo("In substitute_zeros_rank2(), cellsystem.")
 #endif
-        call self%substitute_rank2(a_parallelizer, variables, 0._real_kind)
+        call self%substitute_rank2(variables, 0._real_kind)
     end subroutine substitute_zeros_rank2
 
-    subroutine substitute_rank1(self, a_parallelizer, variables, val)
+    subroutine substitute_rank1(self, variables, val)
         class(cellsystem  ), intent(inout) :: self
-        class(parallelizer), intent(in   ) :: a_parallelizer
         real (real_kind   ), intent(inout) :: variables(:)
         real (real_kind   ), intent(in   ) :: val
 
@@ -1152,9 +1140,8 @@ module class_cellsystem
         end do
     end subroutine substitute_rank1
 
-    subroutine substitute_zeros_rank1(self, a_parallelizer, variables)
+    subroutine substitute_zeros_rank1(self, variables)
         class(cellsystem  ), intent(inout) :: self
-        class(parallelizer), intent(in   ) :: a_parallelizer
         real (real_kind   ), intent(inout) :: variables(:)
 
         integer(int_kind) :: i
@@ -1162,7 +1149,7 @@ module class_cellsystem
 #ifdef _DEBUG
         call write_debuginfo("In substitute_zeros_rank1(), cellsystem.")
 #endif
-        call self%substitute_rank1(a_parallelizer, variables, 0._real_kind)
+        call self%substitute_rank1(variables, 0._real_kind)
     end subroutine substitute_zeros_rank1
 
     ! ### Gradient Calculator ###
@@ -1178,9 +1165,8 @@ module class_cellsystem
         call a_gradient_calculator%initialize(config)
     end subroutine initialize_gradient_calculator
 
-    subroutine compute_gradient_rank2(self, a_parallelizer, a_gradient_calculator, variables_set, gradient_variables_set, num_variables)
+    subroutine compute_gradient_rank2(self, a_gradient_calculator, variables_set, gradient_variables_set, num_variables)
         class  (cellsystem         ), intent(inout) :: self
-        class  (parallelizer       ), intent(in   ) :: a_parallelizer
         class  (gradient_calculator), intent(inout) :: a_gradient_calculator
         real   (real_kind          ), intent(in   ) :: variables_set            (:,:)
         real   (real_kind          ), intent(inout) :: gradient_variables_set   (:,:)
@@ -1219,9 +1205,8 @@ module class_cellsystem
         end do
     end subroutine compute_gradient_rank2
 
-    subroutine compute_gradient_rank1(self, a_parallelizer, a_gradient_calculator, variable_set, gradient_variable_set)
+    subroutine compute_gradient_rank1(self, a_gradient_calculator, variable_set, gradient_variable_set)
         class(cellsystem         ), intent(inout) :: self
-        class(parallelizer       ), intent(in   ) :: a_parallelizer
         class(gradient_calculator), intent(inout) :: a_gradient_calculator
         real (real_kind          ), intent(in   ) :: variable_set            (:)
         real (real_kind          ), intent(inout) :: gradient_variable_set   (:,:)
@@ -1269,9 +1254,8 @@ module class_cellsystem
         call a_interpolator%initialize(config)
     end subroutine initialize_interpolator
 
-    subroutine compute_divergence_rank2(self, a_parallelizer, a_interpolator, variables_set, divergence_variables_set, num_variables)
+    subroutine compute_divergence_rank2(self, a_interpolator, variables_set, divergence_variables_set, num_variables)
         class  (cellsystem  ), intent(inout) :: self
-        class  (parallelizer), intent(in   ) :: a_parallelizer
         class  (interpolator), intent(inout) :: a_interpolator
         real   (real_kind   ), intent(in   ) :: variables_set           (:,:)
         real   (real_kind   ), intent(inout) :: divergence_variables_set(:,:)
@@ -1313,9 +1297,8 @@ module class_cellsystem
         end do
     end subroutine compute_divergence_rank2
 
-    subroutine compute_divergence_rank1(self, a_parallelizer, a_interpolator, variable_set, divergence_variable_set)
+    subroutine compute_divergence_rank1(self, a_interpolator, variable_set, divergence_variable_set)
         class(cellsystem   ), intent(inout) :: self
-        class(parallelizer ), intent(in   ) :: a_parallelizer
         class(interpolator ), intent(inout) :: a_interpolator
         real (real_kind    ), intent(in   ) :: variable_set              (:,:)
         real (real_kind    ), intent(inout) :: divergence_variable_set   (:)
@@ -1341,12 +1324,11 @@ module class_cellsystem
         end do
     end subroutine compute_divergence_rank1
 
-    subroutine compute_divergence_godunov_rank2(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos,                            &
+    subroutine compute_divergence_godunov_rank2(self, a_reconstructor, a_riemann_solver, an_eos,                                         &
                                              primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
                                              primitive_to_conservative_function, element_function)
 
         class  (cellsystem    ), intent(in   ) :: self
-        class  (parallelizer  ), intent(in   ) :: a_parallelizer
         class  (reconstructor ), intent(in   ) :: a_reconstructor
         class  (riemann_solver), intent(in   ) :: a_riemann_solver
         class  (eos           ), intent(in   ) :: an_eos
@@ -1405,12 +1387,11 @@ module class_cellsystem
         end do
     end subroutine compute_divergence_godunov_rank2
 
-    subroutine compute_divergence_godunov_facegrad_rank2(self, a_parallelizer, a_reconstructor, a_riemann_solver, an_eos, a_face_gradient_interpolator, a_face_gradient_calculator, &
+    subroutine compute_divergence_godunov_facegrad_rank2(self, a_reconstructor, a_riemann_solver, an_eos, a_face_gradient_interpolator, a_face_gradient_calculator,  &
                                         primitive_variables_set, gradient_primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
                                         primitive_to_conservative_function, element_function)
 
         class  (cellsystem                ), intent(in   ) :: self
-        class  (parallelizer              ), intent(in   ) :: a_parallelizer
         class  (reconstructor             ), intent(in   ) :: a_reconstructor
         class  (riemann_solver            ), intent(in   ) :: a_riemann_solver
         class  (eos                       ), intent(in   ) :: an_eos
@@ -1489,9 +1470,8 @@ module class_cellsystem
         end do
     end subroutine compute_divergence_godunov_facegrad_rank2
 
-    subroutine compute_source_term(self, a_parallelizer, variables_set, residual_set, num_conservative_variables, compute_source_term_function)
+    subroutine compute_source_term(self, variables_set, residual_set, num_conservative_variables, compute_source_term_function)
         class  (cellsystem  ), intent(in   ) :: self
-        class  (parallelizer), intent(in   ) :: a_parallelizer
         real   (real_kind   ), intent(in   ) :: variables_set(:,:)
         real   (real_kind   ), intent(inout) :: residual_set (:,:)
         integer(int_kind    ), intent(in   ) :: num_conservative_variables
@@ -1564,11 +1544,10 @@ module class_cellsystem
         call a_time_stepping%initialize(config, self%num_cells, num_conservative_variables)
     end subroutine initialize_time_stepping
 
-    subroutine compute_next_stage_primitive_rank2(self, a_parallelizer, a_time_stepping, an_eos, stage_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, &
+    subroutine compute_next_stage_primitive_rank2(self, a_time_stepping, an_eos, stage_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, &
         conservative_to_primitive_function)
 
         class  (cellsystem         ), intent(inout) :: self
-        class  (parallelizer       ), intent(in   ) :: a_parallelizer
         class  (time_stepping      ), intent(inout) :: a_time_stepping
         class  (eos                ), intent(in   ) :: an_eos
         integer(int_kind           ), intent(in   ) :: stage_num
@@ -1593,10 +1572,9 @@ module class_cellsystem
         end do
     end subroutine compute_next_stage_primitive_rank2
 
-    subroutine compute_next_stage_rank2(self, a_parallelizer, a_time_stepping, stage_num, conservative_variables_set, residual_set)
+    subroutine compute_next_stage_rank2(self, a_time_stepping, stage_num, conservative_variables_set, residual_set)
 
         class  (cellsystem         ), intent(inout) :: self
-        class  (parallelizer       ), intent(in   ) :: a_parallelizer
         class  (time_stepping      ), intent(inout) :: a_time_stepping
         integer(int_kind           ), intent(in   ) :: stage_num
         real   (real_kind          ), intent(inout) :: conservative_variables_set(:,:)
@@ -1615,10 +1593,9 @@ module class_cellsystem
         end do
     end subroutine compute_next_stage_rank2
 
-    subroutine compute_next_stage_rank1(self, a_parallelizer, a_time_stepping, stage_num, conservative_variable_set, residual_set)
+    subroutine compute_next_stage_rank1(self, a_time_stepping, stage_num, conservative_variable_set, residual_set)
 
         class  (cellsystem         ), intent(inout) :: self
-        class  (parallelizer       ), intent(in   ) :: a_parallelizer
         class  (time_stepping      ), intent(inout) :: a_time_stepping
         integer(int_kind           ), intent(in   ) :: stage_num
         real   (real_kind          ), intent(inout) :: conservative_variable_set(:)
@@ -1641,12 +1618,10 @@ module class_cellsystem
 
     subroutine prepare_time_stepping(    &
         self                      , &
-        a_parallelizer            , &
         a_time_stepping           , &
         conservative_variables_set, &
         residual_set                  )
         class(cellsystem   ), intent(inout) :: self
-        class(parallelizer ), intent(in   ) :: a_parallelizer
         class(time_stepping), intent(inout) :: a_time_stepping
         real (real_kind    ), intent(inout) :: conservative_variables_set(:,:)
         real (real_kind    ), intent(inout) :: residual_set              (:,:)

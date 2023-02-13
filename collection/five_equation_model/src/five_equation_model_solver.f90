@@ -30,8 +30,6 @@ program five_equation_model_solver
     ! Time increment control
     use abstract_time_increment_controller
     use time_increment_controller_generator_module
-    ! Parallel computing support
-    use class_openmp_parallelizer
     ! Measurements
     use class_line_plotter
     use class_control_volume_profiler
@@ -82,11 +80,9 @@ program five_equation_model_solver
     type(hllc                                         ) :: a_riemann_solver
     type(vtk_result_writer                            ) :: a_result_writer
     type(end_time_criterion                           ) :: a_termination_criterion
-    type(openmp_parallelizer                          ) :: a_parallelizer
     type(line_plotter                                 ) :: a_line_plotter
     type(control_volume_profiler                      ) :: a_control_volume_profiler
     type(surface_profiler                             ) :: a_surface_profiler
-    
 
     ! These schemes and methods can be cahnge from configuration file you set.
     class(time_stepping            ), pointer :: a_time_stepping
@@ -98,6 +94,9 @@ program five_equation_model_solver
 
     ! Read config
     call a_configuration%parse("config.json")
+
+    ! Initialize cellsystem
+    call a_cellsystem%initialize(a_configuration)
 
     ! Allocate schemes
     call f3ds_time_stepping_generator               (a_configuration, a_time_stepping            )
@@ -112,7 +111,6 @@ program five_equation_model_solver
     call a_cellsystem%initialize(residual_set                    , num_conservative_variables      )
     call a_cellsystem%initialize(primitive_variables_set         , num_primitive_variables         )
     ! Initialize schemes & utils
-    call a_cellsystem%initialize(a_parallelizer              , a_configuration, num_conservative_variables)
     call a_cellsystem%initialize(an_eos                      , a_configuration, num_conservative_variables)
     call a_cellsystem%initialize(a_riemann_solver            , a_configuration, num_conservative_variables)
     call a_cellsystem%initialize(a_time_stepping             , a_configuration, num_conservative_variables)
@@ -126,7 +124,7 @@ program five_equation_model_solver
 
     ! Set initial condition
     call a_cellsystem%read_initial_condition(an_initial_condition_parser, a_configuration, conservative_variables_set)
-    call a_cellsystem%conservative_to_primitive_variables_all(a_parallelizer, an_eos, conservative_variables_set, primitive_variables_set, num_primitive_variables, conservative_to_primitive)
+    call a_cellsystem%conservative_to_primitive_variables_all(an_eos, conservative_variables_set, primitive_variables_set, num_primitive_variables, conservative_to_primitive)
 
     ! initialize five-equation model parameters
     call initialize_model(a_configuration)
@@ -153,11 +151,10 @@ program five_equation_model_solver
 
         call a_cellsystem%show_timestepping_infomation()
 
-        call a_cellsystem%prepare_time_stepping(a_parallelizer, a_time_stepping, conservative_variables_set, residual_set)
+        call a_cellsystem%prepare_time_stepping(a_time_stepping, conservative_variables_set, residual_set)
 
         do stage_num = 1, a_cellsystem%get_number_of_stages(a_time_stepping), 1
             call a_cellsystem%apply_boundary_condition(                  &
-                a_parallelizer                                         , &
                 primitive_variables_set                                , &
                 num_primitive_variables                                , &
                 rotate_primitive                                       , &
@@ -169,8 +166,7 @@ program five_equation_model_solver
                 outflow_condition_function      = outflow_bc             &
             )
 
-            call a_cellsystem%compute_divergence(   &
-                a_parallelizer                  , &
+            call a_cellsystem%compute_divergence( &
                 a_reconstructor                 , &
                 a_riemann_solver                , &
                 an_eos                          , &
@@ -182,7 +178,7 @@ program five_equation_model_solver
                 flux_function                     &
             )
 
-            call a_cellsystem%compute_next_stage(a_parallelizer, a_time_stepping, an_eos, stage_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, conservative_to_primitive)
+            call a_cellsystem%compute_next_stage(a_time_stepping, an_eos, stage_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, conservative_to_primitive)
         end do
 
         call a_cellsystem%increment_time()
