@@ -67,6 +67,10 @@ We provide a fast, maintainable FVM library and solvers.
 - [x] Midpoint rule
 - [x] Corrected midpoint [Nishikawa 2010]
 
+#### Face gradient calculation
+
+- [x] Central difference
+
 #### Time Stepping
 
 - Explicit
@@ -147,8 +151,8 @@ This resource provides following schemes:
 
 The solver include the following terms.
 
-- [x] with Kdiv(u) term [Kapila 2001]
-- [ ] with cavitation model
+- [x] Kdiv(u) term [Kapila 2001]
+- [ ] Cavitation model
 
 ### Viscosity five-equation model [Perigaud 2005] [Coralic 2014]
 
@@ -157,10 +161,10 @@ The solver include the following terms.
 
 The solver include the following terms.
 
-- [x] with Kdiv(u) term [Kapila 2001]
-- [x] with surface tension term [Perigaud 2005] [Garrick 2017]
-- [ ] with cavitation model
-- [x] with gravity
+- [x] Kdiv(u) term [Kapila 2001]
+- [x] Surface tension term [Perigaud 2005] [Garrick 2017]
+- [ ] Cavitation model
+- [x] Gravity term
 
 ### Euler equation
 
