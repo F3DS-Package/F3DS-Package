@@ -1519,16 +1519,18 @@ module class_cellsystem
     end subroutine initialize_riemann_solver
 
     ! ### Reconstructor ###
-    subroutine initialize_reconstructor(self, a_reconstructor, config, num_conservative_variables)
+    subroutine initialize_reconstructor(self, a_reconstructor, config, num_conservative_variables, a_reconstructor_generator)
         class  (cellsystem    ), intent(inout) :: self
         class  (reconstructor ), intent(inout) :: a_reconstructor
         class  (configuration ), intent(inout) :: config
         integer(int_kind      ), intent(in   ) :: num_conservative_variables
 
+        class  (reconstructor_generator), optional, intent(inout) :: a_reconstructor_generator
+
 #ifdef _DEBUG
         call write_debuginfo("In initialize_reconstructor(), cellsystem.")
 #endif
-        call a_reconstructor%initialize(config)
+        call a_reconstructor%initialize(config, a_reconstructor_generator)
     end subroutine initialize_reconstructor
 
     ! ### Time stepping ###

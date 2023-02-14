@@ -3,6 +3,13 @@ module abstract_reconstructor
 
     private
 
+    type, public, abstract :: reconstructor_generator
+        contains
+        generic, public :: generate => generate_from_configuration, generate_from_name
+        procedure(generate_from_configuration_interface), pass(self), deferred :: generate_from_configuration
+        procedure(generate_from_name_interface         ), pass(self), deferred :: generate_from_name
+    end type reconstructor_generator
+
     type, public, abstract :: reconstructor
         contains
 
@@ -12,11 +19,33 @@ module abstract_reconstructor
     end type
 
     abstract interface
-        subroutine initialize_interface(self, config)
+        subroutine generate_from_configuration_interface(self, a_reconstructor, a_config)
+            use abstract_configuration
+            import reconstructor_generator
+            import reconstructor
+            class(reconstructor_generator),          intent(inout) :: self
+            class(reconstructor          ), pointer, intent(inout) :: a_reconstructor
+            class(configuration          ),          intent(inout) :: a_config
+        end subroutine generate_from_configuration_interface
+
+        subroutine generate_from_name_interface(self, a_reconstructor, name)
+            use abstract_configuration
+            import reconstructor_generator
+            import reconstructor
+            class    (reconstructor_generator),              intent(inout) :: self
+            class    (reconstructor          ), pointer    , intent(inout) :: a_reconstructor
+            character(len=:                  ), allocatable, intent(in   ) :: name
+        end subroutine generate_from_name_interface
+    end interface
+
+    abstract interface
+        subroutine initialize_interface(self, config, a_reconstructor_generator)
             use abstract_configuration
             import reconstructor
-            class(reconstructor), intent(inout) :: self
-            class(configuration), intent(inout) :: config
+            import reconstructor_generator
+            class(reconstructor          ),           intent(inout) :: self
+            class(configuration          ),           intent(inout) :: config
+            class(reconstructor_generator), optional, intent(inout) :: a_reconstructor_generator
         end subroutine initialize_interface
 
         pure function reconstruct_lhc_interface( &

@@ -2,49 +2,45 @@ module five_equation_model_reconstructor_generator_module
     use abstract_configuration
     use stdio_module
     use abstract_reconstructor
-    use class_minmod_muscl3
-    use class_weno5_js
-    use class_mp_weno5_js
+    use default_reconstructor_generator_module
     use class_rho_thinc
     implicit none
 
     private
 
-    public :: five_equation_model_reconstructor_generator
-
-    interface five_equation_model_reconstructor_generator
-        module procedure with_config, with_name
-    end interface five_equation_model_reconstructor_generator
+    type, public, extends(reconstructor_generator) :: five_equation_model_reconstructor_generator
+        contains
+        procedure, pass(self) :: generate_from_configuration
+        procedure, pass(self) :: generate_from_name
+    end type five_equation_model_reconstructor_generator
 
     contains
 
-    subroutine with_config(config, method)
-        class(configuration), intent(inout) :: config
-        class(reconstructor), pointer, intent(inout) :: method
+    subroutine generate_from_configuration(self, a_reconstructor, a_config)
+        class(five_equation_model_reconstructor_generator),          intent(inout) :: self
+        class(reconstructor                              ), pointer, intent(inout) :: a_reconstructor
+        class(configuration                              ),          intent(inout) :: a_config
 
         logical          :: found
         character(len=:), allocatable :: name
 
-        call config%get_char("Reconstructor.Name", name, found)
+        call a_config%get_char("Reconstructor.Name", name, found)
         if(.not. found) call call_error("'Reconstructor.Name' is not found in configuration file you set.")
 
-        call with_name(name, method)
-    end subroutine with_config
+        call self%generate_from_name(a_reconstructor, name)
+    end subroutine generate_from_configuration
 
-    subroutine with_name(name, method)
-        character(len=:), allocatable, intent(in) :: name
-        class(reconstructor), pointer, intent(inout) :: method
+    subroutine generate_from_name(self, a_reconstructor, name)
+        class    (five_equation_model_reconstructor_generator),              intent(inout) :: self
+        class    (reconstructor                              ), pointer    , intent(inout) :: a_reconstructor
+        character(len=:                                      ), allocatable, intent(in   ) :: name
 
-        if(name == "Minmod MUSCL3") then
-            allocate(minmod_muscl3 :: method)
-        else if(name == "WENO5-JS") then
-            allocate(weno5_js :: method)
-        else if(name == "MP-WENO5-JS") then
-            allocate(mp_weno5_js :: method)
-        else if(name == "rho-THINC") then
-            allocate(rho_thinc :: method)
+        type(default_reconstructor_generator) :: default_generator
+
+        if(name == "rho-THINC") then
+            allocate(rho_thinc :: a_reconstructor)
         else
-            call call_error("Unknow reconstructor name '"//name//"' is found.")
+            call default_generator%generate(a_reconstructor, name)
         end if
-    end subroutine with_name
+    end subroutine generate_from_name
 end module five_equation_model_reconstructor_generator_module

@@ -17,7 +17,7 @@ program viscous_five_equation_model_solver
     use class_central_difference_face_gradient_calculator
     ! Time stepping
     use abstract_time_stepping
-    use time_stepping_generator_module
+    use default_time_stepping_generator_module
     ! Reconstructor
     use abstract_reconstructor
     use five_equation_model_reconstructor_generator_module
@@ -32,7 +32,7 @@ program viscous_five_equation_model_solver
     use class_end_time_criterion
     ! Time increment control
     use abstract_time_increment_controller
-    use time_increment_controller_generator_module
+    use default_time_increment_controller_generator_module
     ! Measurements
     use class_line_plotter
     use class_control_volume_profiler
@@ -118,6 +118,11 @@ program viscous_five_equation_model_solver
     class(reconstructor            ), pointer :: a_reconstructor
     class(time_increment_controller), pointer :: a_time_increment_controller
 
+    ! Generators
+    type(default_time_stepping_generator            ) :: a_time_stepping_generator
+    type(five_equation_model_reconstructor_generator) :: a_reconstructor_genearator
+    type(default_time_increment_controller_generator) :: a_time_increment_controller_generator
+
     ! Loop index
     integer(int_kind) :: stage_num, cell_index, smooth_num
 
@@ -128,9 +133,9 @@ program viscous_five_equation_model_solver
     call a_cellsystem%initialize(a_configuration)
 
     ! Allocate schemes
-    call f3ds_time_stepping_generator               (a_configuration, a_time_stepping            )
-    call five_equation_model_reconstructor_generator(a_configuration, a_reconstructor            )
-    call f3ds_time_increment_controller_generator   (a_configuration, a_time_increment_controller)
+    call a_time_stepping_generator            %generate(a_time_stepping            , a_configuration)
+    call a_reconstructor_genearator           %generate(a_reconstructor            , a_configuration)
+    call a_time_increment_controller_generator%generate(a_time_increment_controller, a_configuration)
 
     ! Read grid
     call a_cellsystem%read(a_grid_parser, a_configuration)
@@ -145,7 +150,7 @@ program viscous_five_equation_model_solver
     call a_cellsystem%initialize(an_eos                      , a_configuration, num_conservative_variables)
     call a_cellsystem%initialize(a_riemann_solver            , a_configuration, num_conservative_variables)
     call a_cellsystem%initialize(a_time_stepping             , a_configuration, num_conservative_variables)
-    call a_cellsystem%initialize(a_reconstructor             , a_configuration, num_conservative_variables)
+    call a_cellsystem%initialize(a_reconstructor             , a_configuration, num_conservative_variables, a_reconstructor_genearator)
     call a_cellsystem%initialize(a_gradient_calculator       , a_configuration, num_conservative_variables)
     call a_cellsystem%initialize(a_interpolator              , a_configuration, num_conservative_variables)
     call a_cellsystem%initialize(a_result_writer             , a_configuration, num_conservative_variables)

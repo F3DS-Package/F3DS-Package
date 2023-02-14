@@ -1,8 +1,14 @@
 module abstract_eos
-    ! TODO: Support to simulation of more than 2 phases flow.
     implicit none
 
     private
+
+    type, public, abstract :: eos_generator
+        contains
+        generic, public :: generate => generate_from_configuration, generate_from_name
+        procedure(generate_from_configuration_interface), pass(self), deferred :: generate_from_configuration
+        procedure(generate_from_name_interface         ), pass(self), deferred :: generate_from_name
+    end type eos_generator
 
     type, public, abstract :: eos
         contains
@@ -18,11 +24,33 @@ module abstract_eos
     end type eos
 
     abstract interface
-        subroutine initialize_interface(self, a_configuration)
+        subroutine generate_from_configuration_interface(self, an_eos, a_config)
+            use abstract_configuration
+            import eos_generator
+            import eos
+            class(eos_generator),          intent(inout) :: self
+            class(eos          ), pointer, intent(inout) :: an_eos
+            class(configuration),          intent(inout) :: a_config
+        end subroutine generate_from_configuration_interface
+
+        subroutine generate_from_name_interface(self, an_eos, name)
+            use abstract_configuration
+            import eos_generator
+            import eos
+            class    (eos_generator),              intent(inout) :: self
+            class    (eos          ), pointer    , intent(inout) :: an_eos
+            character(len=:        ), allocatable, intent(in   ) :: name
+        end subroutine generate_from_name_interface
+    end interface
+
+    abstract interface
+        subroutine initialize_interface(self, a_configuration, an_eos_generator)
             use abstract_configuration
             import eos
-            class(eos          ), intent(inout) :: self
-            class(configuration), intent(inout) :: a_configuration
+            import eos_generator
+            class(eos          ),           intent(inout) :: self
+            class(configuration),           intent(inout) :: a_configuration
+            class(eos_generator), optional, intent(inout) :: an_eos_generator
         end subroutine initialize_interface
 
         pure function compute_pressure_interface(self, specific_internal_energy, density, phase_num) result(pressure)

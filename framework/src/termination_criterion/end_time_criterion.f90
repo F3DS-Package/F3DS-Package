@@ -21,9 +21,11 @@ module class_end_time_criterion
 
     contains
 
-    subroutine initialize(self, config)
-        class(end_time_criterion) :: self
-        class(configuration     ) :: config
+    subroutine initialize(self, config, a_termination_criterion_generator)
+        class(end_time_criterion             ),           intent(inout) :: self
+        class(configuration                  ),           intent(inout) :: config
+        class(termination_criterion_generator), optional, intent(inout) :: a_termination_criterion_generator
+
         logical :: found
 
         call config%get_real("Termination criterion.End time", self%end_time, found)

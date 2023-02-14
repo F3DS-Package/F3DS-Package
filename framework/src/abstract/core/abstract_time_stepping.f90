@@ -3,15 +3,42 @@ module abstract_time_stepping
 
     private
 
+    type, public, abstract :: time_stepping_generator
+        contains
+        generic, public :: generate => generate_from_configuration, generate_from_name
+        procedure(generate_from_configuration_interface), pass(self), deferred :: generate_from_configuration
+        procedure(generate_from_name_interface         ), pass(self), deferred :: generate_from_name
+    end type time_stepping_generator
+
     type, public, abstract :: time_stepping
         contains
 
-        procedure(initialize_interface          ), pass(self), deferred :: initialize
-        procedure(compute_next_stage_interface  ), pass(self), deferred :: compute_next_stage
-        procedure(prepare_time_stepping_interface    ), pass(self), deferred :: prepare_time_stepping
+        procedure(initialize_interface           ), pass(self), deferred :: initialize
+        procedure(compute_next_stage_interface   ), pass(self), deferred :: compute_next_stage
+        procedure(prepare_time_stepping_interface), pass(self), deferred :: prepare_time_stepping
         !procedure(cleanup_stepping_interface    ), pass(self), deferred :: cleanup_stepping
-        procedure(get_number_of_stages_interface), pass(self), deferred :: get_number_of_stages
-    end type
+        procedure(get_number_of_stages_interface ), pass(self), deferred :: get_number_of_stages
+    end type time_stepping
+
+    abstract interface
+        subroutine generate_from_configuration_interface(self, a_time_stepping, a_config)
+            use abstract_configuration
+            import time_stepping_generator
+            import time_stepping
+            class(time_stepping_generator),          intent(inout) :: self
+            class(time_stepping          ), pointer, intent(inout) :: a_time_stepping
+            class(configuration          ),          intent(inout) :: a_config
+        end subroutine generate_from_configuration_interface
+
+        subroutine generate_from_name_interface(self, a_time_stepping, name)
+            use abstract_configuration
+            import time_stepping_generator
+            import time_stepping
+            class    (time_stepping_generator),              intent(inout) :: self
+            class    (time_stepping          ), pointer    , intent(inout) :: a_time_stepping
+            character(len=:                  ), allocatable, intent(in   ) :: name
+        end subroutine generate_from_name_interface
+    end interface
 
     abstract interface
         subroutine initialize_interface(self, config, num_cells, num_conservative_variables)
@@ -33,7 +60,6 @@ module abstract_time_stepping
             residuals                                 ) result(updated_conservative_variables)
 
             use typedef_module
-            use abstract_eos
             import time_stepping
 
             class  (time_stepping      ), intent(in) :: self

@@ -35,9 +35,10 @@ module class_minmod_muscl3
         r = max(0.d0, min(1.d0, s))
     end function
 
-    subroutine initialize(self, config)
-        class(minmod_muscl3), intent(inout) :: self
-        class(configuration), intent(inout) :: config
+    subroutine initialize(self, config, a_reconstructor_generator)
+        class(minmod_muscl3          ),           intent(inout) :: self
+        class(configuration          ),           intent(inout) :: config
+        class(reconstructor_generator), optional, intent(inout) :: a_reconstructor_generator
         logical :: found
 
         call config%get_real("Reconstructor.Minmod MUSCL3.Kappa", self%kappa_, found, 1.d0 / 3.d0)

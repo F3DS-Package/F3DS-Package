@@ -28,9 +28,11 @@ module class_weno5_js
 
     contains
 
-    subroutine initialize(self, config)
-        class(weno5_js     ), intent(inout) :: self
-        class(configuration), intent(inout) :: config
+    subroutine initialize(self, config, a_reconstructor_generator)
+        class(weno5_js               ),           intent(inout) :: self
+        class(configuration          ),           intent(inout) :: config
+        class(reconstructor_generator), optional, intent(inout) :: a_reconstructor_generator
+
         logical :: found
 
         call config%get_real("Reconstructor.WENO5-JS.Epsilon", self%epsilon_, found, 1.d-6)

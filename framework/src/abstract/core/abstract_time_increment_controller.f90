@@ -3,6 +3,13 @@ module abstract_time_increment_controller
 
     private
 
+    type, public, abstract :: time_increment_controller_generator
+        contains
+        generic, public :: generate => generate_from_configuration, generate_from_name
+        procedure(generate_from_configuration_interface), pass(self), deferred :: generate_from_configuration
+        procedure(generate_from_name_interface         ), pass(self), deferred :: generate_from_name
+    end type time_increment_controller_generator
+
     type, public, abstract :: time_increment_controller
         contains
 
@@ -13,12 +20,33 @@ module abstract_time_increment_controller
     end type time_increment_controller
 
     abstract interface
+        subroutine generate_from_configuration_interface(self, a_time_increment_controller, a_config)
+            use abstract_configuration
+            import time_increment_controller_generator
+            import time_increment_controller
+            class(time_increment_controller_generator),          intent(inout) :: self
+            class(time_increment_controller          ), pointer, intent(inout) :: a_time_increment_controller
+            class(configuration                      ),          intent(inout) :: a_config
+        end subroutine generate_from_configuration_interface
+
+        subroutine generate_from_name_interface(self, a_time_increment_controller, name)
+            use abstract_configuration
+            import time_increment_controller_generator
+            import time_increment_controller
+            class    (time_increment_controller_generator),              intent(inout) :: self
+            class    (time_increment_controller          ), pointer    , intent(inout) :: a_time_increment_controller
+            character(len=:                              ), allocatable, intent(in   ) :: name
+        end subroutine generate_from_name_interface
+    end interface
+
+    abstract interface
         subroutine initialize_interface(self, config)
             use abstract_configuration
             import time_increment_controller
+            import time_increment_controller_generator
 
-            class(time_increment_controller), intent(inout) :: self
-            class(configuration            ), intent(inout) :: config
+            class(time_increment_controller          ),           intent(inout) :: self
+            class(configuration                      ),           intent(inout) :: config
         end subroutine initialize_interface
 
         function get_constant_dt_interface(self) result(dt)

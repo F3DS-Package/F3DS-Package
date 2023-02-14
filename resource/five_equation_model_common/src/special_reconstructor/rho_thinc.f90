@@ -3,7 +3,6 @@ module class_rho_thinc
     use abstract_reconstructor
     use abstract_configuration
     use stdio_module
-    use reconstructor_generator_module
 
     implicit none
 
@@ -24,9 +23,11 @@ module class_rho_thinc
 
     contains
 
-    subroutine initialize(self, config)
-        class(rho_thinc    ), intent(inout) :: self
-        class(configuration), intent(inout) :: config
+    subroutine initialize(self, config, a_reconstructor_generator)
+        class(rho_thinc              ),           intent(inout) :: self
+        class(configuration          ),           intent(inout) :: config
+        class(reconstructor_generator), optional, intent(inout) :: a_reconstructor_generator
+
         logical :: found
         character(len=:), allocatable :: name
 
@@ -39,7 +40,11 @@ module class_rho_thinc
         call config%get_char("Reconstructor.rho-THINC.Primary reconstructor", name, found, "Minmod MUSCL")
         if(.not. found) call write_warring("'Reconstructor.rho-THINC.Primary reconstructor' is not found in configuration you set. To be set dafault value.")
 
-        call f3ds_reconstructor_generator(name, self%primary_reconstructor_)
+        if(.not. present(a_reconstructor_generator))then
+            call call_error("rho-THINC requests a reconstructor-generator.")
+        end if
+
+        call a_reconstructor_generator%generate(self%primary_reconstructor_, name)
     end subroutine initialize
 
     pure function reconstruct_lhc( &

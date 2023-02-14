@@ -36,9 +36,10 @@ module class_stiffened_gas_eos
 
     contains
 
-    subroutine initialize(self, a_configuration)
-        class(stiffened_gas_eos), intent(inout) :: self
-        class(configuration    ), intent(inout) :: a_configuration
+    subroutine initialize(self, a_configuration, an_eos_generator)
+        class(stiffened_gas_eos),           intent(inout) :: self
+        class(configuration    ),           intent(inout) :: a_configuration
+        class(eos_generator    ), optional, intent(inout) :: an_eos_generator
 
         logical           :: found
         integer(int_kind) :: i
