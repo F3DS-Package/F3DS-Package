@@ -131,7 +131,8 @@ module class_stiffened_gas_eos
             n = 1
         endif
 
-        soundspeed = sqrt(self%specific_heat_ratio_(n) * (pressure + self%reference_pressure_(n)) / max(density, machine_epsilon))
+        ! Protect square root of a negative number {@code max(pressure + self%reference_pressure_(n), 0.0_real_kind)} and zero division {@code max(density, machine_epsilon)}.
+        soundspeed = sqrt(self%specific_heat_ratio_(n) * max(pressure + self%reference_pressure_(n), 0.0_real_kind) / max(density, machine_epsilon))
     end function compute_soundspeed
 
     pure function compute_mixture_soundspeed(self, pressure, densities, volume_fractions) result(soundspeed)
