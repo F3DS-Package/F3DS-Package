@@ -1435,6 +1435,7 @@ module class_cellsystem
                     face_gradient_primitive_variables(:) = a_face_gradient_calculator%compute(            &
                         primitive_variables_set   (:,lhc_index), primitive_variables_set   (:,rhc_index), &
                         self%cell_centor_positions(:,lhc_index), self%cell_centor_positions(:,rhc_index), &
+                        self%face_normal_vectors(:, i),                                                   &
                         num_primitive_variables                                                           &
                     )
                 else
