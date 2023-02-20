@@ -22,7 +22,7 @@ We provide a fast, maintainable FVM library and solvers.
 
 #### EoS
 
-- [ ] Ideal gas EoS
+- [x] Ideal gas EoS
 - [x] Stiffened-gas EoS
 - [ ] Noble-Abel Stiffened-gas EoS
 
@@ -43,12 +43,14 @@ We provide a fast, maintainable FVM library and solvers.
 
 - For structure grid
     - [x] MUSCL3 (3rd order)
-        - [x] with minimod flux limmiter
-        - [ ] with monotonized central flux limmiter
+        - [x] Minimod flux limmiter (Minmod MUSCL3)
+        - [ ] Monotonized central flux limmiter
     - [x] WENO5 (5th order)
-        - [x] with original smoothing indicator (WENO5) [Liu 1994]
-        - [x] with smoothing indicator proposed by Jiang & Shu (WENO5-JS) [Jiang 1996]
-        - [x] with monotonicity-preserving schemes (MP-WENO5-JS) [Balsara 2000]
+        - [ ] Original smoothing indicator (WENO5) [Liu 1994]
+        - [x] Smoothing indicator proposed by Jiang & Shu (WENO5-JS) [Jiang 1996]
+        - [x] WENO-Z [Borges 2008]
+    - [x] Monotonicity preserving scheme (MP)
+        - We can conbine WENO5-JS (MP-WENO5-JS) [Balsara 2000] and other reconstruction metheds.
 - For unstructure grid
     - [ ] UMUSCL3 (3rd order)
 
