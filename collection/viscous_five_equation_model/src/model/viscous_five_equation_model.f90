@@ -654,6 +654,7 @@ module viscous_five_equation_model_module
             !dst_surface_tension_variables(1) = (heavest_volume_fraction**alpha) &
             !                                 / ((heavest_volume_fraction**alpha) + (1.d0 - heavest_volume_fraction)**alpha)
             dst_surface_tension_variables(1) = heavest_volume_fraction
+            dst_surface_tension_variables(2:5) = surface_tension_variables(2:5)
         end associate
     end function compute_smoothed_volume_fraction
 
@@ -674,6 +675,7 @@ module viscous_five_equation_model_module
             else
                 dst_surface_tension_variables(2:4) = 0.d0
             endif
+            dst_surface_tension_variables(5) = surface_tension_variables(5)
         end associate
     end function normalize_gradient_volume_fraction
 
