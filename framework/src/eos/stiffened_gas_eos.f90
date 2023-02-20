@@ -183,6 +183,11 @@ module class_stiffened_gas_eos
         real   (real_kind) :: sigma
         integer(int_kind ) :: n
 
+        if(pressure <= 0.0_real_kind)then
+            soundspeed = machine_epsilon
+            return
+        end if
+
         sigma = 0.0_real_kind
         do n = 1, self%num_phase_, 1
             if(densities(n) <= 0.0_real_kind)cycle
