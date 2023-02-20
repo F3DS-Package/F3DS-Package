@@ -47,8 +47,6 @@ module class_stiffened_gas_eos
         call a_configuration%get_int    ("Phase.Number of phase", self%num_phase_, found)
         if(.not. found) call call_error("'Phase.Number of phase' is not found in configuration you set. Please check your configuration file.")
 
-        if(self%num_phase_ > 2) call call_error("This solver does not support simulation of more than 2 phases flow.")
-
         allocate(self%specific_heat_ratio_(self%num_phase_))
         allocate(self%reference_pressure_ (self%num_phase_))
 
