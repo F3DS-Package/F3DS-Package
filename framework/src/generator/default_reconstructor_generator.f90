@@ -4,7 +4,7 @@ module default_reconstructor_generator_module
     use abstract_reconstructor
     use class_minmod_muscl3
     use class_weno5_js
-    use class_mp_weno5_js
+    use class_mp
     implicit none
 
     private
@@ -40,8 +40,8 @@ module default_reconstructor_generator_module
             allocate(minmod_muscl3 :: a_reconstructor)
         else if(name == "WENO5-JS") then
             allocate(weno5_js :: a_reconstructor)
-        else if(name == "MP-WENO5-JS") then
-            allocate(mp_weno5_js :: a_reconstructor)
+        else if(name == "MP") then
+            allocate(mp :: a_reconstructor)
         else
             call call_error("Unknow reconstructor name '"//name//"' is found.")
         end if

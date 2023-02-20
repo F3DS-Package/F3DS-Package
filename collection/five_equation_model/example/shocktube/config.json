@@ -31,16 +31,16 @@
     },
     "Reconstructor" :
     {
-        "Name" : "MP-WENO5-JS",
+        "Name" : "MP",
         "Minmod MUSCL3" :
         {
             "Kappa" : 0.3
         },
-        "MP-WENO5-JS" :
+        "MP" :
         {
-            "Epsilon" : 1e-6,
             "Alpha"   : 10.0,
-            "Beta"    : 4.0
+            "Beta"    : 4.0,
+            "Primary reconstructor" : "WENO5-JS"
         },
         "WENO5-JS" :
         {

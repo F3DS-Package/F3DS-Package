@@ -45,6 +45,8 @@ module class_rho_thinc
         end if
 
         call a_reconstructor_generator%generate(self%primary_reconstructor_, name)
+
+        call self%primary_reconstructor_%initialize(config, a_reconstructor_generator)
     end subroutine initialize
 
     pure function reconstruct_lhc( &
