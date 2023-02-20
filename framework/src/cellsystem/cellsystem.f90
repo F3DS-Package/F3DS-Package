@@ -1882,8 +1882,8 @@ module class_cellsystem
                 nonslip_wall_index = nonslip_wall_index + 1
                 self%nonslip_wall_face_indexes(nonslip_wall_index) = index
             else if (face_types(index) == slip_wall_face_type) then
-                nonslip_wall_index = slip_wall_index + 1
-                self%slip_wall_face_indexes(nonslip_wall_index) = index
+                slip_wall_index = slip_wall_index + 1
+                self%slip_wall_face_indexes(slip_wall_index) = index
             else if (face_types(index) == symmetric_face_type) then
                 symmetric_index = symmetric_index + 1
                 self%symmetric_face_indexes(symmetric_index) = index
