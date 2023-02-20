@@ -2,9 +2,10 @@ module default_reconstructor_generator_module
     use abstract_configuration
     use stdio_module
     use abstract_reconstructor
+    use class_mp
     use class_minmod_muscl3
     use class_weno5_js
-    use class_mp
+    use class_weno5_z
     implicit none
 
     private
@@ -40,6 +41,8 @@ module default_reconstructor_generator_module
             allocate(minmod_muscl3 :: a_reconstructor)
         else if(name == "WENO5-JS") then
             allocate(weno5_js :: a_reconstructor)
+        else if(name == "WENO5-Z") then
+            allocate(weno5_z :: a_reconstructor)
         else if(name == "MP") then
             allocate(mp :: a_reconstructor)
         else

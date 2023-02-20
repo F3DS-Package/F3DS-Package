@@ -28,12 +28,14 @@ module weno_utils
     public :: compute_js_indicator_coefficients_left_side
     public :: compute_polynomials_coefficients_left_side
     public :: compute_weights_left_side
+    public :: compute_weights_left_side_z
     public :: compute_polynomials_left_side
 
     public :: compute_ideal_weights_right_side
     public :: compute_js_indicator_coefficients_right_side
     public :: compute_polynomials_coefficients_right_side
     public :: compute_weights_right_side
+    public :: compute_weights_right_side_z
     public :: compute_polynomials_right_side
 
     contains
@@ -95,13 +97,10 @@ module weno_utils
                       / vector_multiply((p    - p_m3), (p    - p_m2))
     end function compute_polynomials_coefficients_left_side
 
-    pure function compute_weights_left_side(v_m2, v_m1, v, v_p1, v_p2, g, b_coef, epsilon) result(w)
+    pure function compute_indicator_left_side(v_m2, v_m1, v, v_p1, v_p2, b_coef) result(b)
         real(real_kind), intent(in) :: v_m2, v_m1, v, v_p1, v_p2 ! value
-        real(real_kind), intent(in) :: g(3), b_coef(3,3)
-        real(real_kind), intent(in) :: epsilon
-        real(real_kind)             :: w(3)
+        real(real_kind), intent(in) :: b_coef(3,3)
         real(real_kind)             :: b(3)
-        real(real_kind)             :: total_w
 
         b(1) = b_coef(1,1) * (v_p1 - v)**2.d0 &
              + b_coef(1,2) * (v_p1 - v)*(v_p2 - v_p1) &
@@ -112,6 +111,17 @@ module weno_utils
         b(3) = b_coef(3,1) * (v - v_m1)**2.d0 &
              + b_coef(3,2) * (v_m1 - v_m2)*(v - v_m1) &
              + b_coef(3,3) * (v_m1 - v_m2)**2.d0
+    end function compute_indicator_left_side
+
+    pure function compute_weights_left_side(v_m2, v_m1, v, v_p1, v_p2, g, b_coef, epsilon) result(w)
+        real(real_kind), intent(in) :: v_m2, v_m1, v, v_p1, v_p2 ! value
+        real(real_kind), intent(in) :: g(3), b_coef(3,3)
+        real(real_kind), intent(in) :: epsilon
+        real(real_kind)             :: w(3)
+        real(real_kind)             :: b(3)
+        real(real_kind)             :: total_w
+
+        b(1:3) = compute_indicator_left_side(v_m2, v_m1, v, v_p1, v_p2, b_coef)
 
         w(1) = g(1) / (b(1) + epsilon)**2.d0
         w(2) = g(2) / (b(2) + epsilon)**2.d0
@@ -121,6 +131,30 @@ module weno_utils
         w(2) = w(2) / total_w
         w(3) = w(3) / total_w
     end function compute_weights_left_side
+
+    ! https://www.sciencedirect.com/science/article/pii/S0021999110006431#e0060
+    pure function compute_weights_left_side_z(v_m2, v_m1, v, v_p1, v_p2, g, b_coef, epsilon) result(w)
+        real(real_kind), intent(in) :: v_m2, v_m1, v, v_p1, v_p2 ! value
+        real(real_kind), intent(in) :: g(3), b_coef(3,3)
+        real(real_kind), intent(in) :: epsilon
+        real(real_kind)             :: w(3)
+        real(real_kind)             :: b(3)
+        real(real_kind)             :: total_w
+        real(real_kind)             :: tau
+
+        b(1:3) = compute_indicator_left_side(v_m2, v_m1, v, v_p1, v_p2, b_coef)
+
+        tau = abs(b(1) - b(3))
+
+        w(1) = g(1) * (1.0_real_kind + tau / (b(1) + epsilon))
+        w(2) = g(2) * (1.0_real_kind + tau / (b(2) + epsilon))
+        w(3) = g(3) * (1.0_real_kind + tau / (b(3) + epsilon))
+
+        total_w = w(1) + w(2) + w(3)
+        w(1) = w(1) / total_w
+        w(2) = w(2) / total_w
+        w(3) = w(3) / total_w
+    end function compute_weights_left_side_z
 
     pure function compute_polynomials_left_side(v_m2, v_m1, v, v_p1, v_p2, p_coef) result(p)
         real(real_kind), intent(in) :: v_m2, v_m1, v, v_p1, v_p2       ! value
@@ -189,13 +223,10 @@ module weno_utils
                       / vector_multiply((p    - p_m3), (p    - p_m2))
     end function compute_polynomials_coefficients_right_side
 
-    pure function compute_weights_right_side(v_m2, v_m1, v, v_p1, v_p2, g, b_coef, epsilon) result(w)
+    pure function compute_indicator_right_side(v_m2, v_m1, v, v_p1, v_p2, b_coef) result(b)
         real(real_kind), intent(in) :: v_m2, v_m1, v, v_p1, v_p2 ! value
-        real(real_kind), intent(in) :: g(3), b_coef(3,3)
-        real(real_kind), intent(in) :: epsilon
-        real(real_kind)             :: w(3)
+        real(real_kind), intent(in) :: b_coef(3,3)
         real(real_kind)             :: b(3)
-        real(real_kind)             :: total_w
 
         b(1) = b_coef(1,1) * (v_p1 - v)**2.d0 &
              + b_coef(1,2) * (v_p1 - v)*(v_p2 - v_p1) &
@@ -206,6 +237,17 @@ module weno_utils
         b(3) = b_coef(3,1) * (v - v_m1)**2.d0 &
              + b_coef(3,2) * (v_m1 - v_m2)*(v - v_m1) &
              + b_coef(3,3) * (v_m1 - v_m2)**2.d0
+    end function compute_indicator_right_side
+
+    pure function compute_weights_right_side(v_m2, v_m1, v, v_p1, v_p2, g, b_coef, epsilon) result(w)
+        real(real_kind), intent(in) :: v_m2, v_m1, v, v_p1, v_p2 ! value
+        real(real_kind), intent(in) :: g(3), b_coef(3,3)
+        real(real_kind), intent(in) :: epsilon
+        real(real_kind)             :: w(3)
+        real(real_kind)             :: b(3)
+        real(real_kind)             :: total_w
+
+        b(1:3) = compute_indicator_right_side(v_m2, v_m1, v, v_p1, v_p2, b_coef)
 
         w(1) = g(1) / (b(1) + epsilon)**2.d0
         w(2) = g(2) / (b(2) + epsilon)**2.d0
@@ -215,6 +257,30 @@ module weno_utils
         w(2) = w(2) / total_w
         w(3) = w(3) / total_w
     end function compute_weights_right_side
+
+    ! https://www.sciencedirect.com/science/article/pii/S0021999110006431#e0060
+    pure function compute_weights_right_side_z(v_m2, v_m1, v, v_p1, v_p2, g, b_coef, epsilon) result(w)
+        real(real_kind), intent(in) :: v_m2, v_m1, v, v_p1, v_p2 ! value
+        real(real_kind), intent(in) :: g(3), b_coef(3,3)
+        real(real_kind), intent(in) :: epsilon
+        real(real_kind)             :: w(3)
+        real(real_kind)             :: b(3)
+        real(real_kind)             :: total_w
+        real(real_kind)             :: tau
+
+        b(1:3) = compute_indicator_right_side(v_m2, v_m1, v, v_p1, v_p2, b_coef)
+
+        tau = abs(b(1) - b(3))
+
+        w(1) = g(1) * (1.0_real_kind + tau / (b(1) + epsilon))
+        w(2) = g(2) * (1.0_real_kind + tau / (b(2) + epsilon))
+        w(3) = g(3) * (1.0_real_kind + tau / (b(3) + epsilon))
+
+        total_w = w(1) + w(2) + w(3)
+        w(1) = w(1) / total_w
+        w(2) = w(2) / total_w
+        w(3) = w(3) / total_w
+    end function compute_weights_right_side_z
 
     pure function compute_polynomials_right_side(v_m2, v_m1, v, v_p1, v_p2, p_coef) result(p)
         real(real_kind), intent(in) :: v_m2, v_m1, v, v_p1, v_p2       ! value
