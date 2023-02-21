@@ -1,5 +1,7 @@
 # Fortran Finite volume Fluid Dynamics Solver (F3DS) Package
 
+[![License](https://img.shields.io/badge/license-MIT-red.svg)]()
+
 F3DS package is a modern Fortran (such as Fortran 2003, 2008, ...) software of finite volume method (FVM) for fulid dynamics solvers. F3DS Package is composed of below:
 
 - F3DS Flamework: Flamework for developing fluid dynamics solvers.
@@ -8,7 +10,7 @@ F3DS package is a modern Fortran (such as Fortran 2003, 2008, ...) software of f
 
 Status: **DEVELOPMENT**  
 
-Solvers are generalized. We can change parameters by a configuration file witch writen by JSON or XML file format. Of course we can also change a grid and an initial condition.  
+Solvers are generalized. We can change parameters by a configuration file witch writen by JSON file format. Of course we can also change a grid and an initial condition.  
 We can easily build a solver for any non-viscous and viscous fluid using this flamework.  
 We are working on improving parallel computing and developing features for unstructured mesh.
 
@@ -134,7 +136,6 @@ We provide a fast, maintainable FVM library and solvers.
     - [ ] [Annoy](https://github.com/spotify/annoy)
 - [x] Data Description Language I/O
     - [x] JSON ([JSON-Fortran](https://github.com/jacobwilliams/json-fortran) backend)
-    - [X] XML ([FoXy](https://github.com/Fortran-FOSS-Programmers/FoXy) backend)
 
 ### F3DS Resource
 
@@ -210,3 +211,24 @@ gfortran your_solver.f90 -o your_solver.exe -L/{your_f3ds_path}/f3ds/libs -I/{yo
 
 All binaries provided by F3DS is stored in "bins" directory. If you want use "f5eq", you type "./bins/f5eq".  
 If you want more infomations, please read README.md in each collection directories.
+
+## Lisence
+
+### F3DS Package
+
+[![License](https://img.shields.io/badge/license-MIT-red.svg)]()
+
+F3DS Package is an open sorce software, it is distributed under the MIT license. More details of the MIT license available at the following website: https://opensource.org/license/mit/.  
+Contributors names are listed below:  
+
+- Tatsumasa Ishikawa
+
+### Third party libraries
+
+- [VTK Fortran](https://github.com/szaghi/VTKFortran) [![License](https://img.shields.io/badge/license-MIT-red.svg)]()
+    - [FACE](https://github.com/szaghi/FACE) [![License](https://img.shields.io/badge/license-MIT-red.svg)]()
+    - [FoXy](https://github.com/Fortran-FOSS-Programmers/FoXy) [![License](https://img.shields.io/badge/license-MIT-red.svg)]()
+    - [PENF](https://github.com/szaghi/PENF) [![License](https://img.shields.io/badge/license-MIT-red.svg)]()
+    - [StringiFor](https://github.com/szaghi/StringiFor) [![License](https://img.shields.io/badge/license-MIT-red.svg)]()
+- [JSON Fortran](https://github.com/jacobwilliams/json-fortran) [![License](https://img.shields.io/badge/license-BSD3-red.svg)]()
+
