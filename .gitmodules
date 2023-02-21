@@ -19,9 +19,3 @@
 [submodule "third_party/StringiFor"]
 	path = third_party/StringiFor
 	url = https://github.com/szaghi/StringiFor.git
-[submodule "third_party/flann"]
-	path = third_party/flann
-	url = https://github.com/flann-lib/flann.git
-[submodule "third_party/annoy"]
-	path = third_party/annoy
-	url = https://github.com/spotify/annoy.git
