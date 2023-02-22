@@ -130,7 +130,7 @@ module class_stiffened_gas_eos
         endif
 
         ! Protect square root of a negative number {@code max(pressure + self%reference_pressure_(n), 0.0_real_kind)} and zero division {@code max(density, machine_epsilon)}.
-        soundspeed = sqrt(self%specific_heat_ratio_(n) * max(pressure + self%reference_pressure_(n), 0.0_real_kind) / max(density, machine_epsilon))
+        soundspeed = sqrt(self%specific_heat_ratio_(n) * max(pressure + self%reference_pressure_(n), machine_epsilon) / max(density, machine_epsilon))
     end function compute_soundspeed
 
     pure function compute_mixture_soundspeed(self, pressure, densities, volume_fractions) result(soundspeed)
@@ -187,7 +187,8 @@ module class_stiffened_gas_eos
 
         sigma = 0.0_real_kind
         do n = 1, self%num_phase_, 1
-            sigma = sigma + volume_fractions(n) / max(densities(n) * self%compute_soundspeed(pressure, densities(n), n), min_val)
+            if (densities(n) <= 0.0_real_kind) cycle
+            sigma = sigma + volume_fractions(n) / densities(n) * self%compute_soundspeed(pressure, densities(n), n)
         end do
         soundspeed = max(self%compute_mixture_density(densities, volume_fractions) * sigma, machine_epsilon)**(-0.5_real_kind)
     end function compute_wood_soundspeed

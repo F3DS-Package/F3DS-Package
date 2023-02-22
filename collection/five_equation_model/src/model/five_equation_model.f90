@@ -98,7 +98,7 @@ module five_equation_model_module
             rho1_powc1 => densities(1) * an_eos%compute_soundspeed(pressure, densities(1), 1)**2.0_real_kind, &
             rho2_powc2 => densities(2) * an_eos%compute_soundspeed(pressure, densities(2), 2)**2.0_real_kind  &
         )
-            k = (volume_fraction * (1.0_real_kind - volume_fraction) * (rho2_powc2 * rho1_powc1)) &
+            k = (volume_fraction * (1.0_real_kind - volume_fraction) * (rho2_powc2 - rho1_powc1)) &
               / (volume_fraction * rho2_powc2 + (1.0_real_kind - volume_fraction) * rho1_powc1)
         end associate
     end function compute_k
