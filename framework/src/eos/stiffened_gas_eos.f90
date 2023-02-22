@@ -180,17 +180,21 @@ module class_stiffened_gas_eos
         real (real_kind        ), intent(in) :: volume_fractions(:)
         real (real_kind        )             :: soundspeed
 
-        real   (real_kind) :: sigma, min_val
+        real   (real_kind) :: sigma, mixture_density
         integer(int_kind ) :: n
 
-        min_val = machine_epsilon / dble(self%num_phase_)
+        mixture_density = self%compute_mixture_density(densities, volume_fractions)
+        if(mixture_density <= 0.0_real_kind)then
+            soundspeed = 0.0_real_kind
+            return
+        end if
 
         sigma = 0.0_real_kind
         do n = 1, self%num_phase_, 1
             if (densities(n) <= 0.0_real_kind) cycle
-            sigma = sigma + volume_fractions(n) / densities(n) * self%compute_soundspeed(pressure, densities(n), n)
+            sigma = sigma + volume_fractions(n) / (densities(n) * self%compute_soundspeed(pressure, densities(n), n)**2.0_real_kind)
         end do
-        soundspeed = max(self%compute_mixture_density(densities, volume_fractions) * sigma, machine_epsilon)**(-0.5_real_kind)
+        soundspeed = (mixture_density * sigma)**(-0.5_real_kind)
     end function compute_wood_soundspeed
 
     pure function compute_pi(self, volume_fractions) result(pi)

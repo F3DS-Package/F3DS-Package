@@ -68,7 +68,7 @@ module five_equation_model_module
         end associate
     end function fix_reconstructed_primitive_variables
 
-    pure function compute_soundspeed(an_eos, pressure, densities, volume_fractions) result(c)
+    function compute_soundspeed(an_eos, pressure, densities, volume_fractions) result(c)
         class(eos      ), intent(in) :: an_eos
         real (real_kind), intent(in) :: pressure
         real (real_kind), intent(in) :: densities(:)
