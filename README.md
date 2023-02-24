@@ -1,8 +1,8 @@
 # Fortran Finite volume Fluid Dynamics Solver (F3DS) Package
 
-[![License](https://img.shields.io/badge/license-MIT-red.svg)]()
+[![License](https://img.shields.io/badge/license-MIT-red.svg)](https://opensource.org/license/mit/)
 
-F3DS package is a modern Fortran (such as Fortran 2003, 2008, ...) software of finite volume method (FVM) for fulid dynamics solvers. F3DS Package is composed of below:
+F3DS package is a modern Fortran software of finite volume method (FVM) for fulid dynamics solvers. F3DS Package is composed of below:
 
 - F3DS Flamework: Flamework for developing fluid dynamics solvers.
 - F3DS Resource: Models and schemes for specific solvers.
@@ -216,19 +216,21 @@ If you want more infomations, please read README.md in each collection directori
 
 ### F3DS Package
 
-[![License](https://img.shields.io/badge/license-MIT-red.svg)]()
+[![License](https://img.shields.io/badge/license-MIT-red.svg)](https://opensource.org/license/mit/)
 
-F3DS Package is an open sorce software, it is distributed under the MIT license. More details of the MIT license available at the following website: https://opensource.org/license/mit/.  
+F3DS Package is an open sorce software, it is distributed under the MIT license. More details of the MIT license available at the following file: [LICENSE](LICENSE).  
 Contributors names are listed below:  
 
 - Tatsumasa Ishikawa
 
 ### Third party libraries
 
-- [VTK Fortran](https://github.com/szaghi/VTKFortran) [![License](https://img.shields.io/badge/license-MIT-red.svg)]()
-    - [FACE](https://github.com/szaghi/FACE) [![License](https://img.shields.io/badge/license-MIT-red.svg)]()
-    - [FoXy](https://github.com/Fortran-FOSS-Programmers/FoXy) [![License](https://img.shields.io/badge/license-MIT-red.svg)]()
-    - [PENF](https://github.com/szaghi/PENF) [![License](https://img.shields.io/badge/license-MIT-red.svg)]()
-    - [StringiFor](https://github.com/szaghi/StringiFor) [![License](https://img.shields.io/badge/license-MIT-red.svg)]()
-- [JSON Fortran](https://github.com/jacobwilliams/json-fortran) [![License](https://img.shields.io/badge/license-BSD3-red.svg)]()
+| Libraries                                                    | Lisence                                                                                                       | Copyright                               |
+|--------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|-----------------------------------------|
+|[VTK Fortran](https://github.com/szaghi/VTKFortran)           | [![License](https://img.shields.io/badge/license-MIT-red.svg)](https://opensource.org/license/mit/)           | Copyright (c) 2022 Stefano Zaghi        |
+|[FACE](https://github.com/szaghi/FACE)                        | [![License](https://img.shields.io/badge/license-MIT-red.svg)](https://opensource.org/license/mit/)           | Copyright (c) 2022 Stefano Zaghi        |
+|[FoXy](https://github.com/Fortran-FOSS-Programmers/FoXy)      | [![License](https://img.shields.io/badge/license-MIT-red.svg)](https://opensource.org/license/mit/)           | Copyright (c) 2022 Stefano Zaghi        |
+|[PENF](https://github.com/szaghi/PENF)                        | [![License](https://img.shields.io/badge/license-MIT-red.svg)](https://opensource.org/license/mit/)           | Copyright (c) 2022 Stefano Zaghi        |
+|[StringiFor](https://github.com/szaghi/StringiFor)            | [![License](https://img.shields.io/badge/license-MIT-red.svg)](https://opensource.org/license/mit/)           | Copyright (c) 2022 Stefano Zaghi        |
+|[JSON Fortran](https://github.com/jacobwilliams/json-fortran) | [![License](https://img.shields.io/badge/license-BSD3-red.svg)](https://opensource.org/license/bsd-3-clause/) | Copyright (c) 2014-2021, Jacob Williams |
 
