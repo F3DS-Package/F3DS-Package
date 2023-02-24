@@ -14,13 +14,14 @@ Solvers are generalized. We can change parameters by a configuration file witch 
 We can easily build a solver for any non-viscous and viscous fluid using this flamework.  
 We are working on improving parallel computing and developing features for unstructured mesh.
 
-## Feature
 
-### F3DS Flamework
+## F3DS Flamework
 
 The source code is located in "framework" directory. The static link library is located in libs/f3ds_framework.a.  
 This flamework is desined by Object Oriented Desing (OOD) and supports Structure of Arrays (SoA) layout.
 We provide a fast, maintainable FVM library and solvers.
+
+### Features
 
 #### EoS
 
@@ -137,15 +138,15 @@ We provide a fast, maintainable FVM library and solvers.
 - [x] Data Description Language I/O
     - [x] JSON ([JSON-Fortran](https://github.com/jacobwilliams/json-fortran) backend)
 
-### F3DS Resource
+## F3DS Resource
 
-#### Five-equation model common tools
+### Five-equation model common tools
 
 The source code is located in resource/five_equation_model_common. The static link library is located in libs/f5eq_common.a.  
 This resource provides following schemes:
 
 - [x] rho-THINC reconstruction
-### F3DS Collection
+## F3DS Collection
 
 ### Five-equation model [Kapila 2001] [Allaire 2002]
 
