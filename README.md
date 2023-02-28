@@ -67,6 +67,11 @@ We provide a fast, maintainable FVM library and solvers.
 - [x] Gauss divergence
 - [x] Weighted Gauss divergence
 
+#### Face valiables interpolation
+
+- [x] Midpoint rule
+- [x] Weighted linear interpolator
+
 #### Face gradient interpolation
 
 - [x] Midpoint rule
@@ -99,6 +104,8 @@ We provide a fast, maintainable FVM library and solvers.
     - [ ] xyz
 - Unstructure grid format
     - [ ] gmsh
+    - [ ] CGNS
+    - [ ] OpenFOAM
 
 #### Result I/O
 
@@ -112,16 +119,15 @@ We provide a fast, maintainable FVM library and solvers.
 
 #### Parallelization
 
-- [x] single-node multi-thread simd (backends none/openMP/openMP)
-- [ ] multi-node multi-thread simd (backends MPI/MPI/openMP)
+- [x] OpenMP
+- [ ] MPI
 - [ ] multi-node multi-thread multi-gpu (backends MPI/MPI/{cuda, openACC})
 
 #### Grid Decomposition for Parallelization
 
-- [x] Structure (Simple decomposition)
-- [ ] [Metis](https://github.com/KarypisLab/METIS)
-- [ ] [Scotch](https://gitlab.inria.fr/scotch/scotch)
-- [ ] [Zoltan](https://github.com/sandialabs/Zoltan)
+- [x] Simple decomposition according to cell number
+- [ ] Recursive Coordinate Bisection
+- [ ] [Zoltan](https://github.com/sandialabs/Zoltan) interface
 
 #### Measurement Tools
 
@@ -194,7 +200,7 @@ If you want to use "ifort" and debug options, you can use the following command.
 make COMPILER=ifort DEBUG=yes
 ```
 
-More details can be found in 'make help'.
+More details can be found in the script shown by the 'make help' command.
 
 ## How to use
 
