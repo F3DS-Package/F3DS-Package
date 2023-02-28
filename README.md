@@ -133,8 +133,6 @@ We provide a fast, maintainable FVM library and solvers.
 #### Other tools
 
 - [ ] Nearest Neighbor Search
-    - [ ] [FLANN](https://github.com/flann-lib/flann)
-    - [ ] [Annoy](https://github.com/spotify/annoy)
 - [x] Data Description Language I/O
     - [x] JSON ([JSON-Fortran](https://github.com/jacobwilliams/json-fortran) backend)
 
@@ -151,7 +149,7 @@ This resource provides following schemes:
 ### Five-equation model [Kapila 2001] [Allaire 2002]
 
 - Source code location: collection/five_equation_model
-- binary location: bins/f5eq.
+- binary location: bins/f5eq
 
 The solver include the following terms.
 
@@ -161,7 +159,7 @@ The solver include the following terms.
 ### Viscosity five-equation model [Perigaud 2005] [Coralic 2014]
 
 - Source code location: collection/five_equation_model
-- binary location: bins/f5eq.
+- binary location: bins/f5eq
 
 The solver include the following terms.
 
