@@ -7,20 +7,24 @@ PREFIX   = /opt/f3ds
 
 # Constants
 # for gfortran
-GNU_RELEASE_FLAGS =-O3 -march=native -ffree-line-length-none -cpp -fopenmp
+GNU_RELEASE_FLAGS =-O3 -march=native -ffree-line-length-none -cpp
 GNU_DEBUG_FLAGS   =-O0 -g -pg -ffree-line-length-none -Wall -Wextra -Warray-temporaries -Wconversion -fimplicit-none -fbacktrace -fcheck=all -ffpe-trap=invalid,zero,overflow -finit-real=nan -cpp -D_DEBUG
+GNU_OMP_FLAGS     =-fopenmp
 
 # for ifort
-INTEL_CLASSIC_RELEASE_FLAGS =-fast -fpp -std18 -O3 -ipo -inline all -ipo-jobs4 -qopenmp -static
-INTEL_CLASSIC_DEBUG_FLAGS   =-g -std18  -check all -fpe0 -warn -traceback -debug extended -fpp -D_DEBUG
+INTEL_CLASSIC_RELEASE_FLAGS =-fast -fpp -std08 -O3 -ipo -inline all -ipo-jobs4 -static
+INTEL_CLASSIC_DEBUG_FLAGS   =-g -std08  -check all -fpe0 -warn -traceback -debug extended -fpp -D_DEBUG
+INTEL_CLASSIC_OMP_FLAGS     =-qopenmp
 
 # for ifx
-INTEL_RELEASE_FLAGS =-std18 -O3 -xHost -ipo -fast -fiopenmp -fpp
-INTEL_DEBUG_FLAGS   =-std18 -O0 -g -assume ieee_compares -check all -fpe0 -warn -traceback -debug extended -fpp -D_DEBUG
+INTEL_RELEASE_FLAGS =-std08 -O3 -xHost -ipo -fast -fpp
+INTEL_DEBUG_FLAGS   =-std08 -O0 -g -assume ieee_compares -check all -fpe0 -warn -traceback -debug extended -fpp -D_DEBUG
+INTEL_OMP_FLAGS     =-fiopenmp
 
 # for nvfortran
 NVIDIA_RELEASE_FLAGS =-O3 -fast -Mfree -cpp
 NVIDIA_DEBUG_FLAGS   =-O0 -g -traceback -Mdclchk -Mfree -cpp -D_DEBUG
+NVIDIA_OMP_FLAGS     =-mp
 
 OBJDIR=objs
 MODDIR=mods
@@ -33,12 +37,16 @@ AR=$(ARCHIVER)
 ifeq "$(DEBUG)" "no"
 	ifeq "$(findstring gfortran, $(FC))" "gfortran"
 		FCFLAGS=$(GNU_RELEASE_FLAGS)
+		OMPFLAGS=$(GNU_OMP_FLAGS)
 	else ifeq "$(FC)" "ifort"
 		FCFLAGS=$(INTEL_CLASSIC_RELEASE_FLAGS)
+		OMPFLAGS=$(INTEL_CLASSIC_OMP_FLAGS)
 	else ifeq "$(FC)" "ifx"
 		FCFLAGS=$(INTEL_RELEASE_FLAGS)
+		OMPFLAGS=$(INTEL_OMP_FLAGS)
 	else ifeq "$(FC)" "nvfortran"
 		FCFLAGS=$(NVIDIA_RELEASE_FLAGS)
+		OMPFLAGS=$(NVIDIA_OMP_FLAGS)
 	endif
 else
 	ifeq "$(findstring gfortran, $(FC))" "gfortran"
@@ -187,16 +195,17 @@ help:
 	@echo -e '  make {options} {flags}'
 	@echo -e '\033[1;32m Options: \033[0m'
 	@echo -e '  all                      : Compile F3DS Framework, Resource, and Collection.'
+	@echo -e '  clean                    : Delete binaries, mod files, and object files.'
 	@echo -e '  list                     : Show compiling target.'
 	@echo -e '  install                  : Install F3DS Package.'
 	@echo -e '\033[1;32m Flags: \033[0m'
-	@echo -e '  COMPILER={name}          : Compiler name you want to use. F3DS support below:'
+	@echo -e '  COMPILER={name}          : Compiler name you want to use. F3DS Package support below:'
 	@echo -e '                             - gfortran'
 	@echo -e '                             - ifort'
 	@echo -e '                             - ifx'
 	@echo -e '                             - nvfortran'
 	@echo -e '  DEBUG={yes/no}           : If you set DEBUG=yes, Debug infomations are embeded to your code.'
-	@echo -e '  EXTERNAL_FLAGS={flags}   : Flags you want to set the compiler.'
+	@echo -e '  EXTERNAL_FLAGS='{flags}' : Flags you want to set to a compiler.'
 	@echo -e '  ARCHIVER={name}          : Archiver you want to use on making a static link library.'
 	@echo -e '  PLEFIX={path}            : Install path you want to set. The default is "/opt/f3ds".'
 	@echo -e '\033[1;32m Example use: \033[0m'
@@ -218,12 +227,12 @@ $(FIVE_EQUATION_MODEL_COMMON_TARGET): $(FIVE_EQUATION_MODEL_COMMON_OBJS)
 ### Five-equation model
 $(FIVE_EQUATION_MODEL_TARGET): $(FIVE_EQUATION_MODEL_OBJS)
 	[ -d $(BINDIR) ] || mkdir -p $(BINDIR)
-	$(FC) $(FCFLAGS) $+ -o $(BINDIR)/$@
+	$(FC) $(FCFLAGS) $(OMPFLAGS) $+ -o $(BINDIR)/$@
 
 ### Viscous five-equation model
 $(VISCOUS_FIVE_EQUATION_MODEL_TARGET): $(VISCOUS_FIVE_EQUATION_MODEL_OBJS)
 	[ -d $(BINDIR) ] || mkdir -p $(BINDIR)
-	$(FC) $(FCFLAGS) $+ -o $(BINDIR)/$@
+	$(FC) $(FCFLAGS) $(OMPFLAGS) $+ -o $(BINDIR)/$@
 
 # Third-party compile rule
 ## JSON Fortran
@@ -280,26 +289,26 @@ $(OBJDIR)/%.o: $(VTKFORTRAN_DIR)/%.F90
 $(OBJDIR)/%.o: $(FRAMEWORK_SRCDIR)/%.f90
 	[ -d $(dir $@) ] || mkdir -p $(dir $@)
 	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
-	$(FC) $(FCFLAGS) -c $< -o $@
+	$(FC) $(FCFLAGS) $(OMPFLAGS) -c $< -o $@
 
 # F3DS Collection compile rule
 ## Five-equation model common tools
 $(OBJDIR)/%.o: $(FIVE_EQUATION_MODEL_COMMON_SRCDIR)/%.f90
 	[ -d $(dir $@) ] || mkdir -p $(dir $@)
 	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
-	$(FC) $(FCFLAGS) -c $< -o $@
+	$(FC) $(FCFLAGS) $(OMPFLAGS) -c $< -o $@
 
 ## Five-equation model
 $(OBJDIR)/%.o: $(FIVE_EQUATION_MODEL_SRCDIR)/%.f90
 	[ -d $(dir $@) ] || mkdir -p $(dir $@)
 	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
-	$(FC) $(FCFLAGS) -c $< -o $@
+	$(FC) $(FCFLAGS) $(OMPFLAGS) -c $< -o $@
 
 ## Viscous five-equation model
 $(OBJDIR)/%.o: $(VISCOUS_FIVE_EQUATION_MODEL_SRCDIR)/%.f90
 	[ -d $(dir $@) ] || mkdir -p $(dir $@)
 	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
-	$(FC) $(FCFLAGS) -c $< -o $@
+	$(FC) $(FCFLAGS) $(OMPFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(OBJDIR)
