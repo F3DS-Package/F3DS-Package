@@ -215,9 +215,9 @@ program viscous_five_equation_model_solver
                 call a_cellsystem%substitute_zeros(surface_tension_variables_set)
 
                 ! Compute normarized gradient volume fraction
-                call a_cellsystem%operate_cellwise(surface_tension_variables_set, primitive_variables_set, num_surface_tension_variables, compute_smoothed_volume_fraction)
+                call a_cellsystem%operate_cellwise(surface_tension_variables_set, primitive_variables_set, compute_smoothed_volume_fraction)
                 call a_cellsystem%compute_gradient(a_gradient_calculator, surface_tension_variables_set(1,:), surface_tension_variables_set(2:4,:))
-                call a_cellsystem%operate_cellwise(surface_tension_variables_set, num_surface_tension_variables, normalize_gradient_volume_fraction)
+                call a_cellsystem%operate_cellwise(surface_tension_variables_set, normalize_gradient_volume_fraction)
 
                 ! Apply BC for normalized gradient volume flaction
                 call a_cellsystem%apply_boundary_condition(                   &
@@ -239,7 +239,7 @@ program viscous_five_equation_model_solver
                 call a_cellsystem%smooth_variables(surface_tension_variables_set, curvature_smoothing_weight)
 
                 ! Curvature is copied to {@code primitive_variables_set}.
-                call a_cellsystem%operate_cellwise(primitive_variables_set, surface_tension_variables_set, num_primitive_variables, curvature_preprocessing)
+                call a_cellsystem%operate_cellwise(primitive_variables_set, surface_tension_variables_set, curvature_preprocessing)
 
                 ! Re apply BC for curvature
                 call a_cellsystem%apply_boundary_condition(                  &

@@ -301,21 +301,18 @@ module class_cellsystem
         procedure, private, pass(self) :: compute_boundary_gradient ! TODO: Move it! Make 'compute_face_gradient' class!
     end type
 
-    ! ### Function interfaces ###
+    ! ### Procedure interfaces ###
     interface
-        function operator_function_interface(operated_variables, num_variables) result(destination_variables)
+        subroutine operator_subroutine_interface(operated_variables)
             use typedef_module
-            real   (real_kind ), intent(in) :: operated_variables(:)
-            integer(int_kind  ), intent(in) :: num_variables
-            real   (real_kind )             :: destination_variables(num_variables)
-        end function operator_function_interface
+            real   (real_kind ), intent(inout) :: operated_variables(:)
+        end subroutine operator_subroutine_interface
 
-        function operator_with_subarray_function_interface(operated_variables, sub_variables, num_variables) result(destination_variables)
+        subroutine operator_with_subarray_subroutine_interface(operated_variables, sub_variables)
             use typedef_module
-            real   (real_kind ), intent(in) :: operated_variables(:), sub_variables(:)
-            integer(int_kind  ), intent(in) :: num_variables
-            real   (real_kind )             :: destination_variables(num_variables)
-        end function operator_with_subarray_function_interface
+            real   (real_kind ), intent(inout) :: operated_variables(:)
+            real   (real_kind ), intent(in   ) :: sub_variables(:)
+        end subroutine operator_with_subarray_subroutine_interface
 
         function weight_function_interface(own_cell_position, neighbor_cell_position, own_variables, neighbor_variables) result(weight)
             use typedef_module
@@ -1003,12 +1000,11 @@ module class_cellsystem
         end do
     end subroutine conservative_to_primitive_variables_all
 
-    subroutine operate_cellwise_rank2(self, variables_set, num_variables, operator_function)
+    subroutine operate_cellwise_rank2(self, variables_set, operator_subroutine)
         class  (cellsystem  ), intent(inout) :: self
         real   (real_kind   ), intent(inout) :: variables_set(:,:)
-        integer(int_kind    ), intent(in   ) :: num_variables
 
-        procedure(operator_function_interface) :: operator_function
+        procedure(operator_subroutine_interface) :: operator_subroutine
 
         integer(int_kind) :: i
 
@@ -1018,16 +1014,16 @@ module class_cellsystem
 
 !$omp parallel do private(i)
         do i = 1, self%num_cells, 1
-            variables_set(:,i) = operator_function(variables_set(:,i), num_variables)
+            call operator_subroutine(variables_set(:,i))
         end do
     end subroutine operate_cellwise_rank2
 
-    subroutine operate_cellwise_subarray_rank2(self, primary_variables_set, secondary_variables_set, num_variables, operator_function)
+    subroutine operate_cellwise_subarray_rank2(self, primary_variables_set, secondary_variables_set, operator_with_subarray_subroutine)
         class  (cellsystem  ), intent(inout) :: self
-        real   (real_kind   ), intent(inout) :: primary_variables_set(:,:), secondary_variables_set(:,:)
-        integer(int_kind    ), intent(in   ) :: num_variables
+        real   (real_kind   ), intent(inout) :: primary_variables_set  (:,:)
+        real   (real_kind   ), intent(in   ) :: secondary_variables_set(:,:)
 
-        procedure(operator_with_subarray_function_interface) :: operator_function
+        procedure(operator_with_subarray_subroutine_interface) :: operator_with_subarray_subroutine
 
         integer(int_kind) :: i
 
@@ -1037,7 +1033,7 @@ module class_cellsystem
 
 !$omp parallel do private(i)
         do i = 1, self%num_cells, 1
-            primary_variables_set(:,i) = operator_function(primary_variables_set(:,i), secondary_variables_set(:,i), num_variables)
+            call operator_with_subarray_subroutine(primary_variables_set(:,i), secondary_variables_set(:,i))
         end do
     end subroutine operate_cellwise_subarray_rank2
 
