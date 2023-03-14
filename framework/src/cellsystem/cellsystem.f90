@@ -206,9 +206,11 @@ module class_cellsystem
         procedure, public, pass(self) :: read_initial_condition
         procedure, public, pass(self) :: conservative_to_primitive_variables_all
         procedure, public, pass(self) :: operate_cellwise_rank2
-        procedure, public, pass(self) :: operate_cellwise_subarray_rank2
-        generic  , public             :: operate_cellwise => operate_cellwise_rank2, &
-                                                             operate_cellwise_subarray_rank2
+        procedure, public, pass(self) :: operate_cellwise_rank2_rank2
+        procedure, public, pass(self) :: operate_cellwise_rank2_rank1
+        generic  , public             :: operate_cellwise => operate_cellwise_rank2      , &
+                                                             operate_cellwise_rank2_rank2, &
+                                                             operate_cellwise_rank2_rank1
         procedure, public, pass(self) :: smooth_variables
         procedure, public, pass(self) :: substitute_rank1
         procedure, public, pass(self) :: substitute_rank2
@@ -220,7 +222,10 @@ module class_cellsystem
                                                              substitute_zeros_rank2
 
         ! ### Time increment control ###
-        procedure, public, pass(self) :: update_time_increment
+        procedure, public, pass(self) :: update_time_increment_eos_rank2
+        procedure, public, pass(self) :: update_time_increment_rank1
+        generic  , public             :: update_time_increment => update_time_increment_eos_rank2, &
+                                                                  update_time_increment_rank1
 
         ! ### Termination criterion ###
         procedure, public, pass(self) :: satisfy_termination_criterion
@@ -261,7 +266,10 @@ module class_cellsystem
         generic  , public             :: compute_next_stage => compute_next_stage_primitive_rank2, &
                                                                compute_next_stage_rank2          , &
                                                                compute_next_stage_rank1
-        procedure, public, pass(self) :: prepare_time_stepping
+        procedure, public, pass(self) :: prepare_time_stepping_rank2
+        procedure, public, pass(self) :: prepare_time_stepping_rank1
+        generic  , public             :: prepare_time_stepping => prepare_time_stepping_rank2, &
+                                                                  prepare_time_stepping_rank1
         procedure, public, pass(self) :: get_number_of_stages
 
         ! ### Result Writer ###
@@ -303,16 +311,22 @@ module class_cellsystem
 
     ! ### Procedure interfaces ###
     interface
-        subroutine operator_subroutine_interface(operated_variables)
+        subroutine operator_subroutine_rank1_interface(operated_variables)
             use typedef_module
             real   (real_kind ), intent(inout) :: operated_variables(:)
-        end subroutine operator_subroutine_interface
+        end subroutine operator_subroutine_rank1_interface
 
-        subroutine operator_with_subarray_subroutine_interface(operated_variables, sub_variables)
+        subroutine operator_subroutine_rank1_rank1_interface(operated_variables, sub_variables)
             use typedef_module
             real   (real_kind ), intent(inout) :: operated_variables(:)
             real   (real_kind ), intent(in   ) :: sub_variables(:)
-        end subroutine operator_with_subarray_subroutine_interface
+        end subroutine operator_subroutine_rank1_rank1_interface
+
+        subroutine operator_subroutine_rank1_rank0_interface(operated_variables, sub_variable)
+            use typedef_module
+            real   (real_kind ), intent(inout) :: operated_variables(:)
+            real   (real_kind ), intent(in   ) :: sub_variable
+        end subroutine operator_subroutine_rank1_rank0_interface
 
         function weight_function_interface(own_cell_position, neighbor_cell_position, own_variables, neighbor_variables) result(weight)
             use typedef_module
@@ -380,14 +394,22 @@ module class_cellsystem
             real   (real_kind)              :: primitive_variables(num_primitive_variables)
         end function conservative_to_primitive_function_interface
 
-        function spectral_radius_function_interface(an_eos, variables, length) result(r)
+        function spectral_radius_function_eos_rank1_interface(an_eos, variables, length) result(r)
             use abstract_eos
             use typedef_module
             class  (eos      ), intent(in) :: an_eos
             real   (real_kind), intent(in) :: variables(:)
             real   (real_kind), intent(in) :: length
             real   (real_kind) :: r
-        end function spectral_radius_function_interface
+        end function spectral_radius_function_eos_rank1_interface
+
+        function spectral_radius_function_rank0_interface(variable, length) result(r)
+            use abstract_eos
+            use typedef_module
+            real   (real_kind), intent(in) :: variable
+            real   (real_kind), intent(in) :: length
+            real   (real_kind) :: r
+        end function spectral_radius_function_rank0_interface
 
         function compute_source_term_function_interface(variables, num_conservative_variables) result(source)
             use typedef_module
@@ -621,18 +643,18 @@ module class_cellsystem
         call controller%initialize(config)
     end subroutine initialize_time_increment_controller
 
-    subroutine update_time_increment(self, controller, an_eos, variables_set, spectral_radius_function)
+    subroutine update_time_increment_eos_rank2(self, controller, an_eos, variables_set, spectral_radius_function)
         class  (cellsystem               ), intent(inout) :: self
         class  (time_increment_controller), intent(in   ) :: controller
         class  (eos                      ), intent(in   ) :: an_eos
         real   (real_kind                ), intent(in   ) :: variables_set(:,:)
 
-        procedure(spectral_radius_function_interface) :: spectral_radius_function
+        procedure(spectral_radius_function_eos_rank1_interface) :: spectral_radius_function
 
         integer(int_kind ) :: i
 
 #ifdef _DEBUG
-        call write_debuginfo("In update_time_increment (), cellsystem.")
+        call write_debuginfo("In update_time_increment_eos_rank2(), cellsystem.")
 #endif
 
         if ( controller%returns_constant() ) then
@@ -659,7 +681,46 @@ module class_cellsystem
                 end if
             end associate
         end do
-    end subroutine update_time_increment
+    end subroutine update_time_increment_eos_rank2
+
+    subroutine update_time_increment_rank1(self, controller, variables_set, spectral_radius_function)
+        class  (cellsystem               ), intent(inout) :: self
+        class  (time_increment_controller), intent(in   ) :: controller
+        real   (real_kind                ), intent(in   ) :: variables_set(:)
+
+        procedure(spectral_radius_function_rank0_interface) :: spectral_radius_function
+
+        integer(int_kind ) :: i
+
+#ifdef _DEBUG
+        call write_debuginfo("In update_time_increment_eos_rank2(), cellsystem.")
+#endif
+
+        if ( controller%returns_constant() ) then
+            self%time_increment = controller%get_constant_dt()
+            return
+        end if
+
+        self%time_increment = large_value
+        do i = 1, self%num_faces, 1
+            associate(                                                                                                             &
+                lhc_q        => variables_set    (self%face_to_cell_indexes(self%num_local_cells+0, i)), &
+                rhc_q        => variables_set    (self%face_to_cell_indexes(self%num_local_cells+1, i)), &
+                lhc_v        => self%cell_volumes(self%face_to_cell_indexes(self%num_local_cells+0, i)), &
+                rhc_v        => self%cell_volumes(self%face_to_cell_indexes(self%num_local_cells+1, i)), &
+                s            => self%face_areas                                                    (i) , &
+                lhc_is_real  => self%is_real_cell(self%face_to_cell_indexes(self%num_local_cells+0, i)), &
+                rhc_is_real  => self%is_real_cell(self%face_to_cell_indexes(self%num_local_cells+1, i))  &
+            )
+                if(lhc_is_real)then
+                    self%time_increment = min(controller%compute_local_dt(lhc_v, s, spectral_radius_function(lhc_q, lhc_v / s)), self%time_increment)
+                end if
+                if(rhc_is_real)then
+                    self%time_increment = min(controller%compute_local_dt(rhc_v, s, spectral_radius_function(rhc_q, rhc_v / s)), self%time_increment)
+                end if
+            end associate
+        end do
+    end subroutine update_time_increment_rank1
 
     ! ### Termination criterion ###
     subroutine initialize_termination_ctiterion(self, criterion, config, num_conservative_variables)
@@ -1004,7 +1065,7 @@ module class_cellsystem
         class  (cellsystem  ), intent(inout) :: self
         real   (real_kind   ), intent(inout) :: variables_set(:,:)
 
-        procedure(operator_subroutine_interface) :: operator_subroutine
+        procedure(operator_subroutine_rank1_interface) :: operator_subroutine
 
         integer(int_kind) :: i
 
@@ -1018,24 +1079,43 @@ module class_cellsystem
         end do
     end subroutine operate_cellwise_rank2
 
-    subroutine operate_cellwise_subarray_rank2(self, primary_variables_set, secondary_variables_set, operator_with_subarray_subroutine)
+    subroutine operate_cellwise_rank2_rank2(self, primary_variables_set, secondary_variables_set, operator_subroutine)
         class  (cellsystem  ), intent(inout) :: self
         real   (real_kind   ), intent(inout) :: primary_variables_set  (:,:)
         real   (real_kind   ), intent(in   ) :: secondary_variables_set(:,:)
 
-        procedure(operator_with_subarray_subroutine_interface) :: operator_with_subarray_subroutine
+        procedure(operator_subroutine_rank1_rank1_interface) :: operator_subroutine
 
         integer(int_kind) :: i
 
 #ifdef _DEBUG
-        call write_debuginfo("In operate_cellwise_subarray_rank2(), cellsystem.")
+        call write_debuginfo("In operate_cellwise_rank2_rank2(), cellsystem.")
 #endif
 
 !$omp parallel do private(i)
         do i = 1, self%num_cells, 1
-            call operator_with_subarray_subroutine(primary_variables_set(:,i), secondary_variables_set(:,i))
+            call operator_subroutine(primary_variables_set(:,i), secondary_variables_set(:,i))
         end do
-    end subroutine operate_cellwise_subarray_rank2
+    end subroutine operate_cellwise_rank2_rank2
+
+    subroutine operate_cellwise_rank2_rank1(self, primary_variables_set, secondary_variable_set, operator_subroutine)
+        class  (cellsystem  ), intent(inout) :: self
+        real   (real_kind   ), intent(inout) :: primary_variables_set  (:,:)
+        real   (real_kind   ), intent(in   ) :: secondary_variable_set (:)
+
+        procedure(operator_subroutine_rank1_rank0_interface) :: operator_subroutine
+
+        integer(int_kind) :: i
+
+#ifdef _DEBUG
+        call write_debuginfo("In operate_cellwise_rank2_rank1(), cellsystem.")
+#endif
+
+!$omp parallel do private(i)
+        do i = 1, self%num_cells, 1
+            call operator_subroutine(primary_variables_set(:,i), secondary_variable_set(i))
+        end do
+    end subroutine operate_cellwise_rank2_rank1
 
     subroutine smooth_variables(self, variables_set, weight_function)
         class  (cellsystem  ), intent(inout) :: self
@@ -1615,7 +1695,7 @@ module class_cellsystem
         end do
     end subroutine compute_next_stage_rank1
 
-    subroutine prepare_time_stepping(    &
+    subroutine prepare_time_stepping_rank2(    &
         self                      , &
         a_time_stepping           , &
         conservative_variables_set, &
@@ -1628,12 +1708,34 @@ module class_cellsystem
         integer(int_kind) :: i
 
 #ifdef _DEBUG
-        call write_debuginfo("In prepare_time_stepping(), cellsystem.")
+        call write_debuginfo("In prepare_time_stepping_rank2(), cellsystem.")
 #endif
 
 !$omp parallel do private(i)
         do i = 1, self%num_cells, 1
             call a_time_stepping%prepare_time_stepping(i, conservative_variables_set(:,i), residual_set(:,i))
+        end do
+    end subroutine
+
+    subroutine prepare_time_stepping_rank1(    &
+        self                      , &
+        a_time_stepping           , &
+        conservative_variables_set, &
+        residual_set                  )
+        class(cellsystem   ), intent(inout) :: self
+        class(time_stepping), intent(inout) :: a_time_stepping
+        real (real_kind    ), intent(inout) :: conservative_variables_set(:)
+        real (real_kind    ), intent(inout) :: residual_set              (:)
+
+        integer(int_kind) :: i
+
+#ifdef _DEBUG
+        call write_debuginfo("In prepare_time_stepping_rank1(), cellsystem.")
+#endif
+
+!$omp parallel do private(i)
+        do i = 1, self%num_cells, 1
+            call a_time_stepping%prepare_time_stepping(i, [conservative_variables_set(i)], [residual_set(i)])
         end do
     end subroutine
 

@@ -52,15 +52,15 @@ module class_forward_euler
     end function compute_next_stage
 
     subroutine prepare_time_stepping(   &
-        self                     , &
-        cell_index               , &
-        conservative_variables   , &
-        residuals                    )
+        self                          , &
+        cell_index                    , &
+        conservative_variables        , &
+        residuals                         )
 
         class  (forward_euler), intent(inout) :: self
-        integer(int_kind           ), intent(in   ) :: cell_index
-        real   (real_kind          ), intent(inout) :: conservative_variables(:)
-        real   (real_kind          ), intent(inout) :: residuals             (:)
+        integer(int_kind     ), intent(in   ) :: cell_index
+        real   (real_kind    ), intent(in   ) :: conservative_variables(:)
+        real   (real_kind    ), intent(in   ) :: residuals             (:)
 
         return
     end subroutine prepare_time_stepping

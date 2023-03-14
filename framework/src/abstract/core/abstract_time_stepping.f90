@@ -72,16 +72,16 @@ module abstract_time_stepping
         end function compute_next_stage_interface
 
         subroutine prepare_time_stepping_interface(   &
-            self                               , &
-            cell_index                         , &
-            conservative_variables             , &
-            residuals                              )
+            self                                    , &
+            cell_index                              , &
+            conservative_variables                  , &
+            residuals                                   )
             use typedef_module
             import time_stepping
             class  (time_stepping), intent(inout) :: self
             integer(int_kind     ), intent(in   ) :: cell_index
-            real   (real_kind    ), intent(inout) :: conservative_variables(:)
-            real   (real_kind    ), intent(inout) :: residuals             (:)
+            real   (real_kind    ), intent(in   ) :: conservative_variables(:)
+            real   (real_kind    ), intent(in   ) :: residuals             (:)
         end subroutine prepare_time_stepping_interface
 
         pure function get_number_of_stages_interface(self) result(n)

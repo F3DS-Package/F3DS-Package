@@ -164,6 +164,13 @@ FIVE_EQUATION_MODEL_COMMON_SRCS+=$(wildcard $(FIVE_EQUATION_MODEL_COMMON_SRCDIR)
 FIVE_EQUATION_MODEL_COMMON_OBJS=$(subst .f90,.o, $(subst $(FIVE_EQUATION_MODEL_COMMON_SRCDIR)/, $(OBJDIR)/, $(FIVE_EQUATION_MODEL_COMMON_SRCS)))
 
 # F3DS Collection
+# Advection Equation
+ADVECTION_EQUATION_TARGET=fadvection
+ADVECTION_EQUATION_SRCDIR=collection/advection_equation/src
+ADVECTION_EQUATION_SRCS+=$(wildcard $(ADVECTION_EQUATION_SRCDIR)/*.f90)
+ADVECTION_EQUATION_OBJS=$(FRAMEWORK_OBJS)
+ADVECTION_EQUATION_OBJS+=$(subst .f90,.o, $(subst $(ADVECTION_EQUATION_SRCDIR)/, $(OBJDIR)/, $(ADVECTION_EQUATION_SRCS)))
+
 # Five-equation model
 FIVE_EQUATION_MODEL_TARGET=f5eq
 FIVE_EQUATION_MODEL_SRCDIR=collection/five_equation_model/src
@@ -186,7 +193,9 @@ VISCOUS_FIVE_EQUATION_MODEL_OBJS=$(FRAMEWORK_OBJS)
 VISCOUS_FIVE_EQUATION_MODEL_OBJS+=$(FIVE_EQUATION_MODEL_COMMON_OBJS)
 VISCOUS_FIVE_EQUATION_MODEL_OBJS+=$(subst .f90,.o, $(subst $(VISCOUS_FIVE_EQUATION_MODEL_SRCDIR)/, $(OBJDIR)/, $(VISCOUS_FIVE_EQUATION_MODEL_SRCS)))
 
-all: $(FRAMEWORK_TARGET) $(FIVE_EQUATION_MODEL_COMMON_TARGET) $(FIVE_EQUATION_MODEL_TARGET) $(VISCOUS_FIVE_EQUATION_MODEL_TARGET)
+all: $(FRAMEWORK_TARGET) \
+$(FIVE_EQUATION_MODEL_COMMON_TARGET) \
+$(ADVECTION_EQUATION_TARGET) $(FIVE_EQUATION_MODEL_TARGET) $(VISCOUS_FIVE_EQUATION_MODEL_TARGET)
 
 # Help
 help:
@@ -224,6 +233,11 @@ $(FIVE_EQUATION_MODEL_COMMON_TARGET): $(FIVE_EQUATION_MODEL_COMMON_OBJS)
 	$(AR) rc $(LIBDIR)/$@ $+
 
 ## F3DS collection
+### Advection Equation
+$(ADVECTION_EQUATION_TARGET): $(ADVECTION_EQUATION_OBJS)
+	[ -d $(BINDIR) ] || mkdir -p $(BINDIR)
+	$(FC) $(FCFLAGS) $(OMPFLAGS) $+ -o $(BINDIR)/$@
+
 ### Five-equation model
 $(FIVE_EQUATION_MODEL_TARGET): $(FIVE_EQUATION_MODEL_OBJS)
 	[ -d $(BINDIR) ] || mkdir -p $(BINDIR)
@@ -291,9 +305,16 @@ $(OBJDIR)/%.o: $(FRAMEWORK_SRCDIR)/%.f90
 	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
 	$(FC) $(FCFLAGS) $(OMPFLAGS) -c $< -o $@
 
-# F3DS Collection compile rule
+# F3DS Resource compile rule
 ## Five-equation model common tools
 $(OBJDIR)/%.o: $(FIVE_EQUATION_MODEL_COMMON_SRCDIR)/%.f90
+	[ -d $(dir $@) ] || mkdir -p $(dir $@)
+	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
+	$(FC) $(FCFLAGS) $(OMPFLAGS) -c $< -o $@
+
+# F3DS Collection compile rule
+## Five-equation model
+$(OBJDIR)/%.o: $(ADVECTION_EQUATION_SRCDIR)/%.f90
 	[ -d $(dir $@) ] || mkdir -p $(dir $@)
 	[ -d $(MODDIR) ] || mkdir -p $(MODDIR)
 	$(FC) $(FCFLAGS) $(OMPFLAGS) -c $< -o $@
@@ -321,10 +342,12 @@ list:
 	@echo -e $(FRAMEWORK_OBJS)
 	@echo -e '\033[1;32m Five-equation model resource objects:\033[0m'
 	@echo -e $(FIVE_EQUATION_MODEL_COMMON_OBJS)
+	@echo -e '\033[1;32m advection equation objects:\033[0m'
+	@echo -e $(ADVECTION_EQUATION_OBJS)
+	@echo -e '\033[1;32m five-equation model objects:\033[0m'
+	@echo -e $(FIVE_EQUATION_MODEL_OBJS)
 	@echo -e '\033[1;32m Viscous five-equation model objects:\033[0m'
 	@echo -e $(VISCOUS_FIVE_EQUATION_MODEL_OBJS)
-	@echo -e '\033[1;32m five-equation model objects objects:\033[0m'
-	@echo -e $(FIVE_EQUATION_MODEL_OBJS)
 
 install:
 	[ -d $(PREFIX) ] || mkdir -p $(PREFIX)

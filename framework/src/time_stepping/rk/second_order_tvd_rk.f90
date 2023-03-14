@@ -69,8 +69,8 @@ module class_second_order_tvd_rk
 
         class  (second_order_tvd_rk), intent(inout) :: self
         integer(int_kind           ), intent(in   ) :: cell_index
-        real   (real_kind          ), intent(inout) :: conservative_variables(:)
-        real   (real_kind          ), intent(inout) :: residuals             (:)
+        real   (real_kind          ), intent(in   ) :: conservative_variables(:)
+        real   (real_kind          ), intent(in   ) :: residuals             (:)
 
         self%init_conservative_variables_set(:, cell_index) = conservative_variables(:)
     end subroutine prepare_time_stepping
