@@ -121,7 +121,7 @@ We provide a fast, maintainable FVM library and solvers.
 
 - [x] OpenMP
 - [ ] MPI
-- [ ] multi-node multi-thread multi-gpu (backends MPI/MPI/{cuda, openACC})
+- [ ] GPU
 
 #### Grid Decomposition for Parallelization
 
@@ -146,16 +146,25 @@ We provide a fast, maintainable FVM library and solvers.
 
 ### Five-equation model common tools
 
-The source code is located in resource/five_equation_model_common. The static link library is located in libs/f5eq_common.a.  
+- Source code location: resource/five_equation_model_common
+- Static link library location: libs/f5eq_common.a
+
 This resource provides following schemes:
 
 - [x] rho-THINC reconstruction
 ## F3DS Collection
 
+### Advection Equation
+
+- Source code location: collection/advection_equation
+- Binary location: bins/fadvection
+
+This code solves the equation that transports the scaler variable Phi. It will give you a hint as to the taste of the framework.
+
 ### Five-equation model [Kapila 2001] [Allaire 2002]
 
 - Source code location: collection/five_equation_model
-- binary location: bins/f5eq
+- Binary location: bins/f5eq
 
 The solver include the following terms.
 
@@ -165,7 +174,7 @@ The solver include the following terms.
 ### Viscosity five-equation model [Perigaud 2005] [Coralic 2014]
 
 - Source code location: collection/five_equation_model
-- binary location: bins/f5eq
+- Binary location: bins/f5eq
 
 The solver include the following terms.
 
@@ -204,18 +213,27 @@ More details can be found in the script shown by the 'make help' command.
 
 ## How to use
 
+### Setup
+
+Executing the script "setenv.sh", we can set the environment variables of F3DS package.
+We recommend writing the following script to your bashrc.
+
+```
+source /{your_f3ds_package_path}/setenv.sh
+```
+
 ### Use F3DS Framework and F3DS Resource
 
 Please link static link libraries and mod files.
 
 ```
-gfortran your_solver.f90 -o your_solver.exe -L/{your_f3ds_path}/f3ds/libs -I/{your_f3ds_path}/f3ds/mods f3ds_framework.a
+gfortran your_solver.f90 -o your_solver.exe -LF3DS_LIBS -IF3DS_MODS f3ds_framework.a
 ```
 
 ### Use solvers
 
-All binaries provided by F3DS is stored in "bins" directory. If you want use "f5eq", you type "./bins/f5eq".  
-If you want more infomations, please read README.md in each collection directories.
+All binaries provided by F3DS collection are stored in "bins" directory. If you set the environment variables using "setenv.sh", binaries are already set to your environment.
+More information can be found in README.md in each collection directory.
 
 ## Lisence
 
