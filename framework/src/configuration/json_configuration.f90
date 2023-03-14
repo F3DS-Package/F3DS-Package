@@ -170,7 +170,7 @@ module class_json_configuration
         logical                      , intent(inout), optional :: found
         real     (real_kind         ), intent(in   ), optional :: default(:)
 
-        real(json_RK), dimension(:), allocatable :: array_json_file
+        real(json_RK), allocatable :: array_json_file(:)
         logical                    :: match_array_range
 
         call call_error("'get_real_array' defined in 'json_configuration' can not be use in this version.")
@@ -183,7 +183,7 @@ module class_json_configuration
             if(.not. match_array_range) call call_error("Array range of 'val' does not match 'default'.")
         end if
 
-        call self%json%get(tag, array_json_file)
+        call self%json%get(tag, array_json_file, found)
 
         if (self%json%failed()) then
             call self%json%check_for_errors(self%status_ok, self%error_msg)

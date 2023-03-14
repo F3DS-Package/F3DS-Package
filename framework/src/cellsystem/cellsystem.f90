@@ -203,7 +203,10 @@ module class_cellsystem
         procedure, public, pass(self) :: show_timestepping_infomation
 
         ! ### Vatiables ###
-        procedure, public, pass(self) :: read_initial_condition
+        procedure, public, pass(self) :: read_initial_condition_rank2
+        procedure, public, pass(self) :: read_initial_condition_rank1
+        generic  , public             :: read_initial_condition => read_initial_condition_rank2, &
+                                                                   read_initial_condition_rank1
         procedure, public, pass(self) :: conservative_to_primitive_variables_all
         procedure, public, pass(self) :: operate_cellwise_rank2
         procedure, public, pass(self) :: operate_cellwise_rank2_rank2
@@ -1017,7 +1020,7 @@ module class_cellsystem
         variables_set(:) = 0.d0
     end subroutine initialize_variables_rank1
 
-    subroutine read_initial_condition(self, an_initial_condition_parser, config, conservative_variables_set)
+    subroutine read_initial_condition_rank2(self, an_initial_condition_parser, config, conservative_variables_set)
         class  (cellsystem              ), intent(inout) :: self
         class  (initial_condition_parser), intent(inout) :: an_initial_condition_parser
         class  (configuration           ), intent(inout) :: config
@@ -1028,7 +1031,7 @@ module class_cellsystem
         integer          :: i
 
 #ifdef _DEBUG
-        call write_debuginfo("In read_initial_condition(), cellsystem.")
+        call write_debuginfo("In read_initial_condition_rank2(), cellsystem.")
 #endif
 
         ! TODO: Following lines move to {@code initial_condition_parser} class.
@@ -1038,7 +1041,35 @@ module class_cellsystem
         call an_initial_condition_parser%parse(filepath)
         call an_initial_condition_parser%get_conservative_variables_set(conservative_variables_set)
         call an_initial_condition_parser%close()
-    end subroutine read_initial_condition
+    end subroutine read_initial_condition_rank2
+
+    subroutine read_initial_condition_rank1(self, an_initial_condition_parser, config, conservative_variables_set)
+        class  (cellsystem              ), intent(inout) :: self
+        class  (initial_condition_parser), intent(inout) :: an_initial_condition_parser
+        class  (configuration           ), intent(inout) :: config
+        real   (real_kind               ), intent(inout) :: conservative_variables_set(:)
+
+        character(len=:), allocatable :: filepath
+        logical          :: found
+        integer          :: i
+        real(real_kind), allocatable :: temp_variables(:,:)
+
+#ifdef _DEBUG
+        call write_debuginfo("In read_initial_condition_rank1(), cellsystem.")
+#endif
+
+        allocate(temp_variables(1, size(conservative_variables_set)))
+
+        ! TODO: Following lines move to {@code initial_condition_parser} class.
+        call config%get_char("Initial condition.Filepath", filepath, found)
+        if(.not. found) call call_error("'Initial condition.Filepath' is not found in configuration file you set.")
+
+        call an_initial_condition_parser%parse(filepath)
+        call an_initial_condition_parser%get_conservative_variables_set(temp_variables)
+        call an_initial_condition_parser%close()
+
+        conservative_variables_set(:) = temp_variables(1,:)
+    end subroutine read_initial_condition_rank1
 
     subroutine conservative_to_primitive_variables_all(self, an_eos, conservative_variables_set, primitive_variables_set, num_primitive_variables, conservative_to_primitive_function)
         class  (cellsystem              ), intent(inout) :: self
