@@ -161,6 +161,13 @@ This resource provides following schemes:
 
 This code solves the equation that transports the scaler variable Phi. It will give you a hint as to the taste of the framework.
 
+### Diffusion Equation
+
+- Source code location: collection/diffusion_equation
+- Binary location: bins/fdiffusion
+
+This code solves the equation that diffuse the scaler variable Phi.
+
 ### Five-equation model [Kapila 2001] [Allaire 2002]
 
 - Source code location: collection/five_equation_model

@@ -1,12 +1,7 @@
 {
     "Model" :
     {
-        "Speed":
-        {
-            "x" : 1.0,
-            "y" : 0.0,
-            "z" : 0.0
-        }
+        "Diffusion coefficient": 1.0
     },
     "Grid" :
     {
@@ -23,18 +18,18 @@
     },
     "Result writer" :
     {
-        "Output timespan" : 0.01
+        "Output timespan" : 0.0005
     },
     "Termination criterion" :
     {
-        "End time" : 0.1
+        "End time" : 0.005
     },
     "Time increment control" :
     {
         "Controller name" : "Constant controller",
         "Constant controller" :
         {
-            "dt" : 0.001
+            "dt" : 0.00005
         }
     },
     "Time stepping" :
