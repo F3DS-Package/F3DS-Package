@@ -19,18 +19,21 @@ module abstract_interpolator
             class(configuration), intent(in   ) :: config
         end subroutine initialize_interface
 
-        pure function interpolate_face_variables_interface(self, variables, face_to_cell_index, cell_positions, face_position, num_local_cells, num_variables) result(face_variables)
+        function interpolate_face_variables_interface(self, variables, face_to_cell_index, cell_positions, face_position, face_normal_vector, num_local_cells, num_variables, gradient_variables, velosity) result(face_variables)
             use typedef_module
             import interpolator
 
-            class  (interpolator), intent(in) :: self
-            real   (real_kind   ), intent(in) :: variables         (:,:)
-            integer(int_kind    ), intent(in) :: face_to_cell_index(:)
-            real   (real_kind   ), intent(in) :: cell_positions    (:,:)
-            real   (real_kind   ), intent(in) :: face_position     (3)
-            integer(int_kind    ), intent(in) :: num_local_cells
-            integer(int_kind    ), intent(in) :: num_variables
-            real   (real_kind   )             :: face_variables(num_variables)
+            class  (interpolator), intent(in)           :: self
+            real   (real_kind   ), intent(in)           :: variables         (:,:)
+            integer(int_kind    ), intent(in)           :: face_to_cell_index(:)
+            real   (real_kind   ), intent(in)           :: cell_positions    (:,:)
+            real   (real_kind   ), intent(in)           :: face_position     (3)
+            real   (real_kind   ), intent(in)           :: face_normal_vector(3)
+            integer(int_kind    ), intent(in)           :: num_local_cells
+            integer(int_kind    ), intent(in)           :: num_variables
+            real   (real_kind   ), intent(in), optional :: gradient_variables(:,:)
+            real   (real_kind   ), intent(in), optional :: velosity          (:,:)
+            real   (real_kind   )                       :: face_variables(num_variables)
         end function interpolate_face_variables_interface
     end interface
 end module abstract_interpolator

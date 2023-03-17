@@ -24,15 +24,18 @@ module class_weighted_linear_interpolator
         class(configuration            ), intent(in   ) :: config
     end subroutine initialize
 
-    pure function interpolate_face_variables(self, variables, face_to_cell_index, cell_positions, face_position, num_local_cells, num_variables) result(face_variables)
-        class  (weighted_linear_interpolator), intent(in) :: self
-        real   (real_kind                   ), intent(in) :: variables         (:,:)
-        integer(int_kind                    ), intent(in) :: face_to_cell_index(:)
-        real   (real_kind                   ), intent(in) :: cell_positions    (:,:)
-        real   (real_kind                   ), intent(in) :: face_position     (3)
-        integer(int_kind                    ), intent(in) :: num_local_cells
-        integer(int_kind                    ), intent(in) :: num_variables
-        real   (real_kind                   )             :: face_variables(num_variables)
+    function interpolate_face_variables(self, variables, face_to_cell_index, cell_positions, face_position, face_normal_vector, num_local_cells, num_variables, gradient_variables, velosity) result(face_variables)
+        class  (weighted_linear_interpolator), intent(in)           :: self
+        real   (real_kind                   ), intent(in)           :: variables         (:,:)
+        integer(int_kind                    ), intent(in)           :: face_to_cell_index(:)
+        real   (real_kind                   ), intent(in)           :: cell_positions    (:,:)
+        real   (real_kind                   ), intent(in)           :: face_position     (3)
+        real   (real_kind                   ), intent(in)           :: face_normal_vector(3)
+        integer(int_kind                    ), intent(in)           :: num_local_cells
+        integer(int_kind                    ), intent(in)           :: num_variables
+        real   (real_kind                   ), intent(in), optional :: gradient_variables(:,:)
+        real   (real_kind                   ), intent(in), optional :: velosity          (:,:)
+        real   (real_kind                   )                       :: face_variables(num_variables)
 
         real   (real_kind) :: rhc_w, lhc_w, total_w
 

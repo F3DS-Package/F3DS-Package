@@ -1361,15 +1361,17 @@ module class_cellsystem
         call a_interpolator%initialize(config)
     end subroutine initialize_interpolator
 
-    subroutine compute_divergence_rank2(self, a_interpolator, variables_set, divergence_variables_set, num_variables)
+    subroutine compute_divergence_rank2(self, a_interpolator, variables_set, divergence_variables_set, num_variables, gradient_variables_set, velosity_set)
         class  (cellsystem  ), intent(inout) :: self
         class  (interpolator), intent(inout) :: a_interpolator
         real   (real_kind   ), intent(in   ) :: variables_set           (:,:)
         real   (real_kind   ), intent(inout) :: divergence_variables_set(:,:)
         integer(int_kind    ), intent(in   ) :: num_variables
+        real   (real_kind   ), intent(in   ), optional :: gradient_variables_set(:,:)
+        real   (real_kind   ), intent(in   ), optional :: velosity_set          (:,:)
 
         integer(int_kind ) :: face_index, rhc_index, lhc_index, var_index, num_divergence_variables
-        real   (real_kind) :: face_variables(3)
+        real   (real_kind) :: face_variables(num_variables)
 
 #ifdef _DEBUG
         call write_debuginfo("In compute_divergence_rank2(), cellsystem.")
@@ -1382,33 +1384,36 @@ module class_cellsystem
             lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
             rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
 
+            face_variables(:) = a_interpolator%interpolate_face_variables(&
+               variables_set                      (:   , :         ), &
+               self%face_to_cell_indexes          (:   , face_index), &
+               self%cell_centor_positions         (1:3 , :         ), &
+               self%face_positions                (1:3 , face_index), &
+               self%face_normal_vectors           (1:3 , face_index), &
+               self%num_local_cells                                 , &
+               num_variables                                        , &
+               gradient_variables_set             (:   , :         ), &
+               velosity_set                       (:   , :         )  &
+            )
+
             do var_index = 1, num_divergence_variables, 1
-                associate(                                &
-                    vec_start_index => 3*(var_index-1)+1, &
-                    vec_end_index   => 3*(var_index-1)+3  &
-                )
-                    face_variables(:) = a_interpolator%interpolate_face_variables(                     &
-                       variables_set                      (vec_start_index:vec_end_index, :         ), &
-                       self%face_to_cell_indexes          (:                            , face_index), &
-                       self%cell_centor_positions         (1:3                          , :         ), &
-                       self%face_positions                (1:3                          , face_index), &
-                       self%num_local_cells                                                          , &
-                       3                                                                               &
-                    )
+                associate(face_variable=>face_variables(3*(var_index-1)+1:3*(var_index-1)+3))
                     divergence_variables_set(var_index, lhc_index) = divergence_variables_set(var_index, lhc_index) &
-                                                        + (1.d0 / self%cell_volumes(lhc_index)) * vector_multiply(face_variables, self%face_normal_vectors(:, face_index) * self%face_areas(face_index))
+                                                        + (1.d0 / self%cell_volumes(lhc_index)) * vector_multiply(face_variable, self%face_normal_vectors(:, face_index) * self%face_areas(face_index))
                     divergence_variables_set(var_index, rhc_index) = divergence_variables_set(var_index, rhc_index) &
-                                                        - (1.d0 / self%cell_volumes(rhc_index)) * vector_multiply(face_variables, self%face_normal_vectors(:, face_index) * self%face_areas(face_index))
+                                                        - (1.d0 / self%cell_volumes(rhc_index)) * vector_multiply(face_variable, self%face_normal_vectors(:, face_index) * self%face_areas(face_index))
                 end associate
             end do
         end do
     end subroutine compute_divergence_rank2
 
-    subroutine compute_divergence_rank1(self, a_interpolator, variable_set, divergence_variable_set)
+    subroutine compute_divergence_rank1(self, a_interpolator, variable_set, divergence_variable_set, gradient_variables_set, velosity_set)
         class(cellsystem   ), intent(inout) :: self
         class(interpolator ), intent(inout) :: a_interpolator
         real (real_kind    ), intent(in   ) :: variable_set              (:,:)
         real (real_kind    ), intent(inout) :: divergence_variable_set   (:)
+        real   (real_kind   ), intent(in   ), optional :: gradient_variables_set(:,:)
+        real   (real_kind   ), intent(in   ), optional :: velosity_set          (:,:)
 
         integer(int_kind ) :: face_index, rhc_index, lhc_index
         real   (real_kind) :: face_variables(3)
@@ -1422,7 +1427,9 @@ module class_cellsystem
             lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
             rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
 
-            face_variables(:) = a_interpolator%interpolate_face_variables(variable_set(:,:), self%face_to_cell_indexes(:, face_index), self%cell_centor_positions(:,:), self%face_positions(:,face_index), self%num_local_cells, 3)
+            face_variables(:) = a_interpolator%interpolate_face_variables( &
+                variable_set(:,:), self%face_to_cell_indexes(:, face_index), self%cell_centor_positions(:,:), self%face_positions(:,face_index), self%face_normal_vectors(1:3, face_index), self%num_local_cells, 3, gradient_variables_set, velosity_set &
+            )
 
             divergence_variable_set(lhc_index) = divergence_variable_set(lhc_index)               &
                                                + (1.d0 / self%cell_volumes(lhc_index)) * vector_multiply(face_variables(1:3), self%face_normal_vectors(1:3, face_index) * self%face_areas(face_index))
