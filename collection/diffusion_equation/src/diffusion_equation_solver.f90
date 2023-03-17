@@ -89,22 +89,22 @@ contains
         global_coordinate_flux(1:3) = vector_unrotate(face_coordinate_flux(1:3), face_normal_vector, face_tangential1_vector, face_tangential2_vector)
     end function unrotate_flux
 
-    pure function empty_bc(inner_cell_fulx, num_flux_variavles) result(ghost_cell_fulx)
-        real   (real_kind), intent(in) :: inner_cell_fulx(:)
+    pure function empty_bc(inner_cell_flux, num_flux_variavles) result(ghost_cell_flux)
+        real   (real_kind), intent(in) :: inner_cell_flux(:)
         integer(int_kind ), intent(in) :: num_flux_variavles
         real   (real_kind)             :: ghost_cell_fulx(num_flux_variavles)
-        ghost_cell_fulx(1) =  1.0_real_kind * inner_cell_fulx(1)
-        ghost_cell_fulx(2) =  1.0_real_kind * inner_cell_fulx(2)
-        ghost_cell_fulx(3) =  1.0_real_kind * inner_cell_fulx(3)
+        ghost_cell_flux(1) =  1.0_real_kind * inner_cell_flux(1)
+        ghost_cell_flux(2) =  1.0_real_kind * inner_cell_flux(2)
+        ghost_cell_flux(3) =  1.0_real_kind * inner_cell_flux(3)
     end function
 
-    pure function symmetric_bc(inner_cell_fulx, num_flux_variavles) result(ghost_cell_fulx)
-        real   (real_kind), intent(in) :: inner_cell_fulx(:)
+    pure function symmetric_bc(inner_cell_flux, num_flux_variavles) result(ghost_cell_flux)
+        real   (real_kind), intent(in) :: inner_cell_flux(:)
         integer(int_kind ), intent(in) :: num_flux_variavles
         real   (real_kind)             :: ghost_cell_fulx(num_flux_variavles)
-        ghost_cell_fulx(1) = -1.0_real_kind * inner_cell_fulx(1)
-        ghost_cell_fulx(2) =  1.0_real_kind * inner_cell_fulx(2)
-        ghost_cell_fulx(3) =  1.0_real_kind * inner_cell_fulx(3)
+        ghost_cell_flux(1) = -1.0_real_kind * inner_cell_flux(1)
+        ghost_cell_flux(2) =  1.0_real_kind * inner_cell_flux(2)
+        ghost_cell_flux(3) =  1.0_real_kind * inner_cell_flux(3)
     end function
 end module
 
