@@ -376,11 +376,11 @@ list:
 
 install:
 	[ -d $(PREFIX) ] || mkdir -p $(PREFIX)
-	cp bins        $(PREFIX)/. -r
-	cp libs        $(PREFIX)/. -r
-	cp mods        $(PREFIX)/. -r
-	cp framework   $(PREFIX)/. -r
-	cp resource    $(PREFIX)/. -r
-	cp collection  $(PREFIX)/. -r
-	cp setenv.sh   $(PREFIX)/.
-	cp README.md   $(PREFIX)/.
+	cp bins          $(PREFIX)/. -r
+	cp libs          $(PREFIX)/. -r
+	cp mods          $(PREFIX)/. -r
+	cp framework     $(PREFIX)/. -r
+	cp resource      $(PREFIX)/. -r
+	cp collection    $(PREFIX)/. -r
+	cp README.md     $(PREFIX)/.
+	./make_setenv.sh $(PREFIX)
