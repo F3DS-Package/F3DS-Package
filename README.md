@@ -2,24 +2,29 @@
 
 [![License](https://img.shields.io/badge/license-MIT-red.svg)](https://opensource.org/license/mit/)
 
+Status: **DEVELOPMENT**
+
+## Introduction
+
 F3DS package is a modern Fortran software of finite volume method (FVM) for fulid dynamics solvers. F3DS Package is composed of below:
 
 - F3DS Flamework: Flamework for developing fluid dynamics solvers.
 - F3DS Resource: Models and schemes for specific solvers.
 - F3DS Collection: Solvers built by F3DS Framework & Resource.
 
-Status: **DEVELOPMENT**  
-
-Solvers are generalized. We can change parameters by a configuration file witch writen by JSON file format. Of course we can also change a grid and an initial condition.  
-We can easily build a solver for any non-viscous and viscous fluid using this flamework.  
-We are working on improving parallel computing and developing features for unstructured mesh.
-
+The framework is designed to discretize any governing equations.
+We hope to contribute to many researchers and engineers through this flexible framework-centered software package.
+And we also hope that many researchers and engineers can collaborate through this framework.
 
 ## F3DS Flamework
 
-The source code is located in "framework" directory. The static link library is located in libs/f3ds_framework.a.  
-This flamework is desined by Object Oriented Desing (OOD) and supports Structure of Arrays (SoA) layout.
-We provide a fast, maintainable FVM library and solvers.
+- Source code location: framework/src
+- Static link library location: libs/f3ds_framework.a
+
+This code uses object-oriented design (OOD) and dependency injection strategy to design the generic FVM framework. But, Users do not need to understand OOD.
+Variables are expressed as a Structure of Arrays layout, which helps speed up the solver.
+You can easily build a usefull solver for any non-viscous and viscous fluid using this flamework.
+We are working on improving parallel computing and developing features for unstructured mesh.
 
 ### Features
 
@@ -69,8 +74,10 @@ We provide a fast, maintainable FVM library and solvers.
 
 #### Face valiables interpolation
 
-- [x] Midpoint rule
+- [x] Midpoint interpolator
 - [x] Weighted linear interpolator
+- [x] Upwind interpolator
+- [x] Linear upwind interpolator
 
 #### Face gradient interpolation
 
@@ -193,9 +200,9 @@ The solver include the following terms.
 ### Euler equation
 
 Currently under development
-## How to compile
+## How to compile & setup
 
-At first, we need to clone the repository and download submodules.
+First, you need to clone the repository and download submodules.
 
 ```:shell
 git clone https://165.93.124.207/gitlab/tishikawa/f3ds.git
@@ -203,7 +210,7 @@ git submodule init
 git submodule update
 ```
 
-F3DS only support for Linux system now. We can compile F3DS by Makefile like this.
+F3DS only support for Linux system now. You can compile F3DS by Makefile like this.
 
 ```:shell
 make
@@ -216,14 +223,15 @@ If you want to use "ifort" and debug options, you can use the following command.
 make COMPILER=ifort DEBUG=yes
 ```
 
-More details can be found in the script shown by the 'make help' command.
+More details can be found in the script shown by the 'make help' command.  
+Finally, to install F3DS Package for your computer, run the bellow:
 
-## How to use
-
-### Setup
-
-Executing the script "setenv.sh", we can set the environment variables of F3DS package.
-We recommend writing the following script to your bashrc.
+```:shell
+make install
+```
+The default installation path is '/opt/f3ds-package'. You can change the installation path by the 'PLEFIX={path}' option.   
+Executing the script 'setenv.sh', you can easily set the environment variables of F3DS package.
+We recommend writing the following script to your bashrc or profile.
 
 ```
 source /{your_f3ds_package_path}/setenv.sh
@@ -254,6 +262,9 @@ Contributors names are listed below:
 - Tatsumasa Ishikawa
 
 ### Third party libraries
+
+We use the following software to develop this software.
+We thank the authors for their outstanding contributions to the Fortran community.
 
 | Libraries                                                    | Lisence                                                                                                       | Copyright                               |
 |--------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|-----------------------------------------|

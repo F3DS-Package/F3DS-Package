@@ -3,7 +3,7 @@
 COMPILER = gfortran
 DEBUG    = no
 ARCHIVER = ar
-PREFIX   = /opt/f3ds
+PREFIX   = /opt/f3ds-package
 
 # Constants
 # for gfortran
