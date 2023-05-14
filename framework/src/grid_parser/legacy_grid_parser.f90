@@ -1,4 +1,4 @@
-module class_nlgrid_parser
+module class_legacy_grid_parser
     use, intrinsic :: iso_fortran_env
     use json_module
     use abstract_configuration
@@ -13,7 +13,7 @@ module class_nlgrid_parser
 
     private
 
-    type, public, extends(grid_parser) :: nlgrid_parser
+    type, public, extends(grid_parser) :: legacy_grid_parser
         integer(int_kind), private :: num_ghost_cells_ = 3
 
         integer(int_kind), private :: imax
@@ -51,6 +51,7 @@ module class_nlgrid_parser
         integer(boundary_face_type_kind), private :: z_plus_direction, z_minus_direction
 
         logical, private :: parsed = .false.
+        logical, private :: nlgrid_extension = .false.
 
         contains
 
@@ -75,12 +76,12 @@ module class_nlgrid_parser
         procedure, private, pass(self) :: assign_lower_x_face
         procedure, private, pass(self) :: assign_lower_y_face
         procedure, private, pass(self) :: assign_lower_z_face
-    end type nlgrid_parser
+    end type legacy_grid_parser
 
     contains
 
     subroutine parse(self, config)
-        class(nlgrid_parser), intent(inout) :: self
+        class(legacy_grid_parser), intent(inout) :: self
         class(configuration), intent(inout) :: config
 
         integer(int_kind)  :: i,j,k,n
@@ -93,19 +94,22 @@ module class_nlgrid_parser
         character(len=:), allocatable :: string_value
 
         if(self%parsed)then
-            call call_error("'parse' method of nlgrid_parser is already called. But you call 'parse' method.")
+            call call_error("'parse' method of legacy_grid_parser is already called. But you call 'parse' method.")
         end if
 
-        ! Real a grid file
-        call config%get_char("Grid.Filepath", string_value, found, "grid.nlgrid")
+        ! Read a grid infomation
+        call config%get_bool("Grid.NL Extension", self%nlgrid_extension, found, .false.)
+
+        ! Read a grid file
+        call config%get_char("Grid.Filepath", string_value, found, "grid.lfg")
         if(.not. found) call write_warring("'Grid.Filepath' is not found in configuration you set. To be set default value.")
         open(newunit=unit_number, file=string_value, access = 'stream', form = 'unformatted', status = 'old')
         read(unit_number) self%imin, self%jmin, self%kmin
         read(unit_number) self%imax, self%jmax, self%kmax
-        read(unit_number) dtheta
+        if (self%nlgrid_extension) read(unit_number) dtheta
 
 #ifdef _DEBUG
-        print *, "DEBUG: nlgrid parser: grid size:"
+        print *, "DEBUG: legacy grid parser: grid size:"
         print *, "i = [", self%imin, ", ", self%imax, "]"
         print *, "j = [", self%jmin, ", ", self%jmax, "]"
         print *, "k = [", self%kmin, ", ", self%kmax, "]"
@@ -214,10 +218,10 @@ module class_nlgrid_parser
     end subroutine parse
 
     subroutine close(self)
-        class(nlgrid_parser), intent(inout) :: self
+        class(legacy_grid_parser), intent(inout) :: self
 
         if(.not. self%parsed)then
-            call call_error("'parse' method of nlgrid_parser is not called. But you call 'closs' method.")
+            call call_error("'parse' method of legacy_grid_parser is not called. But you call 'closs' method.")
         end if
 
         deallocate(self%x_poss_cell_cent       )
@@ -247,22 +251,22 @@ module class_nlgrid_parser
     end subroutine close
 
     function get_number_of_cells(self) result(n)
-        class  (nlgrid_parser), intent(in) :: self
+        class  (legacy_grid_parser), intent(in) :: self
         integer(int_kind     )             :: n
 
         if(.not. self%parsed)then
-            call call_error("'parse' method of nlgrid_parser is not called yet. But you call 'get_number_of_cells' method.")
+            call call_error("'parse' method of legacy_grid_parser is not called yet. But you call 'get_number_of_cells' method.")
         end if
 
         n = (self%imax - self%imin + 1 + 2 * self%num_ghost_cells_) * (self%kmax - self%kmin + 1 + 2 * self%num_ghost_cells_) * (self%jmax - self%jmin + 1 + 2 * self%num_ghost_cells_)
     end function get_number_of_cells
 
     function get_number_of_faces(self) result(n)
-        class  (nlgrid_parser), intent(in) :: self
+        class  (legacy_grid_parser), intent(in) :: self
         integer(int_kind     )             :: n
 
         if(.not. self%parsed)then
-            call call_error("'parse' method of nlgrid_parser is not called yet. But you call 'get_number_of_faces' method.")
+            call call_error("'parse' method of legacy_grid_parser is not called yet. But you call 'get_number_of_faces' method.")
         end if
 
         n = (self%imax - self%imin + 2) * (self%jmax - self%jmin + 1) * (self%kmax - self%kmin + 1) &
@@ -271,24 +275,24 @@ module class_nlgrid_parser
     end function get_number_of_faces
 
     function get_number_of_ghost_cells(self) result(n)
-        class  (nlgrid_parser), intent(in) :: self
+        class  (legacy_grid_parser), intent(in) :: self
         integer(int_kind     )             :: n
 
         if(.not. self%parsed)then
-            call call_error("'parse' method of nlgrid_parser is not called yet. But you call 'get_number_of_ghost_cells' method.")
+            call call_error("'parse' method of legacy_grid_parser is not called yet. But you call 'get_number_of_ghost_cells' method.")
         end if
 
-        n = self%num_ghost_cells_ ! nlgrid format is followed only 2 ghost cell. But we extend to 3 ghost cell system.
+        n = self%num_ghost_cells_ ! legacy grid format is followed only 2 ghost cell. But we extend to 3 ghost cell system.
     end function get_number_of_ghost_cells
 
     function get_number_of_boundary_faces(self, type) result(n)
-        class  (nlgrid_parser)      , intent(in) :: self
+        class  (legacy_grid_parser)      , intent(in) :: self
         integer(boundary_face_type_kind), intent(in) :: type
 
         integer(int_kind) :: n
 
         if(.not. self%parsed)then
-            call call_error("'parse' method of nlgrid_parser is not called yet. But you call 'get_number_of_outflow_faces' method.")
+            call call_error("'parse' method of legacy_grid_parser is not called yet. But you call 'get_number_of_outflow_faces' method.")
         end if
 
         n = 0
@@ -302,18 +306,18 @@ module class_nlgrid_parser
     end function get_number_of_boundary_faces
 
     function get_number_of_points(self) result(n)
-        class  (nlgrid_parser), intent(in) :: self
+        class  (legacy_grid_parser), intent(in) :: self
         integer(int_kind     )             :: n
 
         if(.not. self%parsed)then
-            call call_error("'parse' method of nlgrid_parser is not called yet. But you call 'get_number_of_points' method.")
+            call call_error("'parse' method of legacy_grid_parser is not called yet. But you call 'get_number_of_points' method.")
         end if
 
         n = (self%imax - self%imin + 2) * (self%jmax - self%jmin + 2) * (self%kmax - self%kmin + 2)
     end function get_number_of_points
 
     subroutine get_cells(self, centor_positions, volumes, is_real_cell)
-        class(nlgrid_parser), intent(in   ) :: self
+        class(legacy_grid_parser), intent(in   ) :: self
         real (real_kind    ), intent(inout) :: centor_positions(:,:)
         real (real_kind    ), intent(inout) :: volumes         (:)
         logical             , intent(inout) :: is_real_cell  (:)
@@ -322,7 +326,7 @@ module class_nlgrid_parser
         real (real_kind) :: cell_to_face_vec(3)
 
         if(.not. self%parsed)then
-            call call_error("'parse' method of nlgrid_parser is not called yet. But you call 'get_cells' method.")
+            call call_error("'parse' method of legacy_grid_parser is not called yet. But you call 'get_cells' method.")
         end if
 
         is_real_cell(:) = .false.
@@ -506,7 +510,7 @@ module class_nlgrid_parser
     end subroutine get_cells
 
     subroutine get_faces(self, reference_cell_indexs, normal_vectors, tangential1_vectors, tangential2_vectors, positions, areas)
-        class(nlgrid_parser), intent(in   ) :: self
+        class(legacy_grid_parser), intent(in   ) :: self
         integer(int_kind     ), intent(inout) :: reference_cell_indexs(:,:)
         real   (real_kind    ), intent(inout) :: normal_vectors       (:,:)
         real   (real_kind    ), intent(inout) :: tangential1_vectors  (:,:)
@@ -518,7 +522,7 @@ module class_nlgrid_parser
         integer(int_kind) :: face_index
 
         if(.not. self%parsed)then
-            call call_error("'parse' method of nlgrid_parser is not called yet. But you call 'get_faces' method.")
+            call call_error("'parse' method of legacy_grid_parser is not called yet. But you call 'get_faces' method.")
         end if
 
         face_index = 1
@@ -565,7 +569,7 @@ module class_nlgrid_parser
         call assign_upper_x_face(self, reference_cell_indexs, normal_vectors, tangential1_vectors, tangential2_vectors, positions, areas, face_index, self%imax, self%jmax, self%kmax)
 
 #ifdef _DEBUG
-        print *, "DEBUG: nlgrid parser:"
+        print *, "DEBUG: legacy grid parser:"
         print *, "Faces (", face_index-1, "/", self%get_number_of_faces(), ") are assigned."
 #endif
 
@@ -573,7 +577,7 @@ module class_nlgrid_parser
 
     subroutine assign_upper_x_face(self, reference_cell_indexs, normal_vectors, tangential1_vectors, tangential2_vectors, positions, areas, &
         face_index, i, j, k)
-        class  (nlgrid_parser), intent(in   ) :: self
+        class  (legacy_grid_parser), intent(in   ) :: self
         integer(int_kind     ), intent(inout) :: reference_cell_indexs(:,:)
         real   (real_kind    ), intent(inout) :: normal_vectors       (:,:)
         real   (real_kind    ), intent(inout) :: tangential1_vectors  (:,:)
@@ -626,7 +630,7 @@ module class_nlgrid_parser
 
     subroutine assign_lower_x_face(self, reference_cell_indexs, normal_vectors, tangential1_vectors, tangential2_vectors, positions, areas, &
         face_index, i, j, k)
-        class  (nlgrid_parser), intent(in   ) :: self
+        class  (legacy_grid_parser), intent(in   ) :: self
         integer(int_kind     ), intent(inout) :: reference_cell_indexs(:,:)
         real   (real_kind    ), intent(inout) :: normal_vectors       (:,:)
         real   (real_kind    ), intent(inout) :: tangential1_vectors  (:,:)
@@ -679,7 +683,7 @@ module class_nlgrid_parser
 
     subroutine assign_upper_y_face(self, reference_cell_indexs, normal_vectors, tangential1_vectors, tangential2_vectors, positions, areas, &
         face_index, i, j, k)
-        class  (nlgrid_parser), intent(in   ) :: self
+        class  (legacy_grid_parser), intent(in   ) :: self
         integer(int_kind     ), intent(inout) :: reference_cell_indexs(:,:)
         real   (real_kind    ), intent(inout) :: normal_vectors       (:,:)
         real   (real_kind    ), intent(inout) :: tangential1_vectors  (:,:)
@@ -732,7 +736,7 @@ module class_nlgrid_parser
 
     subroutine assign_lower_y_face(self, reference_cell_indexs, normal_vectors, tangential1_vectors, tangential2_vectors, positions, areas, &
         face_index, i, j, k)
-        class  (nlgrid_parser), intent(in   ) :: self
+        class  (legacy_grid_parser), intent(in   ) :: self
         integer(int_kind     ), intent(inout) :: reference_cell_indexs(:,:)
         real   (real_kind    ), intent(inout) :: normal_vectors       (:,:)
         real   (real_kind    ), intent(inout) :: tangential1_vectors  (:,:)
@@ -785,7 +789,7 @@ module class_nlgrid_parser
 
     subroutine assign_upper_z_face(self, reference_cell_indexs, normal_vectors, tangential1_vectors, tangential2_vectors, positions, areas, &
         face_index, i, j, k)
-        class  (nlgrid_parser), intent(in   ) :: self
+        class  (legacy_grid_parser), intent(in   ) :: self
         integer(int_kind     ), intent(inout) :: reference_cell_indexs(:,:)
         real   (real_kind    ), intent(inout) :: normal_vectors       (:,:)
         real   (real_kind    ), intent(inout) :: tangential1_vectors  (:,:)
@@ -838,7 +842,7 @@ module class_nlgrid_parser
 
     subroutine assign_lower_z_face(self, reference_cell_indexs, normal_vectors, tangential1_vectors, tangential2_vectors, positions, areas, &
         face_index, i, j, k)
-        class  (nlgrid_parser), intent(in   ) :: self
+        class  (legacy_grid_parser), intent(in   ) :: self
         integer(int_kind     ), intent(inout) :: reference_cell_indexs(:,:)
         real   (real_kind    ), intent(inout) :: normal_vectors       (:,:)
         real   (real_kind    ), intent(inout) :: tangential1_vectors  (:,:)
@@ -890,14 +894,14 @@ module class_nlgrid_parser
     end subroutine assign_lower_z_face
 
     subroutine get_boundaries(self, face_types)
-        class  (nlgrid_parser      ), intent(in   ) :: self
+        class  (legacy_grid_parser      ), intent(in   ) :: self
         integer(boundary_face_type_kind), intent(inout) :: face_types(:)
 
         integer(int_kind) :: i, j, k
         integer(int_kind) :: face_index
 
         if(.not. self%parsed)then
-            call call_error("'parse' method of nlgrid_parser is not called yet. But you call 'get_boundaries' method.")
+            call call_error("'parse' method of legacy_grid_parser is not called yet. But you call 'get_boundaries' method.")
         end if
 
         face_index = 1
@@ -1009,7 +1013,7 @@ module class_nlgrid_parser
     end subroutine get_boundaries
 
     subroutine get_cell_geometries(self, points, cell_geometries, cell_types)
-        class  (nlgrid_parser), intent(in   ) :: self
+        class  (legacy_grid_parser), intent(in   ) :: self
         real   (real_kind    ), intent(inout) :: points         (:, :)
         class  (point_id_list), intent(inout) :: cell_geometries(:)
         integer(type_kind    ), intent(inout) :: cell_types     (:)
@@ -1018,7 +1022,7 @@ module class_nlgrid_parser
         integer(int_kind) :: p(8)
 
         if(.not. self%parsed)then
-            call call_error("'parse' method of nlgrid_parser is not called yet. But you call 'get_cell_geometries' method.")
+            call call_error("'parse' method of legacy_grid_parser is not called yet. But you call 'get_cell_geometries' method.")
         end if
 
         ! point index loop
@@ -1037,7 +1041,7 @@ module class_nlgrid_parser
             end do
         end do
 #ifdef _DEBUG
-        print *, "DEBUG: nlgrid parser:"
+        print *, "DEBUG: legacy grid parser:"
         print *, "Points (", n_assigned_point, "/", self%get_number_of_points(), ") are assigned."
 #endif
 
@@ -1085,8 +1089,8 @@ module class_nlgrid_parser
             end do
         end do
 #ifdef _DEBUG
-        print *, "DEBUG: nlgrid parser:"
+        print *, "DEBUG: legacy grid parser:"
         print *, "Geometries (", n_assigned_geom, "/", (self%imax - self%imin + 1) * (self%kmax - self%kmin + 1) * (self%jmax - self%jmin + 1), ") are assigned."
 #endif
     end subroutine get_cell_geometries
-end module class_nlgrid_parser
+end module class_legacy_grid_parser

@@ -116,8 +116,8 @@ program diffusion_equation_solver
     use class_green_gauss
     use class_second_order_tvd_rk
     use class_midpoint_interpolator
-    use class_nlgrid_parser
-    use class_nlinit_parser
+    use class_legacy_grid_parser
+    use class_legacy_init_parser
     use class_vtk_result_writer
     use class_end_time_criterion
     use class_constant_time_increment_controller
@@ -135,8 +135,8 @@ program diffusion_equation_solver
     real(real_kind), allocatable :: residual_set                          (:)
 
     type(cellsystem                        ) :: a_cellsystem
-    type(nlgrid_parser                     ) :: a_grid_parser
-    type(nlinit_parser                     ) :: a_init_parser
+    type(legacy_grid_parser                     ) :: a_grid_parser
+    type(legacy_init_parser                     ) :: a_init_parser
     type(json_configuration                ) :: a_configuration
     type(green_gauss                       ) :: a_gradient_calculator
     type(midpoint_interpolator             ) :: an_interpolator

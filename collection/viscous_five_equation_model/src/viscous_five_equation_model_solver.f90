@@ -24,8 +24,8 @@ program viscous_five_equation_model_solver
     ! Rieman solver
     use class_hllc
     ! Grid & initial condition reader
-    use class_nlinit_parser
-    use class_nlgrid_parser
+    use class_legacy_init_parser
+    use class_legacy_grid_parser
     ! Result file output
     use class_vtk_result_writer
     ! Termination criteria
@@ -98,8 +98,8 @@ program viscous_five_equation_model_solver
 
     ! F3DS Flamework
     type(cellsystem                                   ) :: a_cellsystem
-    type(nlgrid_parser                                ) :: a_grid_parser
-    type(nlinit_parser                                ) :: an_initial_condition_parser
+    type(legacy_grid_parser                                ) :: a_grid_parser
+    type(legacy_init_parser                                ) :: an_initial_condition_parser
     type(json_configuration                           ) :: a_configuration
     type(stiffened_gas_eos                            ) :: an_eos
     type(hllc                                         ) :: a_riemann_solver

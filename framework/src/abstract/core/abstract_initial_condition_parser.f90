@@ -12,10 +12,11 @@ module abstract_initial_condition_parser
     end type initial_condition_parser
 
     abstract interface
-        subroutine parse_interface(self, filepath)
+        subroutine parse_interface(self, config)
+            use abstract_configuration
             import initial_condition_parser
-            class    (initial_condition_parser), intent(inout) :: self
-            character(len=*)                   , intent(in   ) :: filepath
+            class(initial_condition_parser), intent(inout) :: self
+            class(configuration           ), intent(inout) :: config
         end subroutine parse_interface
 
         subroutine close_interface(self)

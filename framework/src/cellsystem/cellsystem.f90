@@ -1034,11 +1034,7 @@ module class_cellsystem
         call write_debuginfo("In read_initial_condition_rank2(), cellsystem.")
 #endif
 
-        ! TODO: Following lines move to {@code initial_condition_parser} class.
-        call config%get_char("Initial condition.Filepath", filepath, found)
-        if(.not. found) call call_error("'Initial condition.Filepath' is not found in configuration file you set.")
-
-        call an_initial_condition_parser%parse(filepath)
+        call an_initial_condition_parser%parse(config)
         call an_initial_condition_parser%get_conservative_variables_set(conservative_variables_set)
         call an_initial_condition_parser%close()
     end subroutine read_initial_condition_rank2
@@ -1060,11 +1056,7 @@ module class_cellsystem
 
         allocate(temp_variables(1, size(conservative_variables_set)))
 
-        ! TODO: Following lines move to {@code initial_condition_parser} class.
-        call config%get_char("Initial condition.Filepath", filepath, found)
-        if(.not. found) call call_error("'Initial condition.Filepath' is not found in configuration file you set.")
-
-        call an_initial_condition_parser%parse(filepath)
+        call an_initial_condition_parser%parse(config)
         call an_initial_condition_parser%get_conservative_variables_set(temp_variables)
         call an_initial_condition_parser%close()
 

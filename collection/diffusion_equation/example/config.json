@@ -6,11 +6,13 @@
     "Grid" :
     {
         "Filepath" : "grid.nlgrid",
-        "Boundary condition filepath" : "boundary_condition.json"
+        "Boundary condition filepath" : "boundary_condition.json",
+        "NL Extension" : true
     },
     "Initial condition" :
     {
-        "Filepath" : "init.nlinit"
+        "Filepath" : "init.nlinit",
+        "NL Extension" : true
     },
     "Parallel computing" :
     {
