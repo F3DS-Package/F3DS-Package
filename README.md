@@ -6,24 +6,24 @@ Status: **DEVELOPMENT**
 
 ## Introduction
 
-F3DS package is a modern Fortran software of finite volume method (FVM) for fulid dynamics solvers. F3DS Package is composed of below:
+F3DS package is a modern Fortran software of finite volume method (FVM) for fluid dynamics solvers. F3DS Package is composed of below:
 
-- F3DS Flamework: Flamework for developing fluid dynamics solvers.
+- F3DS Framework: Framework for developing fluid dynamics solvers.
 - F3DS Resource: Models and schemes for specific solvers.
 - F3DS Collection: Solvers built by F3DS Framework & Resource.
 
-The framework is designed to discretize any governing equations.
+The framework is designed to discrete any governing equations.
 We hope to contribute to many researchers and engineers through this flexible framework-centered software package.
 And we also hope that many researchers and engineers can collaborate through this framework.
 
-## F3DS Flamework
+## F3DS Framework
 
 - Source code location: framework/src
 - Static link library location: libs/f3ds_framework.a
 
 This code uses object-oriented design (OOD) and dependency injection strategy to design the generic FVM framework. But, Users do not need to understand OOD.
 Variables are expressed as a Structure of Arrays layout, which helps speed up the solver.
-You can easily build a usefull solver for any non-viscous and viscous fluid using this flamework.
+You can easily build a useful solver for any non-viscous and viscous fluid using this framework.
 We are working on improving parallel computing and developing features for unstructured mesh.
 
 ### Features
@@ -49,7 +49,7 @@ We are working on improving parallel computing and developing features for unstr
 
 #### Reconstruction Methods
 
-- For structure grid
+- For structured grid
     - [x] MUSCL3 (3rd order)
         - [x] Minimod flux limmiter (Minmod MUSCL3)
         - [ ] Monotonized central flux limmiter
@@ -58,8 +58,8 @@ We are working on improving parallel computing and developing features for unstr
         - [x] Smoothing indicator proposed by Jiang & Shu (WENO5-JS) [Jiang 1996]
         - [x] WENO-Z [Borges 2008]
     - [x] Monotonicity preserving scheme (MP)
-        - We can conbine WENO5-JS (MP-WENO5-JS) [Balsara 2000] and other reconstruction metheds.
-- For unstructure grid
+        - We can conbine WENO5-JS (MP-WENO5-JS) [Balsara 2000] and other reconstruction methods.
+- For unstructured grid
     - [ ] UMUSCL3 (3rd order)
 
 #### Gradient scheme
@@ -100,16 +100,16 @@ We are working on improving parallel computing and developing features for unstr
 
 #### Grid System
 
-- [x] Structure grid
-- [x] Unstructure grid
+- [x] Structured grid
+- [x] Unstructured grid
 - [ ] Adaptive Mesh Refinement (AMR)
 
 #### Grid I/O
 
-- Structure grid format
-    - [x] Nishida Lab. legacy format ([NL Grid Toolbox](https://165.93.124.207/gitlab/tishikawa/nl-grid-toolbox) is helpfull for you.)
+- Structured grid format
+    - [x] F3DS legacy format
     - [ ] xyz
-- Unstructure grid format
+- Unstructured grid format
     - [ ] gmsh
     - [ ] CGNS
     - [ ] OpenFOAM
@@ -122,7 +122,7 @@ We are working on improving parallel computing and developing features for unstr
 #### Initial Condition
 
 - [x] Input from Nishida Lab. legacy format
-- [ ] Unifoam flow generation
+- [ ] Uniform flow generation
 
 #### Parallelization
 
@@ -205,7 +205,7 @@ Currently under development
 First, you need to clone the repository and download submodules.
 
 ```:shell
-git clone https://165.93.124.207/gitlab/tishikawa/f3ds.git
+git clone https://github.com/F3DS-Package/F3DS-Package.git
 git submodule init
 git submodule update
 ```
@@ -256,7 +256,7 @@ More information can be found in README.md in each collection directory.
 
 [![License](https://img.shields.io/badge/license-MIT-red.svg)](https://opensource.org/license/mit/)
 
-F3DS Package is an open sorce software, it is distributed under the MIT license. More details of the MIT license available at the following file: [LICENSE](LICENSE).  
+F3DS Package is an open source software, it is distributed under the MIT license. More details of the MIT license available at the following file: [LICENSE](LICENSE).  
 Contributors names are listed below:  
 
 - Tatsumasa Ishikawa
@@ -264,9 +264,9 @@ Contributors names are listed below:
 ### Third party libraries
 
 We use the following software to develop this software.
-We thank the authors for their outstanding contributions to the Fortran community.
+We would like to thank the authors for the development of useful modern Fortran software.
 
-| Libraries                                                    | Lisence                                                                                                       | Copyright                               |
+| Libraries                                                    | License                                                                                                       | Copyright                               |
 |--------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|-----------------------------------------|
 |[VTK Fortran](https://github.com/szaghi/VTKFortran)           | [![License](https://img.shields.io/badge/license-MIT-red.svg)](https://opensource.org/license/mit/)           | Copyright (c) 2022 Stefano Zaghi        |
 |[FACE](https://github.com/szaghi/FACE)                        | [![License](https://img.shields.io/badge/license-MIT-red.svg)](https://opensource.org/license/mit/)           | Copyright (c) 2022 Stefano Zaghi        |
