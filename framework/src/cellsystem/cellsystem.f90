@@ -312,7 +312,7 @@ module class_cellsystem
         procedure, private, pass(self) :: compute_boundary_gradient ! TODO: Move it! Make 'compute_face_gradient' class!
     end type
 
-    ! ### Procedure interfaces ###
+    ! ### Procedure Interfaces ###
     interface
         subroutine operator_subroutine_rank1_interface(operated_variables)
             use typedef_module
@@ -494,6 +494,264 @@ module class_cellsystem
             real   (real_kind     )             :: element(num_conservative_variables, 1:2)
         end function element_provided_with_riemann_facegrad_function_interface
     end interface
+    ! ### End of Procedure Interfaces ###
+
+    ! ### Variables Procedure Interfaces ###
+    interface
+        module subroutine initialize_variables_rank2(self, variables_set, num_variables)
+            class  (cellsystem), intent(inout)              :: self
+            real   (real_kind ), intent(inout), allocatable :: variables_set(:,:)
+            integer(int_kind  ), intent(in   )              :: num_variables
+        end subroutine initialize_variables_rank2
+
+        module subroutine initialize_variables_rank1(self, variables_set)
+            class  (cellsystem), intent(inout)              :: self
+            real   (real_kind ), intent(inout), allocatable :: variables_set(:)
+        end subroutine initialize_variables_rank1
+
+        module subroutine read_initial_condition_rank2(                           &
+            self, an_initial_condition_parser, config, conservative_variables_set &
+        )
+            class  (cellsystem              ), intent(inout) :: self
+            class  (initial_condition_parser), intent(inout) :: an_initial_condition_parser
+            class  (configuration           ), intent(inout) :: config
+            real   (real_kind               ), intent(inout) :: conservative_variables_set(:,:)
+        end subroutine read_initial_condition_rank2
+
+        module subroutine read_initial_condition_rank1(                           &
+            self, an_initial_condition_parser, config, conservative_variables_set &
+        )
+            class  (cellsystem              ), intent(inout) :: self
+            class  (initial_condition_parser), intent(inout) :: an_initial_condition_parser
+            class  (configuration           ), intent(inout) :: config
+            real   (real_kind               ), intent(inout) :: conservative_variables_set(:)
+        end subroutine read_initial_condition_rank1
+
+        module subroutine conservative_to_primitive_variables_all(                                      &
+            self, an_eos, conservative_variables_set, primitive_variables_set, num_primitive_variables, &
+            conservative_to_primitive_function                                                          &
+        )
+            class  (cellsystem              ), intent(inout) :: self
+            class  (eos                     ), intent(in   ) :: an_eos
+            real   (real_kind               ), intent(in   ) :: conservative_variables_set(:,:)
+            real   (real_kind               ), intent(inout) :: primitive_variables_set(:,:)
+            integer(int_kind                ), intent(in   ) :: num_primitive_variables
+
+            procedure(conservative_to_primitive_function_interface) :: conservative_to_primitive_function
+        end subroutine conservative_to_primitive_variables_all
+
+        module subroutine operate_cellwise_rank2(self, variables_set, operator_subroutine)
+            class  (cellsystem  ), intent(inout) :: self
+            real   (real_kind   ), intent(inout) :: variables_set(:,:)
+
+            procedure(operator_subroutine_rank1_interface) :: operator_subroutine
+        end subroutine operate_cellwise_rank2
+
+        module subroutine operate_cellwise_rank2_rank2(           &
+            self, primary_variables_set, secondary_variables_set, &
+            operator_subroutine                                   &
+        )
+            class  (cellsystem  ), intent(inout) :: self
+            real   (real_kind   ), intent(inout) :: primary_variables_set  (:,:)
+            real   (real_kind   ), intent(in   ) :: secondary_variables_set(:,:)
+
+            procedure(operator_subroutine_rank1_rank1_interface) :: operator_subroutine
+        end subroutine operate_cellwise_rank2_rank2
+
+        module subroutine operate_cellwise_rank2_rank1(          &
+            self, primary_variables_set, secondary_variable_set, &
+            operator_subroutine                                  &
+        )
+            class  (cellsystem  ), intent(inout) :: self
+            real   (real_kind   ), intent(inout) :: primary_variables_set  (:,:)
+            real   (real_kind   ), intent(in   ) :: secondary_variable_set (:)
+
+            procedure(operator_subroutine_rank1_rank0_interface) :: operator_subroutine
+        end subroutine operate_cellwise_rank2_rank1
+
+        module subroutine smooth_variables(self, variables_set, weight_function)
+            class  (cellsystem  ), intent(inout) :: self
+            real   (real_kind   ), intent(inout) :: variables_set(:,:)
+            procedure(weight_function_interface) :: weight_function
+        end subroutine smooth_variables
+
+        module subroutine substitute_rank2(self, variables, val)
+            class(cellsystem  ), intent(inout) :: self
+            real (real_kind   ), intent(inout) :: variables(:,:)
+            real (real_kind   ), intent(in   ) :: val
+        end subroutine substitute_rank2
+
+        module subroutine substitute_zeros_rank2(self, variables)
+            class(cellsystem  ), intent(inout) :: self
+            real (real_kind   ), intent(inout) :: variables(:,:)
+        end subroutine substitute_zeros_rank2
+
+        module subroutine substitute_rank1(self, variables, val)
+            class(cellsystem  ), intent(inout) :: self
+            real (real_kind   ), intent(inout) :: variables(:)
+            real (real_kind   ), intent(in   ) :: val
+        end subroutine substitute_rank1
+
+        module subroutine substitute_zeros_rank1(self, variables)
+            class(cellsystem  ), intent(inout) :: self
+            real (real_kind   ), intent(inout) :: variables(:)
+        end subroutine substitute_zeros_rank1
+    end interface
+    ! ### End of Variables Procedure Interfaces ###
+
+    ! ### Timestep Control ###
+    interface
+        module subroutine initialize_time_increment_controller(  &
+            self, controller, config, num_conservative_variables &
+        )
+            class(cellsystem               ), intent(inout) :: self
+            class(time_increment_controller), intent(inout) :: controller
+            class(configuration            ), intent(inout) :: config
+            integer(int_kind               ), intent(in   ) :: num_conservative_variables
+        end subroutine initialize_time_increment_controller
+
+        module subroutine update_time_increment_eos_rank2(                    &
+            self, controller, an_eos, variables_set, spectral_radius_function &
+        )
+            class  (cellsystem               ), intent(inout) :: self
+            class  (time_increment_controller), intent(in   ) :: controller
+            class  (eos                      ), intent(in   ) :: an_eos
+            real   (real_kind                ), intent(in   ) :: variables_set(:,:)
+
+            procedure(spectral_radius_function_eos_rank1_interface) :: spectral_radius_function
+        end subroutine update_time_increment_eos_rank2
+
+        module subroutine update_time_increment_rank1(                &
+            self, controller, variables_set, spectral_radius_function &
+        )
+            class  (cellsystem               ), intent(inout) :: self
+            class  (time_increment_controller), intent(in   ) :: controller
+            real   (real_kind                ), intent(in   ) :: variables_set(:)
+
+            procedure(spectral_radius_function_rank0_interface) :: spectral_radius_function
+        end subroutine update_time_increment_rank1
+    end interface
+    ! ### End of Timestep Control Interfaces ###
+
+    ! ### Termination Criterion Interfaces ###
+    interface
+        module subroutine initialize_termination_ctiterion(self, criterion, config, num_conservative_variables)
+            class  (cellsystem           ), intent(inout) :: self
+            class  (termination_criterion), intent(inout) :: criterion
+            class  (configuration        ), intent(inout) :: config
+            integer(int_kind             ), intent(in   ) :: num_conservative_variables
+        end subroutine initialize_termination_ctiterion
+
+        module pure function satisfy_termination_criterion(self, criterion) result(judge)
+            class(cellsystem           ), intent(in) :: self
+            class(termination_criterion), intent(in) :: criterion
+            logical :: judge
+        end function satisfy_termination_criterion
+    end interface
+    ! ### End of Termination Criterion Interfaces ###
+
+    ! ### Boundary Condition Interfaces ###
+    interface
+        module subroutine apply_boundary_condition( &
+            self, variables_set, num_variables  ,   &
+            compute_rotate_variables_function   ,   &
+            compute_unrotate_variables_function ,   &
+            empty_condition_function            ,   &
+            symmetric_condition_function        ,   &
+            nonslip_wall_condition_function     ,   &
+            slip_wall_condition_function        ,   &
+            outflow_condition_function              &
+        )
+            class  (cellsystem  ), intent(inout) :: self
+            real   (real_kind   ), intent(inout) :: variables_set(:,:)
+            integer(int_kind    ), intent(in   ) :: num_variables
+
+            procedure(compute_rotate_variables_function_interface  ) :: compute_rotate_variables_function
+            procedure(compute_unrotate_variables_function_interface) :: compute_unrotate_variables_function
+
+            procedure(boundary_condition_function_interface        ), optional :: empty_condition_function
+            procedure(boundary_condition_function_interface        ), optional :: symmetric_condition_function
+            procedure(boundary_condition_function_interface        ), optional :: nonslip_wall_condition_function
+            procedure(boundary_condition_function_interface        ), optional :: slip_wall_condition_function
+            procedure(boundary_condition_function_interface        ), optional :: outflow_condition_function
+        end subroutine apply_boundary_condition
+
+        module subroutine apply_outflow_condition( &
+            self, variables_set, num_variables,    &
+            compute_rotate_variables_function,     &
+            compute_unrotate_variables_function,   &
+            boundary_condition_function            &
+        )
+            class  (cellsystem  ), intent(inout) :: self
+            real   (real_kind   ), intent(inout) :: variables_set(:,:)
+            integer(int_kind    ), intent(in   ) :: num_variables
+
+            procedure(compute_rotate_variables_function_interface  ) :: compute_rotate_variables_function
+            procedure(compute_unrotate_variables_function_interface) :: compute_unrotate_variables_function
+            procedure(boundary_condition_function_interface        ) :: boundary_condition_function
+        end subroutine apply_outflow_condition
+
+        module subroutine apply_nonslip_wall_condition( &
+            self, variables_set, num_variables,         &
+            compute_rotate_variables_function,          &
+            compute_unrotate_variables_function,        &
+            boundary_condition_function                 &
+        )
+            class  (cellsystem  ), intent(inout) :: self
+            real   (real_kind   ), intent(inout) :: variables_set(:,:)
+            integer(int_kind    ), intent(in   ) :: num_variables
+
+            procedure(compute_rotate_variables_function_interface  ) :: compute_rotate_variables_function
+            procedure(compute_unrotate_variables_function_interface) :: compute_unrotate_variables_function
+            procedure(boundary_condition_function_interface        ) :: boundary_condition_function
+        end subroutine apply_nonslip_wall_condition
+
+        module subroutine apply_symmetric_condition( &
+            self, variables_set, num_variables,      &
+            compute_rotate_variables_function,       &
+            compute_unrotate_variables_function,     &
+            boundary_condition_function              &
+        )
+            class  (cellsystem  ), intent(inout) :: self
+            real   (real_kind   ), intent(inout) :: variables_set(:,:)
+            integer(int_kind    ), intent(in   ) :: num_variables
+
+            procedure(compute_rotate_variables_function_interface  ) :: compute_rotate_variables_function
+            procedure(compute_unrotate_variables_function_interface) :: compute_unrotate_variables_function
+            procedure(boundary_condition_function_interface        ) :: boundary_condition_function
+        end subroutine apply_symmetric_condition
+
+        module subroutine apply_slip_wall_condition( &
+            self, variables_set, num_variables,      &
+            compute_rotate_variables_function,       &
+            compute_unrotate_variables_function,     &
+            boundary_condition_function              &
+        )
+            class  (cellsystem  ), intent(inout) :: self
+            real   (real_kind   ), intent(inout) :: variables_set(:,:)
+            integer(int_kind    ), intent(in   ) :: num_variables
+
+            procedure(compute_rotate_variables_function_interface  ) :: compute_rotate_variables_function
+            procedure(compute_unrotate_variables_function_interface) :: compute_unrotate_variables_function
+            procedure(boundary_condition_function_interface        ) :: boundary_condition_function
+        end subroutine apply_slip_wall_condition
+
+        module subroutine apply_empty_condition( &
+            self, variables_set, num_variables,  &
+            compute_rotate_variables_function,   &
+            compute_unrotate_variables_function, &
+            boundary_condition_function          &
+        )
+            class  (cellsystem  ), intent(inout) :: self
+            real   (real_kind   ), intent(inout) :: variables_set(:,:)
+            integer(int_kind    ), intent(in   ) :: num_variables
+
+            procedure(compute_rotate_variables_function_interface  ) :: compute_rotate_variables_function
+            procedure(compute_unrotate_variables_function_interface) :: compute_unrotate_variables_function
+            procedure(boundary_condition_function_interface        ) :: boundary_condition_function
+        end subroutine apply_empty_condition
+    end interface
+    ! ### End of Boundary Condition Interfaces
 
     contains
 
@@ -632,624 +890,6 @@ module class_cellsystem
         logical                         :: juge
         juge = plotter%is_writable(self%time)
     end function line_plotter_is_writable
-
-    ! ### Time increment control ###
-    subroutine initialize_time_increment_controller(self, controller, config, num_conservative_variables)
-        class(cellsystem               ), intent(inout) :: self
-        class(time_increment_controller), intent(inout) :: controller
-        class(configuration            ), intent(inout) :: config
-        integer(int_kind               ), intent(in   ) :: num_conservative_variables
-
-#ifdef _DEBUG
-        call write_debuginfo("In initialize_time_increment_controller(), cellsystem.")
-#endif
-        call controller%initialize(config)
-    end subroutine initialize_time_increment_controller
-
-    subroutine update_time_increment_eos_rank2(self, controller, an_eos, variables_set, spectral_radius_function)
-        class  (cellsystem               ), intent(inout) :: self
-        class  (time_increment_controller), intent(in   ) :: controller
-        class  (eos                      ), intent(in   ) :: an_eos
-        real   (real_kind                ), intent(in   ) :: variables_set(:,:)
-
-        procedure(spectral_radius_function_eos_rank1_interface) :: spectral_radius_function
-
-        integer(int_kind ) :: i
-
-#ifdef _DEBUG
-        call write_debuginfo("In update_time_increment_eos_rank2(), cellsystem.")
-#endif
-
-        if ( controller%returns_constant() ) then
-            self%time_increment = controller%get_constant_dt()
-            return
-        end if
-
-        self%time_increment = large_value
-        do i = 1, self%num_faces, 1
-            associate(                                                                                                             &
-                lhc_q        => variables_set    (:, self%face_to_cell_indexes(self%num_local_cells+0, i)), &
-                rhc_q        => variables_set    (:, self%face_to_cell_indexes(self%num_local_cells+1, i)), &
-                lhc_v        => self%cell_volumes   (self%face_to_cell_indexes(self%num_local_cells+0, i)), &
-                rhc_v        => self%cell_volumes   (self%face_to_cell_indexes(self%num_local_cells+1, i)), &
-                s            => self%face_areas                                                       (i) , &
-                lhc_is_real  => self%is_real_cell   (self%face_to_cell_indexes(self%num_local_cells+0, i)), &
-                rhc_is_real  => self%is_real_cell   (self%face_to_cell_indexes(self%num_local_cells+1, i))  &
-            )
-                if(lhc_is_real)then
-                    self%time_increment = min(controller%compute_local_dt(lhc_v, s, spectral_radius_function(an_eos, lhc_q, lhc_v / s)), self%time_increment)
-                end if
-                if(rhc_is_real)then
-                    self%time_increment = min(controller%compute_local_dt(rhc_v, s, spectral_radius_function(an_eos, rhc_q, rhc_v / s)), self%time_increment)
-                end if
-            end associate
-        end do
-    end subroutine update_time_increment_eos_rank2
-
-    subroutine update_time_increment_rank1(self, controller, variables_set, spectral_radius_function)
-        class  (cellsystem               ), intent(inout) :: self
-        class  (time_increment_controller), intent(in   ) :: controller
-        real   (real_kind                ), intent(in   ) :: variables_set(:)
-
-        procedure(spectral_radius_function_rank0_interface) :: spectral_radius_function
-
-        integer(int_kind ) :: i
-
-#ifdef _DEBUG
-        call write_debuginfo("In update_time_increment_eos_rank2(), cellsystem.")
-#endif
-
-        if ( controller%returns_constant() ) then
-            self%time_increment = controller%get_constant_dt()
-            return
-        end if
-
-        self%time_increment = large_value
-        do i = 1, self%num_faces, 1
-            associate(                                                                                                             &
-                lhc_q        => variables_set    (self%face_to_cell_indexes(self%num_local_cells+0, i)), &
-                rhc_q        => variables_set    (self%face_to_cell_indexes(self%num_local_cells+1, i)), &
-                lhc_v        => self%cell_volumes(self%face_to_cell_indexes(self%num_local_cells+0, i)), &
-                rhc_v        => self%cell_volumes(self%face_to_cell_indexes(self%num_local_cells+1, i)), &
-                s            => self%face_areas                                                    (i) , &
-                lhc_is_real  => self%is_real_cell(self%face_to_cell_indexes(self%num_local_cells+0, i)), &
-                rhc_is_real  => self%is_real_cell(self%face_to_cell_indexes(self%num_local_cells+1, i))  &
-            )
-                if(lhc_is_real)then
-                    self%time_increment = min(controller%compute_local_dt(lhc_v, s, spectral_radius_function(lhc_q, lhc_v / s)), self%time_increment)
-                end if
-                if(rhc_is_real)then
-                    self%time_increment = min(controller%compute_local_dt(rhc_v, s, spectral_radius_function(rhc_q, rhc_v / s)), self%time_increment)
-                end if
-            end associate
-        end do
-    end subroutine update_time_increment_rank1
-
-    ! ### Termination criterion ###
-    subroutine initialize_termination_ctiterion(self, criterion, config, num_conservative_variables)
-        class  (cellsystem           ), intent(inout) :: self
-        class  (termination_criterion), intent(inout) :: criterion
-        class  (configuration        ), intent(inout) :: config
-        integer(int_kind             ), intent(in   ) :: num_conservative_variables
-
-#ifdef _DEBUG
-        call write_debuginfo("In initialize_termination_ctiterion(), cellsystem.")
-#endif
-        call criterion%initialize(config)
-    end subroutine initialize_termination_ctiterion
-
-    pure function satisfy_termination_criterion(self, criterion) result(judge)
-        class(cellsystem           ), intent(in) :: self
-        class(termination_criterion), intent(in) :: criterion
-        logical :: judge
-        judge = criterion%is_satisfied(self%time, self%num_steps)
-    end function satisfy_termination_criterion
-
-    ! ### Boundary Condition ###
-    subroutine apply_boundary_condition(self, variables_set, num_variables  , &
-                                        compute_rotate_variables_function   , &
-                                        compute_unrotate_variables_function , &
-                                        empty_condition_function            , &
-                                        symmetric_condition_function        , &
-                                        nonslip_wall_condition_function     , &
-                                        slip_wall_condition_function        , &
-                                        outflow_condition_function               )
-        class  (cellsystem  ), intent(inout) :: self
-        real   (real_kind   ), intent(inout) :: variables_set(:,:)
-        integer(int_kind    ), intent(in   ) :: num_variables
-
-        procedure(compute_rotate_variables_function_interface  ) :: compute_rotate_variables_function
-        procedure(compute_unrotate_variables_function_interface) :: compute_unrotate_variables_function
-
-        procedure(boundary_condition_function_interface        ), optional :: empty_condition_function
-        procedure(boundary_condition_function_interface        ), optional :: symmetric_condition_function
-        procedure(boundary_condition_function_interface        ), optional :: nonslip_wall_condition_function
-        procedure(boundary_condition_function_interface        ), optional :: slip_wall_condition_function
-        procedure(boundary_condition_function_interface        ), optional :: outflow_condition_function
-
-        integer :: i, face_index
-
-#ifdef _DEBUG
-        call write_debuginfo("In apply_boundary_condition(), cellsystem.")
-#endif
-
-        if (present(empty_condition_function)) call self%apply_empty_condition( &
-            variables_set                                                     , &
-            num_variables                                                     , &
-            compute_rotate_variables_function                                 , &
-            compute_unrotate_variables_function                               , &
-            empty_condition_function                                            &
-        )
-
-        if (present(symmetric_condition_function)) call self%apply_symmetric_condition( &
-            variables_set                                                             , &
-            num_variables                                                             , &
-            compute_rotate_variables_function                                         , &
-            compute_unrotate_variables_function                                       , &
-            symmetric_condition_function                                                &
-        )
-
-        if (present(nonslip_wall_condition_function)) call self%apply_nonslip_wall_condition( &
-            variables_set                                                                   , &
-            num_variables                                                                   , &
-            compute_rotate_variables_function                                               , &
-            compute_unrotate_variables_function                                             , &
-            nonslip_wall_condition_function                                                   &
-        )
-
-        if (present(slip_wall_condition_function)) call self%apply_slip_wall_condition( &
-            variables_set                                                             , &
-            num_variables                                                             , &
-            compute_rotate_variables_function                                         , &
-            compute_unrotate_variables_function                                       , &
-            slip_wall_condition_function                                                &
-        )
-
-        if (present(outflow_condition_function)) call self%apply_outflow_condition( &
-            variables_set                                                         , &
-            num_variables                                                         , &
-            compute_rotate_variables_function                                     , &
-            compute_unrotate_variables_function                                   , &
-            outflow_condition_function                                              &
-        )
-    end subroutine apply_boundary_condition
-
-    subroutine apply_outflow_condition(self, variables_set, num_variables, &
-        compute_rotate_variables_function, compute_unrotate_variables_function, boundary_condition_function)
-        class  (cellsystem  ), intent(inout) :: self
-        real   (real_kind   ), intent(inout) :: variables_set(:,:)
-        integer(int_kind    ), intent(in   ) :: num_variables
-
-        procedure(compute_rotate_variables_function_interface  ) :: compute_rotate_variables_function
-        procedure(compute_unrotate_variables_function_interface) :: compute_unrotate_variables_function
-        procedure(boundary_condition_function_interface        ) :: boundary_condition_function
-
-        integer :: i, face_index
-
-#ifdef _DEBUG
-        call write_debuginfo("In apply_outflow_condition(), cellsystem.")
-#endif
-
-!$omp parallel do private(i, face_index)
-        do i = 1, self%num_outflow_faces, 1
-            face_index = self%outflow_face_indexes(i)
-            call apply_boundary_condition_common_impl(          &
-                variables_set                                 , &
-                self%face_normal_vectors     (:,face_index)   , &
-                self%face_tangential1_vectors(:,face_index)   , &
-                self%face_tangential2_vectors(:,face_index)   , &
-                self%face_to_cell_indexes    (:,face_index)   , &
-                self%num_local_cells                          , &
-                num_variables                                 , &
-                compute_rotate_variables_function             , &
-                compute_unrotate_variables_function           , &
-                boundary_condition_function                     &
-            )
-        end do
-    end subroutine apply_outflow_condition
-
-    subroutine apply_nonslip_wall_condition(self, variables_set, num_variables, &
-        compute_rotate_variables_function, compute_unrotate_variables_function, boundary_condition_function)
-        class  (cellsystem  ), intent(inout) :: self
-        real   (real_kind   ), intent(inout) :: variables_set(:,:)
-        integer(int_kind    ), intent(in   ) :: num_variables
-
-        procedure(compute_rotate_variables_function_interface  ) :: compute_rotate_variables_function
-        procedure(compute_unrotate_variables_function_interface) :: compute_unrotate_variables_function
-        procedure(boundary_condition_function_interface        ) :: boundary_condition_function
-
-        integer :: i, face_index
-
-#ifdef _DEBUG
-        call write_debuginfo("In apply_nonslip_wall_condition(), cellsystem.")
-#endif
-
-!$omp parallel do private(i, face_index)
-        do i = 1, self%num_nonslip_wall_faces, 1
-            face_index = self%nonslip_wall_face_indexes(i)
-            call apply_boundary_condition_common_impl(         &
-                variables_set                                , &
-                self%face_normal_vectors     (:,face_index)  , &
-                self%face_tangential1_vectors(:,face_index)  , &
-                self%face_tangential2_vectors(:,face_index)  , &
-                self%face_to_cell_indexes    (:,face_index)  , &
-                self%num_local_cells                         , &
-                num_variables                                , &
-                compute_rotate_variables_function            , &
-                compute_unrotate_variables_function          , &
-                boundary_condition_function                    &
-            )
-        end do
-    end subroutine apply_nonslip_wall_condition
-
-    subroutine apply_symmetric_condition(self, variables_set, num_variables, &
-        compute_rotate_variables_function, compute_unrotate_variables_function, boundary_condition_function)
-        class  (cellsystem  ), intent(inout) :: self
-        real   (real_kind   ), intent(inout) :: variables_set(:,:)
-        integer(int_kind    ), intent(in   ) :: num_variables
-
-        procedure(compute_rotate_variables_function_interface  ) :: compute_rotate_variables_function
-        procedure(compute_unrotate_variables_function_interface) :: compute_unrotate_variables_function
-        procedure(boundary_condition_function_interface        ) :: boundary_condition_function
-
-        integer :: i, face_index
-
-#ifdef _DEBUG
-        call write_debuginfo("In apply_slip_and_symmetric_condition(), cellsystem.")
-#endif
-
-!$omp parallel do private(i, face_index)
-        do i = 1, self%num_symmetric_faces, 1
-            face_index = self%symmetric_face_indexes(i)
-            call apply_boundary_condition_common_impl(          &
-                variables_set                                 , &
-                self%face_normal_vectors     (:,face_index)   , &
-                self%face_tangential1_vectors(:,face_index)   , &
-                self%face_tangential2_vectors(:,face_index)   , &
-                self%face_to_cell_indexes    (:,face_index)   , &
-                self%num_local_cells                          , &
-                num_variables                                 , &
-                compute_rotate_variables_function             , &
-                compute_unrotate_variables_function           , &
-                boundary_condition_function                     &
-            )
-        end do
-    end subroutine apply_symmetric_condition
-
-    subroutine apply_slip_wall_condition(self, variables_set, num_variables, &
-        compute_rotate_variables_function, compute_unrotate_variables_function, boundary_condition_function)
-        class  (cellsystem  ), intent(inout) :: self
-        real   (real_kind   ), intent(inout) :: variables_set(:,:)
-        integer(int_kind    ), intent(in   ) :: num_variables
-
-        procedure(compute_rotate_variables_function_interface  ) :: compute_rotate_variables_function
-        procedure(compute_unrotate_variables_function_interface) :: compute_unrotate_variables_function
-        procedure(boundary_condition_function_interface        ) :: boundary_condition_function
-
-        integer :: i, face_index
-
-#ifdef _DEBUG
-        call write_debuginfo("In apply_slip_wall_condition(), cellsystem.")
-#endif
-
-!$omp parallel do private(i, face_index)
-        do i = 1, self%num_slip_wall_faces, 1
-            face_index = self%slip_wall_face_indexes(i)
-            call apply_boundary_condition_common_impl(          &
-                variables_set                                 , &
-                self%face_normal_vectors     (:,face_index)   , &
-                self%face_tangential1_vectors(:,face_index)   , &
-                self%face_tangential2_vectors(:,face_index)   , &
-                self%face_to_cell_indexes    (:,face_index)   , &
-                self%num_local_cells                          , &
-                num_variables                                 , &
-                compute_rotate_variables_function             , &
-                compute_unrotate_variables_function           , &
-                boundary_condition_function                     &
-            )
-        end do
-    end subroutine apply_slip_wall_condition
-
-    subroutine apply_empty_condition(self, variables_set, num_variables, &
-        compute_rotate_variables_function, compute_unrotate_variables_function, boundary_condition_function)
-        class  (cellsystem  ), intent(inout) :: self
-        real   (real_kind   ), intent(inout) :: variables_set(:,:)
-        integer(int_kind    ), intent(in   ) :: num_variables
-
-        procedure(compute_rotate_variables_function_interface  ) :: compute_rotate_variables_function
-        procedure(compute_unrotate_variables_function_interface) :: compute_unrotate_variables_function
-        procedure(boundary_condition_function_interface        ) :: boundary_condition_function
-
-        integer :: i, face_index
-
-#ifdef _DEBUG
-        call write_debuginfo("In apply_empty_condition(), cellsystem.")
-#endif
-
-!$omp parallel do private(i, face_index)
-        do i = 1, self%num_empty_faces, 1
-            face_index = self%empty_face_indexes(i)
-            call apply_boundary_condition_empty_impl(           &
-                variables_set                                 , &
-                self%face_normal_vectors     (:,face_index)   , &
-                self%face_tangential1_vectors(:,face_index)   , &
-                self%face_tangential2_vectors(:,face_index)   , &
-                self%face_to_cell_indexes    (:,face_index)   , &
-                self%num_local_cells                          , &
-                num_variables                                 , &
-                compute_rotate_variables_function             , &
-                compute_unrotate_variables_function           , &
-                boundary_condition_function                     &
-            )
-        end do
-    end subroutine apply_empty_condition
-
-    ! ### Variables ###
-    subroutine initialize_variables_rank2(self, variables_set, num_variables)
-        class  (cellsystem), intent(inout)              :: self
-        real   (real_kind ), intent(inout), allocatable :: variables_set(:,:)
-        integer(int_kind  ), intent(in   )              :: num_variables
-
-#ifdef _DEBUG
-        call write_debuginfo("In initialize_variables_rank2(), cellsystem.")
-#endif
-
-        if(.not. self%read_cellsystem) call call_error("'read' subroutine is not called. You should call with following steps: first you call 'read' subroutine, next you initialze variables with 'initialze' subroutine. Please check your cord.")
-
-        if(allocated(variables_set))then
-            call call_error("Array variables_set is allocated. But you call 'initialize' subroutine.")
-        end if
-        allocate(variables_set(1:num_variables, 1:self%num_cells))
-        variables_set(:,:) = 0.d0
-    end subroutine initialize_variables_rank2
-
-    subroutine initialize_variables_rank1(self, variables_set)
-        class  (cellsystem), intent(inout)              :: self
-        real   (real_kind ), intent(inout), allocatable :: variables_set(:)
-
-#ifdef _DEBUG
-        call write_debuginfo("In initialize_variables_rank1(), cellsystem.")
-#endif
-
-        if(.not. self%read_cellsystem) call call_error("'read' subroutine is not called. You should call with following steps: first you call 'read' subroutine, next you initialze variables with 'initialze' subroutine. Please check your cord.")
-
-        if(allocated(variables_set))then
-            call call_error("Array variables_set is allocated. But you call 'initialize' subroutine.")
-        end if
-        allocate(variables_set(1:self%num_cells))
-        variables_set(:) = 0.d0
-    end subroutine initialize_variables_rank1
-
-    subroutine read_initial_condition_rank2(self, an_initial_condition_parser, config, conservative_variables_set)
-        class  (cellsystem              ), intent(inout) :: self
-        class  (initial_condition_parser), intent(inout) :: an_initial_condition_parser
-        class  (configuration           ), intent(inout) :: config
-        real   (real_kind               ), intent(inout) :: conservative_variables_set(:,:)
-
-        character(len=:), allocatable :: filepath
-        logical          :: found
-        integer          :: i
-
-#ifdef _DEBUG
-        call write_debuginfo("In read_initial_condition_rank2(), cellsystem.")
-#endif
-
-        call an_initial_condition_parser%parse(config)
-        call an_initial_condition_parser%get_conservative_variables_set(conservative_variables_set)
-        call an_initial_condition_parser%close()
-    end subroutine read_initial_condition_rank2
-
-    subroutine read_initial_condition_rank1(self, an_initial_condition_parser, config, conservative_variables_set)
-        class  (cellsystem              ), intent(inout) :: self
-        class  (initial_condition_parser), intent(inout) :: an_initial_condition_parser
-        class  (configuration           ), intent(inout) :: config
-        real   (real_kind               ), intent(inout) :: conservative_variables_set(:)
-
-        character(len=:), allocatable :: filepath
-        logical          :: found
-        integer          :: i
-        real(real_kind), allocatable :: temp_variables(:,:)
-
-#ifdef _DEBUG
-        call write_debuginfo("In read_initial_condition_rank1(), cellsystem.")
-#endif
-
-        allocate(temp_variables(1, size(conservative_variables_set)))
-
-        call an_initial_condition_parser%parse(config)
-        call an_initial_condition_parser%get_conservative_variables_set(temp_variables)
-        call an_initial_condition_parser%close()
-
-        conservative_variables_set(:) = temp_variables(1,:)
-    end subroutine read_initial_condition_rank1
-
-    subroutine conservative_to_primitive_variables_all(self, an_eos, conservative_variables_set, primitive_variables_set, num_primitive_variables, conservative_to_primitive_function)
-        class  (cellsystem              ), intent(inout) :: self
-        class  (eos                     ), intent(in   ) :: an_eos
-        real   (real_kind               ), intent(in   ) :: conservative_variables_set(:,:)
-        real   (real_kind               ), intent(inout) :: primitive_variables_set(:,:)
-        integer(int_kind                ), intent(in   ) :: num_primitive_variables
-
-        procedure(conservative_to_primitive_function_interface) :: conservative_to_primitive_function
-
-        integer(int_kind) :: i
-
-#ifdef _DEBUG
-        call write_debuginfo("In conservative_to_primitive_variables_all(), cellsystem.")
-#endif
-
-!$omp parallel do private(i)
-        do i = 1, self%num_cells, 1
-            primitive_variables_set(:,i) = conservative_to_primitive_function(an_eos, conservative_variables_set(:,i), num_primitive_variables)
-        end do
-    end subroutine conservative_to_primitive_variables_all
-
-    subroutine operate_cellwise_rank2(self, variables_set, operator_subroutine)
-        class  (cellsystem  ), intent(inout) :: self
-        real   (real_kind   ), intent(inout) :: variables_set(:,:)
-
-        procedure(operator_subroutine_rank1_interface) :: operator_subroutine
-
-        integer(int_kind) :: i
-
-#ifdef _DEBUG
-        call write_debuginfo("In operate_cellwise_rank2(), cellsystem.")
-#endif
-
-!$omp parallel do private(i)
-        do i = 1, self%num_cells, 1
-            call operator_subroutine(variables_set(:,i))
-        end do
-    end subroutine operate_cellwise_rank2
-
-    subroutine operate_cellwise_rank2_rank2(self, primary_variables_set, secondary_variables_set, operator_subroutine)
-        class  (cellsystem  ), intent(inout) :: self
-        real   (real_kind   ), intent(inout) :: primary_variables_set  (:,:)
-        real   (real_kind   ), intent(in   ) :: secondary_variables_set(:,:)
-
-        procedure(operator_subroutine_rank1_rank1_interface) :: operator_subroutine
-
-        integer(int_kind) :: i
-
-#ifdef _DEBUG
-        call write_debuginfo("In operate_cellwise_rank2_rank2(), cellsystem.")
-#endif
-
-!$omp parallel do private(i)
-        do i = 1, self%num_cells, 1
-            call operator_subroutine(primary_variables_set(:,i), secondary_variables_set(:,i))
-        end do
-    end subroutine operate_cellwise_rank2_rank2
-
-    subroutine operate_cellwise_rank2_rank1(self, primary_variables_set, secondary_variable_set, operator_subroutine)
-        class  (cellsystem  ), intent(inout) :: self
-        real   (real_kind   ), intent(inout) :: primary_variables_set  (:,:)
-        real   (real_kind   ), intent(in   ) :: secondary_variable_set (:)
-
-        procedure(operator_subroutine_rank1_rank0_interface) :: operator_subroutine
-
-        integer(int_kind) :: i
-
-#ifdef _DEBUG
-        call write_debuginfo("In operate_cellwise_rank2_rank1(), cellsystem.")
-#endif
-
-!$omp parallel do private(i)
-        do i = 1, self%num_cells, 1
-            call operator_subroutine(primary_variables_set(:,i), secondary_variable_set(i))
-        end do
-    end subroutine operate_cellwise_rank2_rank1
-
-    subroutine smooth_variables(self, variables_set, weight_function)
-        class  (cellsystem  ), intent(inout) :: self
-        real   (real_kind   ), intent(inout) :: variables_set(:,:)
-        procedure(weight_function_interface) :: weight_function
-
-        integer(int_kind ) :: face_index, cell_index, rhc_index, lhc_index
-        real   (real_kind) :: smoothed_variables_set(size(variables_set(:,1)), size(variables_set(1,:))), total_weight_set(size(variables_set(1,:)))
-        real   (real_kind) :: lhc_w, rhc_w
-
-#ifdef _DEBUG
-        call write_debuginfo("In smooth_variables(), cellsystem.")
-#endif
-
-!$omp parallel do private(cell_index)
-        do cell_index = 1, self%num_cells, 1
-            smoothed_variables_set(:,cell_index) = 0.d0
-            total_weight_set        (cell_index) = 0.d0
-        end do
-
-!$omp parallel do private(face_index, rhc_index, lhc_index, lhc_w, rhc_w)
-        do face_index = 1, self%num_faces, 1
-            lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
-            rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
-
-            associate(                                               &
-                x_lhc => self%cell_centor_positions(1:3, lhc_index), &
-                x_rhc => self%cell_centor_positions(1:3, rhc_index), &
-                v_lhc => variables_set             ( : , lhc_index), &
-                v_rhc => variables_set             ( : , rhc_index)  &
-            )
-                lhc_w = weight_function(x_lhc, x_rhc, v_lhc, v_rhc)
-                if(self%is_real_cell(rhc_index))then
-                    rhc_w = weight_function(x_lhc, x_rhc, v_lhc, v_rhc)
-                else
-                    rhc_w = 0.d0
-                endif
-
-                smoothed_variables_set(:, lhc_index) = smoothed_variables_set(:, lhc_index) + lhc_w * v_lhc
-                smoothed_variables_set(:, rhc_index) = smoothed_variables_set(:, rhc_index) + rhc_w * v_rhc
-
-                total_weight_set(lhc_index) = total_weight_set(lhc_index) + lhc_w
-                total_weight_set(rhc_index) = total_weight_set(rhc_index) + rhc_w
-            end associate
-        end do
-
-!$omp parallel do private(cell_index)
-        do cell_index = 1, self%num_cells, 1
-            if(total_weight_set(cell_index) > 0.d0)then
-                variables_set(:,cell_index) = smoothed_variables_set(:,cell_index) / total_weight_set(cell_index)
-            else
-                variables_set(:,cell_index) = 0.d0
-            end if
-        end do
-    end subroutine smooth_variables
-
-    subroutine substitute_rank2(self, variables, val)
-        class(cellsystem  ), intent(inout) :: self
-        real (real_kind   ), intent(inout) :: variables(:,:)
-        real (real_kind   ), intent(in   ) :: val
-
-        integer(int_kind) :: i
-
-#ifdef _DEBUG
-        call write_debuginfo("In substitute_rank2(), cellsystem.")
-#endif
-!$omp parallel do private(i)
-        do i = 1, self%num_cells, 1
-            variables(:,i) = val
-        end do
-    end subroutine substitute_rank2
-
-    subroutine substitute_zeros_rank2(self, variables)
-        class(cellsystem  ), intent(inout) :: self
-        real (real_kind   ), intent(inout) :: variables(:,:)
-
-        integer(int_kind) :: i
-
-#ifdef _DEBUG
-        call write_debuginfo("In substitute_zeros_rank2(), cellsystem.")
-#endif
-        call self%substitute_rank2(variables, 0._real_kind)
-    end subroutine substitute_zeros_rank2
-
-    subroutine substitute_rank1(self, variables, val)
-        class(cellsystem  ), intent(inout) :: self
-        real (real_kind   ), intent(inout) :: variables(:)
-        real (real_kind   ), intent(in   ) :: val
-
-        integer(int_kind) :: i
-
-#ifdef _DEBUG
-        call write_debuginfo("In substitute_rank1(), cellsystem.")
-#endif
-!$omp parallel do private(i)
-        do i = 1, self%num_cells, 1
-            variables(i) = val
-        end do
-    end subroutine substitute_rank1
-
-    subroutine substitute_zeros_rank1(self, variables)
-        class(cellsystem  ), intent(inout) :: self
-        real (real_kind   ), intent(inout) :: variables(:)
-
-        integer(int_kind) :: i
-
-#ifdef _DEBUG
-        call write_debuginfo("In substitute_zeros_rank1(), cellsystem.")
-#endif
-        call self%substitute_rank1(variables, 0._real_kind)
-    end subroutine substitute_zeros_rank1
 
     ! ### Gradient Calculator ###
     subroutine initialize_gradient_calculator(self, a_gradient_calculator, config, num_conservative_variables)
