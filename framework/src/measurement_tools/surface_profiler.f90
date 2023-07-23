@@ -4,12 +4,13 @@ module class_surface_profiler
     use vector_module
     use math_constant_module
     use abstract_configuration
+    use abstract_measurement_tool
 
     implicit none
 
     private
 
-    type, public :: surface_profiler
+    type, public, extends(measurement_tool) :: surface_profiler
         private
 
         integer  (int_kind ), allocatable :: face_ids_  (:)
@@ -25,24 +26,41 @@ module class_surface_profiler
         procedure, public, pass(self) :: initialize
         procedure, public, pass(self) :: write
         procedure, public, pass(self) :: is_writable
-    
+
         procedure,         pass(self) :: make_new_file
         procedure,         pass(self) :: surface_is_included_in_aabb
     end type surface_profiler
 
     contains
 
-    subroutine initialize(self, config, face_to_cell_index, face_centor_positions, face_normal_vectors, is_real_cell, num_faces, num_local_cells)
-        class    (surface_profiler), intent(inout) :: self
-        class    (configuration   ), intent(inout) :: config
-        integer  (int_kind        ), intent(in   ) :: face_to_cell_index   (:, :)
-        real     (real_kind       ), intent(in   ) :: face_centor_positions(:, :)
-        real     (real_kind       ), intent(in   ) :: face_normal_vectors  (:, :)
-        logical                    , intent(in   ) :: is_real_cell         (:)
-        integer  (int_kind        ), intent(in   ) :: num_faces
-        integer  (int_kind        ), intent(in   ) :: num_local_cells
+    subroutine initialize(     &
+        self,                  &
+        a_config,              &
+        cell_positions,        &
+        cell_volumes,          &
+        is_real_cell,          &
+        face_to_cell_index,    &
+        face_centor_positions, &
+        face_normal_vectors,   &
+        face_areas,            &
+        num_cells,             &
+        num_faces,             &
+        num_local_cells        &
+    )
+        class  (surface_profiler), intent(inout) :: self
+        class  (configuration   ), intent(inout) :: a_config
+        real   (real_kind       ), intent(in   ) :: cell_positions       (:, :)
+        real   (real_kind       ), intent(in   ) :: cell_volumes         (:)
+        logical                  , intent(in   ) :: is_real_cell         (:)
+        integer(int_kind        ), intent(in   ) :: face_to_cell_index   (:, :)
+        real   (real_kind       ), intent(in   ) :: face_centor_positions(:, :)
+        real   (real_kind       ), intent(in   ) :: face_normal_vectors  (:, :)
+        real   (real_kind       ), intent(in   ) :: face_areas           (:)
+        integer(int_kind        ), intent(in   ) :: num_cells
+        integer(int_kind        ), intent(in   ) :: num_faces
+        integer(int_kind        ), intent(in   ) :: num_local_cells
 
-        ! from config
+        ! from a_config
         real     (real_kind       ) :: frequency
         real     (real_kind       ) :: min_point(3), max_point(3)
         real     (real_kind       ) :: normal(3)
@@ -53,36 +71,36 @@ module class_surface_profiler
         real     (real_kind       )                :: angle
         logical                                    :: found
 
-        call config%get_bool("Surface profiler.Enable", self%is_enabled_, found, .false.)
+        call a_config%get_bool("Surface profiler.Enable", self%is_enabled_, found, .false.)
         if(.not. found) call write_warring("'Surface profiler.Enable' is not found in configuration file you set. Disable this profiler.")
 
         if (.not. self%is_enabled_) return
 
-        call config%get_real("Surface profiler.Frequency", frequency, found, 1.d3)
+        call a_config%get_real("Surface profiler.Frequency", frequency, found, 1.d3)
         if(.not. found) call write_warring("'Surface profiler.Frequency' is not found in configuration file you set. The default value is set.")
         self%output_timespan_      = 1.d0 / frequency
 
-        call config%get_real("Surface profiler.Min point.x", min_point(1), found)
+        call a_config%get_real("Surface profiler.Min point.x", min_point(1), found)
         if(.not. found) call call_error("'Surface profiler.Min point.x' is not found in configuration file you set.")
-        call config%get_real("Surface profiler.Min point.y", min_point(2), found)
+        call a_config%get_real("Surface profiler.Min point.y", min_point(2), found)
         if(.not. found) call call_error("'Surface profiler.Min point.y' is not found in configuration file you set.")
-        call config%get_real("Surface profiler.Min point.z", min_point(3), found)
+        call a_config%get_real("Surface profiler.Min point.z", min_point(3), found)
         if(.not. found) call call_error("'Surface profiler.Min point.z' is not found in configuration file you set.")
 
-        call config%get_real("Surface profiler.Max point.x", max_point(1), found)
+        call a_config%get_real("Surface profiler.Max point.x", max_point(1), found)
         if(.not. found) call call_error("'Surface profiler.Max point.x' is not found in configuration file you set.")
-        call config%get_real("Surface profiler.Max point.y", max_point(2), found)
+        call a_config%get_real("Surface profiler.Max point.y", max_point(2), found)
         if(.not. found) call call_error("'Surface profiler.Max point.y' is not found in configuration file you set.")
-        call config%get_real("Surface profiler.Max point.z", max_point(3), found)
+        call a_config%get_real("Surface profiler.Max point.z", max_point(3), found)
         if(.not. found) call call_error("'Surface profiler.Max point.z' is not found in configuration file you set.")
 
-        call config%get_real("Surface profiler.Facial Direction.x", normal(1), found)
+        call a_config%get_real("Surface profiler.Facial Direction.x", normal(1), found)
         if(.not. found) call call_error("'Surface profiler.Facial Direction' is not found in configuration file you set.")
-        call config%get_real("Surface profiler.Facial Direction.y", normal(2), found)
+        call a_config%get_real("Surface profiler.Facial Direction.y", normal(2), found)
         if(.not. found) call call_error("'Surface profiler.Facial Direction' is not found in configuration file you set.")
-        call config%get_real("Surface profiler.Facial Direction.z", normal(3), found)
+        call a_config%get_real("Surface profiler.Facial Direction.z", normal(3), found)
         if(.not. found) call call_error("'Surface profiler.Facial Direction' is not found in configuration file you set.")
-        
+
         self%output_timespan_      = 1.d0 / frequency
 
         allocate(tmp_face_ids  (num_faces))
@@ -118,13 +136,24 @@ module class_surface_profiler
         call self%make_new_file(self%output_filename_)
     end subroutine initialize
 
-    subroutine write(self, time, values_set, face_to_cell_index, face_areas, num_local_cells)
+    subroutine write(       &
+        self,               &
+        time,               &
+        values_set,         &
+        cell_positions,     &
+        cell_volumes,       &
+        face_to_cell_index, &
+        face_areas,         &
+        num_local_cells     &
+    )
         class  (surface_profiler), intent(inout) :: self
-        real   (real_kind          ), intent(in   ) :: time
-        real   (real_kind          ), intent(in   ) :: values_set        (:,:)
-        integer(int_kind           ), intent(in   ) :: face_to_cell_index(:,:)
-        real   (real_kind          ), intent(in   ) :: face_areas        (:)
-        integer(int_kind           ), intent(in   ) :: num_local_cells
+        real   (real_kind       ), intent(in   ) :: time
+        real   (real_kind       ), intent(in   ) :: values_set        (:,:)
+        real   (real_kind       ), intent(in   ) :: cell_positions    (:,:)
+        real   (real_kind       ), intent(in   ) :: cell_volumes      (:)
+        integer(int_kind        ), intent(in   ) :: face_to_cell_index(:,:)
+        real   (real_kind       ), intent(in   ) :: face_areas        (:)
+        integer(int_kind        ), intent(in   ) :: num_local_cells
 
         integer(int_kind           )                :: unit_number, id_index, cell_index, values_index, n_output_values
         real   (real_kind          )                :: output_values(size(values_set(:,1)))
@@ -159,8 +188,8 @@ module class_surface_profiler
 
     subroutine make_new_file(self, filename)
         class    (surface_profiler), intent(in) :: self
-        character(len=*              ), intent(in) :: filename
-        integer  (int_kind           )             :: unit_number
+        character(len=*           ), intent(in) :: filename
+        integer  (int_kind        )             :: unit_number
 
         open(newunit = unit_number, file = "result/"//self%output_filename_, status = 'replace')
         write(unit_number, *) "# F3DS measurement surface data"

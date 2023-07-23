@@ -1,6 +1,7 @@
 module class_control_volume_profiler
     use typedef_module
     use abstract_configuration
+    use abstract_measurement_tool
     use stdio_module
     use system_call_module
 
@@ -8,7 +9,7 @@ module class_control_volume_profiler
 
     private
 
-    type, public :: control_volume_profiler
+    type, public, extends(measurement_tool) :: control_volume_profiler
         private
 
         character(:        ), allocatable :: output_filename_
@@ -27,12 +28,32 @@ module class_control_volume_profiler
 
     contains
 
-    subroutine initialize(self, config, cell_positions, is_real_cell, num_cells)
+    subroutine initialize(     &
+        self,                  &
+        a_config,              &
+        cell_positions,        &
+        cell_volumes,          &
+        is_real_cell,          &
+        face_to_cell_index,    &
+        face_centor_positions, &
+        face_normal_vectors,   &
+        face_areas,            &
+        num_cells,             &
+        num_faces,             &
+        num_local_cells        &
+    )
         class  (control_volume_profiler), intent(inout) :: self
-        class  (configuration          ), intent(inout) :: config
-        real   (real_kind              ), intent(in   ) :: cell_positions(:,:)
-        logical                         , intent(in   ) :: is_real_cell  (:)
+        class  (configuration          ), intent(inout) :: a_config
+        real   (real_kind              ), intent(in   ) :: cell_positions       (:, :)
+        real   (real_kind              ), intent(in   ) :: cell_volumes         (:)
+        logical                         , intent(in   ) :: is_real_cell         (:)
+        integer(int_kind               ), intent(in   ) :: face_to_cell_index   (:, :)
+        real   (real_kind              ), intent(in   ) :: face_centor_positions(:, :)
+        real   (real_kind              ), intent(in   ) :: face_normal_vectors  (:, :)
+        real   (real_kind              ), intent(in   ) :: face_areas           (:)
         integer(int_kind               ), intent(in   ) :: num_cells
+        integer(int_kind               ), intent(in   ) :: num_faces
+        integer(int_kind               ), intent(in   ) :: num_local_cells
 
         real   (real_kind) :: frequency
         real   (real_kind) :: min_point(3), max_point(3)
@@ -43,27 +64,27 @@ module class_control_volume_profiler
         self%output_filename_      = "control_volume_profiler.dat"
         self%next_output_time_     = 0.d0
 
-        call config%get_bool("Control volume profiler.Enable", self%is_enabled_, found, .false.)
+        call a_config%get_bool("Control volume profiler.Enable", self%is_enabled_, found, .false.)
         if(.not. found) call write_warring("'Control volume profiler.Enable' is not found in configuration file you set. Disable this profiler.")
 
         if (.not. self%is_enabled_) return
 
-        call config%get_real("Control volume profiler.Frequency", frequency, found, 1.d3)
+        call a_config%get_real("Control volume profiler.Frequency", frequency, found, 1.d3)
         if(.not. found) call write_warring("'Control volume profiler.Frequency' is not found in configuration file you set. The default value is set.")
         self%output_timespan_      = 1.d0 / frequency
 
-        call config%get_real("Control volume profiler.Min point.x", min_point(1), found)
+        call a_config%get_real("Control volume profiler.Min point.x", min_point(1), found)
         if(.not. found) call call_error("'Control volume profiler.Min point.x' is not found in configuration file you set.")
-        call config%get_real("Control volume profiler.Min point.y", min_point(2), found)
+        call a_config%get_real("Control volume profiler.Min point.y", min_point(2), found)
         if(.not. found) call call_error("'Control volume profiler.Min point.y' is not found in configuration file you set.")
-        call config%get_real("Control volume profiler.Min point.z", min_point(3), found)
+        call a_config%get_real("Control volume profiler.Min point.z", min_point(3), found)
         if(.not. found) call call_error("'Control volume profiler.Min point.z' is not found in configuration file you set.")
 
-        call config%get_real("Control volume profiler.Max point.x", max_point(1), found)
+        call a_config%get_real("Control volume profiler.Max point.x", max_point(1), found)
         if(.not. found) call call_error("'Control volume profiler.Max point.x' is not found in configuration file you set.")
-        call config%get_real("Control volume profiler.Max point.y", max_point(2), found)
+        call a_config%get_real("Control volume profiler.Max point.y", max_point(2), found)
         if(.not. found) call call_error("'Control volume profiler.Max point.y' is not found in configuration file you set.")
-        call config%get_real("Control volume profiler.Max point.z", max_point(3), found)
+        call a_config%get_real("Control volume profiler.Max point.z", max_point(3), found)
         if(.not. found) call call_error("'Control volume profiler.Max point.z' is not found in configuration file you set.")
 
         allocate(tmp_ids(num_cells))
@@ -89,12 +110,24 @@ module class_control_volume_profiler
         close(unit_number)
     end subroutine initialize
 
-    subroutine write(self, time, values_set, cell_positions, cell_volumes)
+    subroutine write(       &
+        self,               &
+        time,               &
+        values_set,         &
+        cell_positions,     &
+        cell_volumes,       &
+        face_to_cell_index, &
+        face_areas,         &
+        num_local_cells     &
+    )
         class  (control_volume_profiler), intent(inout) :: self
-        real   (real_kind     ), intent(in   ) :: time
-        real   (real_kind     ), intent(in   ) :: values_set    (:,:)
-        real   (real_kind     ), intent(in   ) :: cell_positions(:,:)
-        real   (real_kind     ), intent(in   ) :: cell_volumes  (:)
+        real   (real_kind              ), intent(in   ) :: time
+        real   (real_kind              ), intent(in   ) :: values_set        (:,:)
+        real   (real_kind              ), intent(in   ) :: cell_positions    (:,:)
+        real   (real_kind              ), intent(in   ) :: cell_volumes      (:)
+        integer(int_kind               ), intent(in   ) :: face_to_cell_index(:,:)
+        real   (real_kind              ), intent(in   ) :: face_areas        (:)
+        integer(int_kind               ), intent(in   ) :: num_local_cells
 
         integer  (int_kind ) :: unit_number, i
         character(7        ) :: cher_n_output
