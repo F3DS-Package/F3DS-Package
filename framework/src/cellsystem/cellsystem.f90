@@ -21,9 +21,7 @@ module class_cellsystem
     use abstract_initial_condition_parser
     use abstract_face_gradient_interpolator
     use abstract_face_gradient_calculator
-    use class_line_plotter
-    use class_control_volume_profiler
-    use class_surface_profiler
+    use abstract_measurement_tool
 #ifdef _OPENMP
     use omp_lib
 #endif
@@ -158,9 +156,7 @@ module class_cellsystem
         procedure, public, pass(self) :: initialize_termination_ctiterion
         procedure, public, pass(self) :: initialize_time_increment_controller
         procedure, public, pass(self) :: initialize_interpolator
-        procedure, public, pass(self) :: initialize_line_plotter
-        procedure, public, pass(self) :: initialize_control_volume_profiler
-        procedure, public, pass(self) :: initialize_surface_profiler
+        procedure, public, pass(self) :: initialize_measurement_tool
         procedure, public, pass(self) :: initialize_face_gradient_interpolator
         procedure, public, pass(self) :: initialize_face_gradient_calculator
         generic  , public             :: initialize  => initilaize_cellsystem                , &
@@ -175,9 +171,7 @@ module class_cellsystem
                                                         initialize_termination_ctiterion     , &
                                                         initialize_time_increment_controller , &
                                                         initialize_interpolator              , &
-                                                        initialize_line_plotter              , &
-                                                        initialize_control_volume_profiler   , &
-                                                        initialize_surface_profiler          , &
+                                                        initialize_measurement_tool          , &
                                                         initialize_face_gradient_interpolator, &
                                                         initialize_face_gradient_calculator
         procedure, public, pass(self) :: result_writer_open_file
@@ -185,19 +179,11 @@ module class_cellsystem
         procedure, public, pass(self) :: result_writer_close_file
         generic  , public             :: close_file  => result_writer_close_file
         procedure, public, pass(self) :: result_writer_is_writable
-        procedure, public, pass(self) :: line_plotter_is_writable
-        procedure, public, pass(self) :: control_volume_profiler_is_writable
-        procedure, public, pass(self) :: surface_profiler_is_writable
-        generic  , public             :: is_writable => result_writer_is_writable          , &
-                                                        line_plotter_is_writable           , &
-                                                        control_volume_profiler_is_writable, &
-                                                        surface_profiler_is_writable
-        procedure, public, pass(self) :: line_plotter_write
-        procedure, public, pass(self) :: control_volume_profiler_write
-        procedure, public, pass(self) :: surface_profiler_write
-        generic  , public             :: write => line_plotter_write           , &
-                                                  control_volume_profiler_write, &
-                                                  surface_profiler_write
+        procedure, public, pass(self) :: measurement_tool_is_writable
+        generic  , public             :: is_writable => result_writer_is_writable,   &
+                                                        measurement_tool_is_writable
+        procedure, public, pass(self) :: measurement_tool_write
+        generic  , public             :: write => measurement_tool_write
 
         ! ### Show infomation ###
         procedure, public, pass(self) :: show_timestepping_infomation
@@ -1024,96 +1010,58 @@ module class_cellsystem
     ! ### End of Result Writer Interfaces ###
 
     contains
-    ! ### Surface profiler ###
-    subroutine initialize_surface_profiler(self, plotter, config, num_conservative_variables)
-        class  (cellsystem      ), intent(inout) :: self
-        class  (surface_profiler), intent(inout) :: plotter
-        class  (configuration   ), intent(inout) :: config
-        integer(int_kind        ), intent(in   ) :: num_conservative_variables
+
+    ! ### Measurement tool ###
+    subroutine initialize_measurement_tool(self, a_tool, config, num_conservative_variables)
+        class(cellsystem      ), intent(inout) :: self
+        class(measurement_tool), intent(inout) :: a_tool
+        class(configuration   ), intent(inout) :: config
+        integer(int_kind      ), intent(in   ) :: num_conservative_variables
 
 #ifdef _DEBUG
-        call write_debuginfo("In initialize_surface_profiler(), cellsystem.")
+        call write_debuginfo("In initialize_measurement_tool(), cellsystem.")
 #endif
-        call plotter%initialize(config, self%face_to_cell_indexes, self%face_positions, self%face_normal_vectors, self%is_real_cell, self%num_faces, self%num_local_cells)
-    end subroutine initialize_surface_profiler
+        call a_tool%initialize(         &
+            config,                     &
+            self%cell_centor_positions, &
+            self%cell_volumes,          &
+            self%is_real_cell,          &
+            self%face_to_cell_indexes,  &
+            self%face_positions,        &
+            self%face_normal_vectors,   &
+            self%face_areas,            &
+            self%num_cells,             &
+            self%num_faces,             &
+            self%num_local_cells        &
+        )
+    end subroutine initialize_measurement_tool
 
-    subroutine surface_profiler_write(self, plotter, values_set)
+    subroutine measurement_tool_write(self, a_tool, values_set)
         class(cellsystem      ), intent(inout) :: self
-        class(surface_profiler), intent(inout) :: plotter
+        class(measurement_tool), intent(inout) :: a_tool
         real (real_kind       ), intent(in   ) :: values_set(:,:)
 #ifdef _DEBUG
-        call write_debuginfo("In surface_profiler_write(), cellsystem.")
+        call write_debuginfo("In measurement_tool_write(), cellsystem.")
 #endif
-        call plotter%write(self%time, values_set, self%face_to_cell_indexes, self%face_areas, self%num_local_cells)
-    end subroutine surface_profiler_write
+        call a_tool%write(              &
+            self%time,                  &
+            values_set,                 &
+            self%cell_centor_positions, &
+            self%cell_volumes,          &
+            self%face_to_cell_indexes,  &
+            self%face_areas,            &
+            self%num_local_cells        &
+        )
+    end subroutine measurement_tool_write
 
-    pure function surface_profiler_is_writable(self, plotter) result(juge)
+    pure function measurement_tool_is_writable(self, a_tool) result(juge)
         class(cellsystem      ), intent(in) :: self
-        class(surface_profiler), intent(in) :: plotter
-        logical                             :: juge
-        juge = plotter%is_writable(self%time)
-    end function surface_profiler_is_writable
-
-    ! ### Control volume profiler ###
-    subroutine initialize_control_volume_profiler(self, plotter, config, num_conservative_variables)
-        class(cellsystem             ), intent(inout) :: self
-        class(control_volume_profiler), intent(inout) :: plotter
-        class(configuration          ), intent(inout) :: config
-        integer(int_kind             ), intent(in   ) :: num_conservative_variables
-
-#ifdef _DEBUG
-        call write_debuginfo("In initialize_control_volume_profiler(), cellsystem.")
-#endif
-        call plotter%initialize(config, self%cell_centor_positions, self%is_real_cell, self%num_cells)
-    end subroutine initialize_control_volume_profiler
-
-    subroutine control_volume_profiler_write(self, plotter, values_set)
-        class(cellsystem             ), intent(inout) :: self
-        class(control_volume_profiler), intent(inout) :: plotter
-        real (real_kind              ), intent(in   ) :: values_set(:,:)
-#ifdef _DEBUG
-        call write_debuginfo("In control_volume_profiler_write(), cellsystem.")
-#endif
-        call plotter%write(self%time, values_set, self%cell_centor_positions, self%cell_volumes)
-    end subroutine control_volume_profiler_write
-
-    pure function control_volume_profiler_is_writable(self, plotter) result(juge)
-        class(cellsystem             ), intent(in) :: self
-        class(control_volume_profiler), intent(in) :: plotter
-        logical                                    :: juge
-        juge = plotter%is_writable(self%time)
-    end function control_volume_profiler_is_writable
-
-    ! ### Line plotter ###
-    subroutine initialize_line_plotter(self, plotter, config, num_conservative_variables)
-        class(cellsystem   ), intent(inout) :: self
-        class(line_plotter ), intent(inout) :: plotter
-        class(configuration), intent(inout) :: config
-        integer(int_kind   ), intent(in   ) :: num_conservative_variables
-
-#ifdef _DEBUG
-        call write_debuginfo("In initialize_line_plotter(), cellsystem.")
-#endif
-        call plotter%initialize(config, self%cell_centor_positions, self%is_real_cell, self%num_cells)
-    end subroutine initialize_line_plotter
-
-    subroutine line_plotter_write(self, plotter, values_set)
-        class(cellsystem  ), intent(inout) :: self
-        class(line_plotter), intent(inout) :: plotter
-        real (real_kind   ), intent(in   ) :: values_set(:,:)
-#ifdef _DEBUG
-        call write_debuginfo("In line_plotter_write(), cellsystem.")
-#endif
-        call plotter%write(self%time, values_set, self%cell_centor_positions)
-    end subroutine line_plotter_write
-
-    pure function line_plotter_is_writable(self, plotter) result(juge)
-        class(cellsystem  ), intent(in) :: self
-        class(line_plotter), intent(in) :: plotter
+        class(measurement_tool), intent(in) :: a_tool
         logical                         :: juge
-        juge = plotter%is_writable(self%time)
-    end function line_plotter_is_writable
+        juge = a_tool%is_writable(self%time)
+    end function measurement_tool_is_writable
 
+    ! ### Source term
     subroutine compute_source_term(self, variables_set, residual_set, num_conservative_variables, compute_source_term_function)
         class  (cellsystem  ), intent(in   ) :: self
         real   (real_kind   ), intent(in   ) :: variables_set(:,:)
