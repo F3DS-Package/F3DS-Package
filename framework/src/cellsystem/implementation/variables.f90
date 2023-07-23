@@ -3,41 +3,6 @@ submodule (class_cellsystem) variables_impl
 
     contains
 
-    module subroutine initialize_variables_rank2(self, variables_set, num_variables)
-        class  (cellsystem), intent(inout)              :: self
-        real   (real_kind ), intent(inout), allocatable :: variables_set(:,:)
-        integer(int_kind  ), intent(in   )              :: num_variables
-
-#ifdef _DEBUG
-        call write_debuginfo("In initialize_variables_rank2(), cellsystem.")
-#endif
-
-        if(.not. self%read_cellsystem) call call_error("'read' subroutine is not called. You should call with following steps: first you call 'read' subroutine, next you initialze variables with 'initialze' subroutine. Please check your code.")
-
-        if(allocated(variables_set))then
-            call call_error("Array variables_set is allocated. But you call 'initialize' subroutine.")
-        end if
-        allocate(variables_set(1:num_variables, 1:self%num_cells))
-        variables_set(:,:) = 0._real_kind
-    end subroutine initialize_variables_rank2
-
-    module subroutine initialize_variables_rank1(self, variables_set)
-        class  (cellsystem), intent(inout)              :: self
-        real   (real_kind ), intent(inout), allocatable :: variables_set(:)
-
-#ifdef _DEBUG
-        call write_debuginfo("In initialize_variables_rank1(), cellsystem.")
-#endif
-
-        if(.not. self%read_cellsystem) call call_error("'read' subroutine is not called. You should call with following steps: first you call 'read' subroutine, next you initialze variables with 'initialze' subroutine. Please check your code.")
-
-        if(allocated(variables_set))then
-            call call_error("Array variables_set is allocated. But you call 'initialize' subroutine.")
-        end if
-        allocate(variables_set(1:self%num_cells))
-        variables_set(:) = 0.d0
-    end subroutine initialize_variables_rank1
-
     module subroutine read_initial_condition_rank2(self, an_initial_condition_parser, config, conservative_variables_set)
         class  (cellsystem              ), intent(inout) :: self
         class  (initial_condition_parser), intent(inout) :: an_initial_condition_parser

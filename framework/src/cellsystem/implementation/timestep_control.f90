@@ -3,18 +3,6 @@ submodule(class_cellsystem) timestep_control_impl
 
     contains
 
-    module subroutine initialize_time_increment_controller(self, controller, config, num_conservative_variables)
-        class(cellsystem               ), intent(inout) :: self
-        class(time_increment_controller), intent(inout) :: controller
-        class(configuration            ), intent(inout) :: config
-        integer(int_kind               ), intent(in   ) :: num_conservative_variables
-
-#ifdef _DEBUG
-        call write_debuginfo("In initialize_time_increment_controller(), cellsystem.")
-#endif
-        call controller%initialize(config)
-    end subroutine initialize_time_increment_controller
-
     module subroutine update_time_increment_eos_rank2(self, controller, an_eos, variables_set, spectral_radius_function)
         class  (cellsystem               ), intent(inout) :: self
         class  (time_increment_controller), intent(in   ) :: controller

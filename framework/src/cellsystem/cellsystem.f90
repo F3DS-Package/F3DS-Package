@@ -309,7 +309,6 @@ module class_cellsystem
         procedure, private, pass(self) :: finalize_cells
         procedure, private, pass(self) :: finalize_boundary_references
         procedure, private, pass(self) :: assign_boundary
-        procedure, private, pass(self) :: compute_boundary_gradient ! TODO: Move it! Make 'compute_face_gradient' class!
     end type
 
     ! ### Procedure Interfaces ###
@@ -496,7 +495,7 @@ module class_cellsystem
     end interface
     ! ### End of Procedure Interfaces ###
 
-    ! ### Variables Procedure Interfaces ###
+    ! ### Initialization Interfaces ###
     interface
         module subroutine initialize_variables_rank2(self, variables_set, num_variables)
             class  (cellsystem), intent(inout)              :: self
@@ -508,7 +507,95 @@ module class_cellsystem
             class  (cellsystem), intent(inout)              :: self
             real   (real_kind ), intent(inout), allocatable :: variables_set(:)
         end subroutine initialize_variables_rank1
+        module subroutine initialize_eos(self, an_eos, config, num_conservative_variables)
+            class  (cellsystem    ), intent(inout) :: self
+            class  (eos           ), intent(inout) :: an_eos
+            class  (configuration ), intent(inout) :: config
+            integer(int_kind      ), intent(in   ) :: num_conservative_variables
+        end subroutine initialize_eos
 
+        module subroutine initialize_time_increment_controller(  &
+            self, controller, config, num_conservative_variables &
+        )
+            class(cellsystem               ), intent(inout) :: self
+            class(time_increment_controller), intent(inout) :: controller
+            class(configuration            ), intent(inout) :: config
+            integer(int_kind               ), intent(in   ) :: num_conservative_variables
+        end subroutine initialize_time_increment_controller
+
+        module subroutine initialize_termination_ctiterion(self, criterion, config, num_conservative_variables)
+            class  (cellsystem           ), intent(inout) :: self
+            class  (termination_criterion), intent(inout) :: criterion
+            class  (configuration        ), intent(inout) :: config
+            integer(int_kind             ), intent(in   ) :: num_conservative_variables
+        end subroutine initialize_termination_ctiterion
+
+        module subroutine initialize_gradient_calculator( &
+            self,                                         &
+            a_gradient_calculator,                        &
+            config,                                       &
+            num_conservative_variables                    &
+        )
+            class  (cellsystem         ), intent(inout) :: self
+            class  (gradient_calculator), intent(inout) :: a_gradient_calculator
+            class  (configuration      ), intent(inout) :: config
+            integer(int_kind           ), intent(in   ) :: num_conservative_variables
+        end subroutine initialize_gradient_calculator
+
+        module subroutine initialize_interpolator(self, a_interpolator, config, num_conservative_variables)
+            class  (cellsystem   ), intent(inout) :: self
+            class  (interpolator ), intent(inout) :: a_interpolator
+            class  (configuration), intent(inout) :: config
+            integer(int_kind     ), intent(in   ) :: num_conservative_variables
+        end subroutine initialize_interpolator
+
+        module subroutine initialize_time_stepping(self, a_time_stepping, config, num_conservative_variables)
+            class  (cellsystem   ), intent(inout) :: self
+            class  (time_stepping), intent(inout) :: a_time_stepping
+            class  (configuration), intent(inout) :: config
+            integer(int_kind     ), intent(in   ) :: num_conservative_variables
+        end subroutine initialize_time_stepping
+
+        module subroutine initialize_face_gradient_interpolator(self, a_face_gradient_interpolator, config, num_conservative_variables)
+            class   (cellsystem                ), intent(inout) :: self
+            class   (face_gradient_interpolator), intent(inout) :: a_face_gradient_interpolator
+            class   (configuration             ), intent(inout) :: config
+            integer (int_kind                  ), intent(in   ) :: num_conservative_variables
+        end subroutine initialize_face_gradient_interpolator
+
+        module subroutine initialize_face_gradient_calculator(self, a_face_gradient_calculator, config, num_conservative_variables)
+            class   (cellsystem              ), intent(inout) :: self
+            class   (face_gradient_calculator), intent(inout) :: a_face_gradient_calculator
+            class   (configuration           ), intent(inout) :: config
+            integer (int_kind                ), intent(in   ) :: num_conservative_variables
+        end subroutine initialize_face_gradient_calculator
+
+        module subroutine initialize_riemann_solver(self, a_riemann_solver, config, num_conservative_variables)
+            class  (cellsystem    ), intent(inout) :: self
+            class  (riemann_solver), intent(inout) :: a_riemann_solver
+            class  (configuration ), intent(inout) :: config
+            integer(int_kind      ), intent(in   ) :: num_conservative_variables
+        end subroutine initialize_riemann_solver
+
+        module subroutine initialize_reconstructor(self, a_reconstructor, config, num_conservative_variables, a_reconstructor_generator)
+            class  (cellsystem    ), intent(inout) :: self
+            class  (reconstructor ), intent(inout) :: a_reconstructor
+            class  (configuration ), intent(inout) :: config
+            integer(int_kind      ), intent(in   ) :: num_conservative_variables
+            class  (reconstructor_generator), optional, intent(inout) :: a_reconstructor_generator
+        end subroutine
+
+        module subroutine initialize_result_writer(self, writer, config, num_conservative_variables)
+            class  (cellsystem   ), intent(inout) :: self
+            class  (result_writer), intent(inout) :: writer
+            class  (configuration), intent(inout) :: config
+            integer(int_kind     ), intent(in   ) :: num_conservative_variables
+        end subroutine initialize_result_writer
+    end interface
+    ! ### End of Initialization Interfaces ###
+
+    ! ### Variables Procedure Interfaces ###
+    interface
         module subroutine read_initial_condition_rank2(                           &
             self, an_initial_condition_parser, config, conservative_variables_set &
         )
@@ -601,15 +688,6 @@ module class_cellsystem
 
     ! ### Timestep Control ###
     interface
-        module subroutine initialize_time_increment_controller(  &
-            self, controller, config, num_conservative_variables &
-        )
-            class(cellsystem               ), intent(inout) :: self
-            class(time_increment_controller), intent(inout) :: controller
-            class(configuration            ), intent(inout) :: config
-            integer(int_kind               ), intent(in   ) :: num_conservative_variables
-        end subroutine initialize_time_increment_controller
-
         module subroutine update_time_increment_eos_rank2(                    &
             self, controller, an_eos, variables_set, spectral_radius_function &
         )
@@ -635,13 +713,6 @@ module class_cellsystem
 
     ! ### Termination Criterion Interfaces ###
     interface
-        module subroutine initialize_termination_ctiterion(self, criterion, config, num_conservative_variables)
-            class  (cellsystem           ), intent(inout) :: self
-            class  (termination_criterion), intent(inout) :: criterion
-            class  (configuration        ), intent(inout) :: config
-            integer(int_kind             ), intent(in   ) :: num_conservative_variables
-        end subroutine initialize_termination_ctiterion
-
         module pure function satisfy_termination_criterion(self, criterion) result(judge)
             class(cellsystem           ), intent(in) :: self
             class(termination_criterion), intent(in) :: criterion
@@ -753,54 +824,206 @@ module class_cellsystem
     end interface
     ! ### End of Boundary Condition Interfaces
 
+    ! ### Gradient Calculator Interfaces ###
+    interface
+        module subroutine compute_gradient_rank2( &
+            self,                                 &
+            a_gradient_calculator,                &
+            variables_set,                        &
+            gradient_variables_set,               &
+            num_variables                         &
+        )
+            class  (cellsystem         ), intent(inout) :: self
+            class  (gradient_calculator), intent(inout) :: a_gradient_calculator
+            real   (real_kind          ), intent(in   ) :: variables_set            (:,:)
+            real   (real_kind          ), intent(inout) :: gradient_variables_set   (:,:)
+            integer(int_kind           ), intent(in   ) :: num_variables
+        end subroutine compute_gradient_rank2
+
+        module subroutine compute_gradient_rank1( &
+            self,                                 &
+            a_gradient_calculator,                &
+            variable_set,                         &
+            gradient_variable_set                 &
+        )
+            class(cellsystem         ), intent(inout) :: self
+            class(gradient_calculator), intent(inout) :: a_gradient_calculator
+            real (real_kind          ), intent(in   ) :: variable_set            (:)
+            real (real_kind          ), intent(inout) :: gradient_variable_set   (:,:)
+        end subroutine compute_gradient_rank1
+    end interface
+    ! ### End of Gradient Calculator Interfaces ###
+
+    ! ### Divergence Calculator Interfaces ###
+    interface
+        module subroutine compute_divergence_rank2(self, a_interpolator, variables_set, divergence_variables_set, num_variables, gradient_variables_set, velosity_set)
+            class  (cellsystem  ), intent(inout) :: self
+            class  (interpolator), intent(inout) :: a_interpolator
+            real   (real_kind   ), intent(in   ) :: variables_set           (:,:)
+            real   (real_kind   ), intent(inout) :: divergence_variables_set(:,:)
+            integer(int_kind    ), intent(in   ) :: num_variables
+            real   (real_kind   ), intent(in   ), optional :: gradient_variables_set(:,:)
+            real   (real_kind   ), intent(in   ), optional :: velosity_set          (:,:)
+        end subroutine compute_divergence_rank2
+
+        module subroutine compute_divergence_rank1(self, a_interpolator, variable_set, divergence_variable_set, gradient_variables_set, velosity_set)
+            class(cellsystem   ), intent(inout) :: self
+            class(interpolator ), intent(inout) :: a_interpolator
+            real (real_kind    ), intent(in   ) :: variable_set              (:,:)
+            real (real_kind    ), intent(inout) :: divergence_variable_set   (:)
+            real   (real_kind   ), intent(in   ), optional :: gradient_variables_set(:,:)
+            real   (real_kind   ), intent(in   ), optional :: velosity_set          (:,:)
+        end subroutine compute_divergence_rank1
+
+        module subroutine compute_divergence_godunov_rank2(self, a_reconstructor, a_riemann_solver, an_eos,                                         &
+                                                 primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
+                                                 primitive_to_conservative_function, element_function)
+            class  (cellsystem    ), intent(in   ) :: self
+            class  (reconstructor ), intent(in   ) :: a_reconstructor
+            class  (riemann_solver), intent(in   ) :: a_riemann_solver
+            class  (eos           ), intent(in   ) :: an_eos
+            real   (real_kind     ), intent(in   ) :: primitive_variables_set (:,:)
+            real   (real_kind     ), intent(inout) :: residual_set            (:,:)
+            integer(int_kind      ), intent(in   ) :: num_conservative_variables
+            integer(int_kind      ), intent(in   ) :: num_primitive_variables
+            procedure(primitive_to_conservative_function_interface   ) :: primitive_to_conservative_function
+            procedure(element_provided_with_riemann_function_interface) :: element_function
+        end subroutine compute_divergence_godunov_rank2
+
+        module subroutine compute_divergence_godunov_facegrad_rank2( &
+            self,                                                    &
+            a_reconstructor,                                         &
+            a_riemann_solver,                                        &
+            an_eos,                                                  &
+            a_face_gradient_interpolator,                            &
+            a_face_gradient_calculator,                              &
+            primitive_variables_set,                                 &
+            gradient_primitive_variables_set,                        &
+            residual_set,                                            &
+            num_conservative_variables,                              &
+            num_primitive_variables,                                 &
+            primitive_to_conservative_function,                      &
+            element_function                                         &
+        )
+            class  (cellsystem                ), intent(in   ) :: self
+            class  (reconstructor             ), intent(in   ) :: a_reconstructor
+            class  (riemann_solver            ), intent(in   ) :: a_riemann_solver
+            class  (eos                       ), intent(in   ) :: an_eos
+            class  (face_gradient_interpolator), intent(in   ) :: a_face_gradient_interpolator
+            class  (face_gradient_calculator  ), intent(in   ) :: a_face_gradient_calculator
+            real   (real_kind                 ), intent(in   ) :: primitive_variables_set          (:,:)
+            real   (real_kind                 ), intent(in   ) :: gradient_primitive_variables_set (:,:)
+            real   (real_kind                 ), intent(inout) :: residual_set                     (:,:)
+            integer(int_kind                  ), intent(in   ) :: num_conservative_variables
+            integer(int_kind                  ), intent(in   ) :: num_primitive_variables
+            procedure(primitive_to_conservative_function_interface            ) :: primitive_to_conservative_function
+            procedure(element_provided_with_riemann_facegrad_function_interface) :: element_function
+        end subroutine compute_divergence_godunov_facegrad_rank2
+    end interface
+    ! ### End of Divergence Calculator Interfaces ###
+
+    ! ### Time Stepping Interfaces ###
+    interface
+        module subroutine compute_next_stage_primitive_rank2(self, a_time_stepping, an_eos, stage_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, &
+            conservative_to_primitive_function)
+            class  (cellsystem         ), intent(inout) :: self
+            class  (time_stepping      ), intent(inout) :: a_time_stepping
+            class  (eos                ), intent(in   ) :: an_eos
+            integer(int_kind           ), intent(in   ) :: stage_num
+            real   (real_kind          ), intent(inout) :: conservative_variables_set(:,:)
+            real   (real_kind          ), intent(inout) :: primitive_variables_set   (:,:)
+            real   (real_kind          ), intent(inout) :: residual_set              (:,:)
+            integer(int_kind           ), intent(in   ) :: num_primitive_variables
+            procedure(conservative_to_primitive_function_interface) :: conservative_to_primitive_function
+        end subroutine compute_next_stage_primitive_rank2
+
+        module subroutine compute_next_stage_rank2(self, a_time_stepping, stage_num, conservative_variables_set, residual_set)
+            class  (cellsystem         ), intent(inout) :: self
+            class  (time_stepping      ), intent(inout) :: a_time_stepping
+            integer(int_kind           ), intent(in   ) :: stage_num
+            real   (real_kind          ), intent(inout) :: conservative_variables_set(:,:)
+            real   (real_kind          ), intent(inout) :: residual_set              (:,:)
+        end subroutine compute_next_stage_rank2
+
+        module subroutine compute_next_stage_rank1(self, a_time_stepping, stage_num, conservative_variable_set, residual_set)
+            class  (cellsystem         ), intent(inout) :: self
+            class  (time_stepping      ), intent(inout) :: a_time_stepping
+            integer(int_kind           ), intent(in   ) :: stage_num
+            real   (real_kind          ), intent(inout) :: conservative_variable_set(:)
+            real   (real_kind          ), intent(inout) :: residual_set             (:)
+        end subroutine compute_next_stage_rank1
+
+        module subroutine prepare_time_stepping_rank2(    &
+            self                      , &
+            a_time_stepping           , &
+            conservative_variables_set, &
+            residual_set                  )
+            class(cellsystem   ), intent(inout) :: self
+            class(time_stepping), intent(inout) :: a_time_stepping
+            real (real_kind    ), intent(inout) :: conservative_variables_set(:,:)
+            real (real_kind    ), intent(inout) :: residual_set              (:,:)
+        end subroutine
+
+        module subroutine prepare_time_stepping_rank1(    &
+            self                      , &
+            a_time_stepping           , &
+            conservative_variables_set, &
+            residual_set                  )
+            class(cellsystem   ), intent(inout) :: self
+            class(time_stepping), intent(inout) :: a_time_stepping
+            real (real_kind    ), intent(inout) :: conservative_variables_set(:)
+            real (real_kind    ), intent(inout) :: residual_set              (:)
+        end subroutine
+
+        module pure function get_number_of_stages(self, a_time_stepping) result(n)
+            class  (cellsystem   ), intent(in) :: self
+            class  (time_stepping), intent(in) :: a_time_stepping
+            integer(int_kind     )             :: n
+        end function get_number_of_stages
+    end interface
+    ! ### End of Time Stepping Interfaces ###
+
+    ! ### Result Writer Interfaces ###
+    interface
+        module subroutine result_writer_open_file(self, writer)
+            class(cellsystem   ), intent(inout) :: self
+            class(result_writer), intent(inout) :: writer
+        end subroutine result_writer_open_file
+
+        module subroutine result_writer_close_file(self, writer)
+            class(cellsystem   ), intent(inout) :: self
+            class(result_writer), intent(inout) :: writer
+        end subroutine result_writer_close_file
+
+        module pure function result_writer_is_writable(self, writer) result(yes)
+            class(cellsystem   ), intent(in) :: self
+            class(result_writer), intent(in) :: writer
+            logical                          :: yes
+        end function result_writer_is_writable
+
+        module subroutine write_scolar(self, writer, name, scolar_variables)
+            class    (cellsystem   ), intent(inout) :: self
+            class    (result_writer), intent(inout) :: writer
+            character(len=*        ), intent(in   ) :: name
+            real     (real_kind    ), intent(in   ) :: scolar_variables(:)
+        end subroutine write_scolar
+
+        module subroutine write_vector(self, writer, name, vector_variables)
+            class    (cellsystem   ), intent(inout) :: self
+            class    (result_writer), intent(inout) :: writer
+            character(len=*        ), intent(in   ) :: name
+            real     (real_kind    ), intent(in   ) :: vector_variables(:,:)
+        end subroutine write_vector
+
+        module function get_filename(self, writer) result(name)
+            class    (cellsystem   ), intent(inout) :: self
+            class    (result_writer), intent(inout) :: writer
+            character(len=:        ), allocatable :: name
+        end function get_filename
+    end interface
+    ! ### End of Result Writer Interfaces ###
+
     contains
-
-    ! ### Cellsystem ###
-    subroutine initilaize_cellsystem(self, config)
-        class(cellsystem   ), intent(inout) :: self
-        class(configuration), intent(inout) :: config
-
-        logical           :: found
-
-#ifdef _OPENMP
-        call config%get_int                ("Parallel computing.Number of threads", self%num_threads, found, 1)
-        if(.not. found) call write_warring("'Parallel computing.Number of threads' is not found in configuration file you set. Solver is executed a single thread.")
-
-        call omp_set_num_threads(self%num_threads)
-#endif
-    end subroutine initilaize_cellsystem
-
-    subroutine show_timestepping_infomation(self)
-        class(cellsystem), intent(inout) :: self
-        print '(3(a, g0))', "Step: ", self%num_steps, ", Time increment: ", self%time_increment, ", Time: ", self%time
-    end subroutine show_timestepping_infomation
-
-    ! ### Face gradient interpolator ###
-    subroutine initialize_face_gradient_interpolator(self, a_face_gradient_interpolator, config, num_conservative_variables)
-        class   (cellsystem                ), intent(inout) :: self
-        class   (face_gradient_interpolator), intent(inout) :: a_face_gradient_interpolator
-        class   (configuration             ), intent(inout) :: config
-        integer (int_kind                  ), intent(in   ) :: num_conservative_variables
-
-#ifdef _DEBUG
-        call write_debuginfo("In initialize_face_gradient_interpolator(), cellsystem.")
-#endif
-        call a_face_gradient_interpolator%initialize(config)
-    end subroutine initialize_face_gradient_interpolator
-
-    ! ### Face gradient calculator ###
-    subroutine initialize_face_gradient_calculator(self, a_face_gradient_calculator, config, num_conservative_variables)
-        class   (cellsystem              ), intent(inout) :: self
-        class   (face_gradient_calculator), intent(inout) :: a_face_gradient_calculator
-        class   (configuration           ), intent(inout) :: config
-        integer (int_kind                ), intent(in   ) :: num_conservative_variables
-
-#ifdef _DEBUG
-        call write_debuginfo("In initialize_face_gradient_calculator(), cellsystem.")
-#endif
-        call a_face_gradient_calculator%initialize(config)
-    end subroutine initialize_face_gradient_calculator
-
     ! ### Surface profiler ###
     subroutine initialize_surface_profiler(self, plotter, config, num_conservative_variables)
         class  (cellsystem      ), intent(inout) :: self
@@ -891,332 +1114,6 @@ module class_cellsystem
         juge = plotter%is_writable(self%time)
     end function line_plotter_is_writable
 
-    ! ### Gradient Calculator ###
-    subroutine initialize_gradient_calculator(self, a_gradient_calculator, config, num_conservative_variables)
-        class  (cellsystem         ), intent(inout) :: self
-        class  (gradient_calculator), intent(inout) :: a_gradient_calculator
-        class  (configuration      ), intent(inout) :: config
-        integer(int_kind           ), intent(in   ) :: num_conservative_variables
-
-#ifdef _DEBUG
-        call write_debuginfo("In initialize_gradient_calculator(), cellsystem.")
-#endif
-        call a_gradient_calculator%initialize(config)
-    end subroutine initialize_gradient_calculator
-
-    subroutine compute_gradient_rank2(self, a_gradient_calculator, variables_set, gradient_variables_set, num_variables)
-        class  (cellsystem         ), intent(inout) :: self
-        class  (gradient_calculator), intent(inout) :: a_gradient_calculator
-        real   (real_kind          ), intent(in   ) :: variables_set            (:,:)
-        real   (real_kind          ), intent(inout) :: gradient_variables_set   (:,:)
-        integer(int_kind           ), intent(in   ) :: num_variables
-
-        integer(int_kind ) :: face_index, rhc_index, lhc_index, var_index
-
-#ifdef _DEBUG
-        call write_debuginfo("In compute_gradient_rank2(), cellsystem.")
-#endif
-
-!$omp parallel do private(face_index, rhc_index, lhc_index, var_index)
-        do face_index = 1, self%num_faces, 1
-            lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
-            rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
-            do var_index = 1, num_variables, 1
-                associate(                                &
-                    vec_start_index => 3*(var_index-1)+1, &
-                    vec_end_index   => 3*(var_index-1)+3, &
-                    residual        => a_gradient_calculator%compute_residual(                         &
-                                           variables_set                      (var_index, lhc_index ), &
-                                           variables_set                      (var_index, rhc_index ), &
-                                           self%cell_centor_positions         (1:3      , lhc_index ), &
-                                           self%cell_centor_positions         (1:3      , rhc_index ), &
-                                           self%face_normal_vectors           (1:3      , face_index), &
-                                           self%face_positions                (1:3      , face_index), &
-                                           self%face_areas                               (face_index)  &
-                                        )                                                              &
-                )
-                    gradient_variables_set(vec_start_index:vec_end_index, rhc_index) = gradient_variables_set(vec_start_index:vec_end_index, rhc_index)  &
-                                                        - (1.d0 / self%cell_volumes(rhc_index)) * residual
-                    gradient_variables_set(vec_start_index:vec_end_index, lhc_index) = gradient_variables_set(vec_start_index:vec_end_index, lhc_index)  &
-                                                        + (1.d0 / self%cell_volumes(lhc_index)) * residual
-                end associate
-            end do
-        end do
-    end subroutine compute_gradient_rank2
-
-    subroutine compute_gradient_rank1(self, a_gradient_calculator, variable_set, gradient_variable_set)
-        class(cellsystem         ), intent(inout) :: self
-        class(gradient_calculator), intent(inout) :: a_gradient_calculator
-        real (real_kind          ), intent(in   ) :: variable_set            (:)
-        real (real_kind          ), intent(inout) :: gradient_variable_set   (:,:)
-
-        integer(int_kind) :: face_index, rhc_index, lhc_index
-
-#ifdef _DEBUG
-        call write_debuginfo("In compute_gradient_rank1(), cellsystem.")
-#endif
-
-!$omp parallel do private(face_index, rhc_index, lhc_index)
-        do face_index = 1, self%num_faces, 1
-            lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
-            rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
-
-            associate(                                                                     &
-                residual => a_gradient_calculator%compute_residual(                        &
-                               variable_set                                  (lhc_index ), &
-                               variable_set                                  (rhc_index ), &
-                               self%cell_centor_positions         (1:3      , lhc_index ), &
-                               self%cell_centor_positions         (1:3      , rhc_index ), &
-                               self%face_normal_vectors           (1:3      , face_index), &
-                               self%face_positions                (1:3      , face_index), &
-                               self%face_areas                               (face_index)  &
-                            )                                                              &
-            )
-                gradient_variable_set(1:3,rhc_index) = gradient_variable_set(1:3,rhc_index)                    &
-                                                 - (1.d0 / self%cell_volumes(rhc_index)) * residual
-                gradient_variable_set(1:3,lhc_index) = gradient_variable_set(1:3,lhc_index)                    &
-                                                 + (1.d0 / self%cell_volumes(lhc_index)) * residual
-            end associate
-        end do
-    end subroutine compute_gradient_rank1
-
-    ! ### Divergence Calculator ###
-    subroutine initialize_interpolator(self, a_interpolator, config, num_conservative_variables)
-        class  (cellsystem   ), intent(inout) :: self
-        class  (interpolator ), intent(inout) :: a_interpolator
-        class  (configuration), intent(inout) :: config
-        integer(int_kind     ), intent(in   ) :: num_conservative_variables
-
-#ifdef _DEBUG
-        call write_debuginfo("In initialize_interpolator(), cellsystem.")
-#endif
-        call a_interpolator%initialize(config)
-    end subroutine initialize_interpolator
-
-    subroutine compute_divergence_rank2(self, a_interpolator, variables_set, divergence_variables_set, num_variables, gradient_variables_set, velosity_set)
-        class  (cellsystem  ), intent(inout) :: self
-        class  (interpolator), intent(inout) :: a_interpolator
-        real   (real_kind   ), intent(in   ) :: variables_set           (:,:)
-        real   (real_kind   ), intent(inout) :: divergence_variables_set(:,:)
-        integer(int_kind    ), intent(in   ) :: num_variables
-        real   (real_kind   ), intent(in   ), optional :: gradient_variables_set(:,:)
-        real   (real_kind   ), intent(in   ), optional :: velosity_set          (:,:)
-
-        integer(int_kind ) :: face_index, rhc_index, lhc_index, var_index, num_divergence_variables
-        real   (real_kind) :: face_variables(num_variables)
-
-#ifdef _DEBUG
-        call write_debuginfo("In compute_divergence_rank2(), cellsystem.")
-#endif
-
-        num_divergence_variables = num_variables/3
-
-!$omp parallel do private(face_index, rhc_index, lhc_index, var_index, face_variables)
-        do face_index = 1, self%num_faces, 1
-            lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
-            rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
-
-            face_variables(:) = a_interpolator%interpolate_face_variables(&
-               variables_set                      (:   , :         ), &
-               self%face_to_cell_indexes          (:   , face_index), &
-               self%cell_centor_positions         (1:3 , :         ), &
-               self%face_positions                (1:3 , face_index), &
-               self%face_normal_vectors           (1:3 , face_index), &
-               self%num_local_cells                                 , &
-               num_variables                                        , &
-               gradient_variables_set             (:   , :         ), &
-               velosity_set                       (:   , :         )  &
-            )
-
-            do var_index = 1, num_divergence_variables, 1
-                associate(face_variable=>face_variables(3*(var_index-1)+1:3*(var_index-1)+3))
-                    divergence_variables_set(var_index, lhc_index) = divergence_variables_set(var_index, lhc_index) &
-                                                        + (1.d0 / self%cell_volumes(lhc_index)) * vector_multiply(face_variable, self%face_normal_vectors(:, face_index) * self%face_areas(face_index))
-                    divergence_variables_set(var_index, rhc_index) = divergence_variables_set(var_index, rhc_index) &
-                                                        - (1.d0 / self%cell_volumes(rhc_index)) * vector_multiply(face_variable, self%face_normal_vectors(:, face_index) * self%face_areas(face_index))
-                end associate
-            end do
-        end do
-    end subroutine compute_divergence_rank2
-
-    subroutine compute_divergence_rank1(self, a_interpolator, variable_set, divergence_variable_set, gradient_variables_set, velosity_set)
-        class(cellsystem   ), intent(inout) :: self
-        class(interpolator ), intent(inout) :: a_interpolator
-        real (real_kind    ), intent(in   ) :: variable_set              (:,:)
-        real (real_kind    ), intent(inout) :: divergence_variable_set   (:)
-        real   (real_kind   ), intent(in   ), optional :: gradient_variables_set(:,:)
-        real   (real_kind   ), intent(in   ), optional :: velosity_set          (:,:)
-
-        integer(int_kind ) :: face_index, rhc_index, lhc_index
-        real   (real_kind) :: face_variables(3)
-
-#ifdef _DEBUG
-        call write_debuginfo("In compute_divergence_rank1(), cellsystem.")
-#endif
-
-!$omp parallel do private(face_index, rhc_index, lhc_index, face_variables)
-        do face_index = 1, self%num_faces, 1
-            lhc_index = self%face_to_cell_indexes(self%num_local_cells - 0, face_index)
-            rhc_index = self%face_to_cell_indexes(self%num_local_cells + 1, face_index)
-
-            face_variables(:) = a_interpolator%interpolate_face_variables( &
-                variable_set(:,:), self%face_to_cell_indexes(:, face_index), self%cell_centor_positions(:,:), self%face_positions(:,face_index), self%face_normal_vectors(1:3, face_index), self%num_local_cells, 3, gradient_variables_set, velosity_set &
-            )
-
-            divergence_variable_set(lhc_index) = divergence_variable_set(lhc_index)               &
-                                               + (1.d0 / self%cell_volumes(lhc_index)) * vector_multiply(face_variables(1:3), self%face_normal_vectors(1:3, face_index) * self%face_areas(face_index))
-            divergence_variable_set(rhc_index) = divergence_variable_set(rhc_index)               &
-                                               - (1.d0 / self%cell_volumes(rhc_index)) * vector_multiply(face_variables(1:3), self%face_normal_vectors(1:3, face_index) * self%face_areas(face_index))
-        end do
-    end subroutine compute_divergence_rank1
-
-    subroutine compute_divergence_godunov_rank2(self, a_reconstructor, a_riemann_solver, an_eos,                                         &
-                                             primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
-                                             primitive_to_conservative_function, element_function)
-
-        class  (cellsystem    ), intent(in   ) :: self
-        class  (reconstructor ), intent(in   ) :: a_reconstructor
-        class  (riemann_solver), intent(in   ) :: a_riemann_solver
-        class  (eos           ), intent(in   ) :: an_eos
-        real   (real_kind     ), intent(in   ) :: primitive_variables_set (:,:)
-        real   (real_kind     ), intent(inout) :: residual_set            (:,:)
-        integer(int_kind      ), intent(in   ) :: num_conservative_variables
-        integer(int_kind      ), intent(in   ) :: num_primitive_variables
-
-        procedure(primitive_to_conservative_function_interface   ) :: primitive_to_conservative_function
-        procedure(element_provided_with_riemann_function_interface) :: element_function
-
-        integer(int_kind ) :: i
-        integer(int_kind ) :: lhc_index
-        integer(int_kind ) :: rhc_index
-        real   (real_kind) :: reconstructed_primitive_variables_lhc   (num_primitive_variables)
-        real   (real_kind) :: reconstructed_primitive_variables_rhc   (num_primitive_variables)
-        real   (real_kind) :: element                                 (num_conservative_variables, 1:2)
-
-#ifdef _DEBUG
-        call write_debuginfo("In compute_divergence_godunov_rank2 (), cellsystem.")
-#endif
-
-!$omp parallel do private(i,lhc_index,rhc_index,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,element)
-        do i = 1, self%num_faces, 1
-            lhc_index = self%face_to_cell_indexes(self%num_local_cells+0, i)
-            rhc_index = self%face_to_cell_indexes(self%num_local_cells+1, i)
-
-            reconstructed_primitive_variables_lhc(:) = a_reconstructor%reconstruct_lhc(                              &
-                primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
-                i, self%num_local_cells, num_primitive_variables                                                     &
-            )
-            reconstructed_primitive_variables_rhc(:) = a_reconstructor%reconstruct_rhc(                              &
-                primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
-                i, self%num_local_cells, num_primitive_variables                                                     &
-            )
-
-            element(:,:) = element_function(&
-                an_eos                                      , &
-                a_riemann_solver                            , &
-                primitive_variables_set       (:,lhc_index) , &
-                primitive_variables_set       (:,rhc_index) , &
-                reconstructed_primitive_variables_lhc   (:) , &
-                reconstructed_primitive_variables_rhc   (:) , &
-                self%cell_volumes            (lhc_index)    , &
-                self%cell_volumes            (rhc_index)    , &
-                self%face_areas                  (i)        , &
-                self%face_normal_vectors     (1:3,i)        , &
-                self%face_tangential1_vectors(1:3,i)        , &
-                self%face_tangential2_vectors(1:3,i)        , &
-                num_conservative_variables                  , &
-                num_primitive_variables                       &
-            )
-
-            residual_set(:,lhc_index) = residual_set(:,lhc_index) + element(:, 1)
-            residual_set(:,rhc_index) = residual_set(:,rhc_index) + element(:, 2)
-        end do
-    end subroutine compute_divergence_godunov_rank2
-
-    subroutine compute_divergence_godunov_facegrad_rank2(self, a_reconstructor, a_riemann_solver, an_eos, a_face_gradient_interpolator, a_face_gradient_calculator,  &
-                                        primitive_variables_set, gradient_primitive_variables_set, residual_set, num_conservative_variables, num_primitive_variables, &
-                                        primitive_to_conservative_function, element_function)
-
-        class  (cellsystem                ), intent(in   ) :: self
-        class  (reconstructor             ), intent(in   ) :: a_reconstructor
-        class  (riemann_solver            ), intent(in   ) :: a_riemann_solver
-        class  (eos                       ), intent(in   ) :: an_eos
-        class  (face_gradient_interpolator), intent(in   ) :: a_face_gradient_interpolator
-        class  (face_gradient_calculator  ), intent(in   ) :: a_face_gradient_calculator
-        real   (real_kind                 ), intent(in   ) :: primitive_variables_set          (:,:)
-        real   (real_kind                 ), intent(in   ) :: gradient_primitive_variables_set (:,:)
-        real   (real_kind                 ), intent(inout) :: residual_set                     (:,:)
-        integer(int_kind                  ), intent(in   ) :: num_conservative_variables
-        integer(int_kind                  ), intent(in   ) :: num_primitive_variables
-
-        procedure(primitive_to_conservative_function_interface            ) :: primitive_to_conservative_function
-        procedure(element_provided_with_riemann_facegrad_function_interface) :: element_function
-
-        integer(int_kind ) :: i
-        real   (real_kind) :: reconstructed_primitive_variables_lhc   (num_primitive_variables)
-        real   (real_kind) :: reconstructed_primitive_variables_rhc   (num_primitive_variables)
-        real   (real_kind) :: face_gradient_primitive_variables       (num_primitive_variables*3)
-        real   (real_kind) :: element                                 (num_conservative_variables, 1:2)
-
-#ifdef _DEBUG
-        call write_debuginfo("In compute_divergence_godunov_facegrad_rank2(), cellsystem.")
-#endif
-
-!$omp parallel do private(i,reconstructed_primitive_variables_lhc,reconstructed_primitive_variables_rhc,face_gradient_primitive_variables,element)
-        do i = 1, self%num_faces, 1
-            associate(                                                             &
-                lhc_index => self%face_to_cell_indexes(self%num_local_cells+0, i), &
-                rhc_index => self%face_to_cell_indexes(self%num_local_cells+1, i)  &
-            )
-                reconstructed_primitive_variables_lhc(:) = a_reconstructor%reconstruct_lhc(                              &
-                    primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
-                    i, self%num_local_cells, num_primitive_variables                                                     &
-                )
-                reconstructed_primitive_variables_rhc(:) = a_reconstructor%reconstruct_rhc(                              &
-                    primitive_variables_set, self%face_to_cell_indexes, self%cell_centor_positions, self%face_positions, &
-                    i, self%num_local_cells, num_primitive_variables                                                     &
-                )
-
-                if(.not. self%is_real_cell(rhc_index))then ! It's boundary face!
-                    face_gradient_primitive_variables(:) = a_face_gradient_calculator%compute(            &
-                        primitive_variables_set   (:,lhc_index), primitive_variables_set   (:,rhc_index), &
-                        self%cell_centor_positions(:,lhc_index), self%cell_centor_positions(:,rhc_index), &
-                        self%face_normal_vectors(:, i),                                                   &
-                        num_primitive_variables                                                           &
-                    )
-                else
-                    face_gradient_primitive_variables(:) = a_face_gradient_interpolator%interpolate(                  &
-                        gradient_primitive_variables_set(:,lhc_index), gradient_primitive_variables_set(:,rhc_index), &
-                        primitive_variables_set         (:,lhc_index), primitive_variables_set         (:,rhc_index), &
-                        self%cell_centor_positions      (:,lhc_index), self%cell_centor_positions      (:,rhc_index), &
-                        num_primitive_variables                                                                       &
-                    )
-                end if
-
-                element(:,:) = element_function(        &
-                    an_eos                                              , &
-                    a_riemann_solver                                    , &
-                    primitive_variables_set              (:,lhc_index)  , &
-                    primitive_variables_set              (:,rhc_index)  , &
-                    reconstructed_primitive_variables_lhc(:)            , &
-                    reconstructed_primitive_variables_rhc(:)            , &
-                    face_gradient_primitive_variables    (:)            , &
-                    self%cell_volumes                      (lhc_index)  , &
-                    self%cell_volumes                      (rhc_index)  , &
-                    self%face_areas                  (i)                , &
-                    self%face_normal_vectors     (1:3,i)                , &
-                    self%face_tangential1_vectors(1:3,i)                , &
-                    self%face_tangential2_vectors(1:3,i)                , &
-                    num_conservative_variables                          , &
-                    num_primitive_variables                               &
-                )
-
-                residual_set(:,lhc_index) = residual_set(:,lhc_index) + element(:, 1)
-                residual_set(:,rhc_index) = residual_set(:,rhc_index) + element(:, 2)
-            end associate
-        end do
-    end subroutine compute_divergence_godunov_facegrad_rank2
-
     subroutine compute_source_term(self, variables_set, residual_set, num_conservative_variables, compute_source_term_function)
         class  (cellsystem  ), intent(in   ) :: self
         real   (real_kind   ), intent(in   ) :: variables_set(:,:)
@@ -1239,251 +1136,26 @@ module class_cellsystem
         end do
     end subroutine compute_source_term
 
-    ! ### EoS ###
-    subroutine initialize_eos(self, an_eos, config, num_conservative_variables)
-        class  (cellsystem    ), intent(inout) :: self
-        class  (eos           ), intent(inout) :: an_eos
-        class  (configuration ), intent(inout) :: config
-        integer(int_kind      ), intent(in   ) :: num_conservative_variables
-
-#ifdef _DEBUG
-        call write_debuginfo("In initialize_eos(), cellsystem.")
-#endif
-        call an_eos%initialize(config)
-    end subroutine initialize_eos
-
-    ! ### Riemann solver ###
-    subroutine initialize_riemann_solver(self, a_riemann_solver, config, num_conservative_variables)
-        class  (cellsystem    ), intent(inout) :: self
-        class  (riemann_solver), intent(inout) :: a_riemann_solver
-        class  (configuration ), intent(inout) :: config
-        integer(int_kind      ), intent(in   ) :: num_conservative_variables
-
-#ifdef _DEBUG
-        call write_debuginfo("In initialize_riemann_solver(), cellsystem.")
-#endif
-        call a_riemann_solver%initialize(config)
-    end subroutine initialize_riemann_solver
-
-    ! ### Reconstructor ###
-    subroutine initialize_reconstructor(self, a_reconstructor, config, num_conservative_variables, a_reconstructor_generator)
-        class  (cellsystem    ), intent(inout) :: self
-        class  (reconstructor ), intent(inout) :: a_reconstructor
-        class  (configuration ), intent(inout) :: config
-        integer(int_kind      ), intent(in   ) :: num_conservative_variables
-
-        class  (reconstructor_generator), optional, intent(inout) :: a_reconstructor_generator
-
-#ifdef _DEBUG
-        call write_debuginfo("In initialize_reconstructor(), cellsystem.")
-#endif
-        call a_reconstructor%initialize(config, a_reconstructor_generator)
-    end subroutine initialize_reconstructor
-
-    ! ### Time stepping ###
-    subroutine initialize_time_stepping(self, a_time_stepping, config, num_conservative_variables)
-        class  (cellsystem   ), intent(inout) :: self
-        class  (time_stepping), intent(inout) :: a_time_stepping
-        class  (configuration), intent(inout) :: config
-        integer(int_kind     ), intent(in   ) :: num_conservative_variables
-
-#ifdef _DEBUG
-        call write_debuginfo("In initialize_time_stepping(), cellsystem.")
-#endif
-        call a_time_stepping%initialize(config, self%num_cells, num_conservative_variables)
-    end subroutine initialize_time_stepping
-
-    subroutine compute_next_stage_primitive_rank2(self, a_time_stepping, an_eos, stage_num, conservative_variables_set, primitive_variables_set, residual_set, num_primitive_variables, &
-        conservative_to_primitive_function)
-
-        class  (cellsystem         ), intent(inout) :: self
-        class  (time_stepping      ), intent(inout) :: a_time_stepping
-        class  (eos                ), intent(in   ) :: an_eos
-        integer(int_kind           ), intent(in   ) :: stage_num
-        real   (real_kind          ), intent(inout) :: conservative_variables_set(:,:)
-        real   (real_kind          ), intent(inout) :: primitive_variables_set   (:,:)
-        real   (real_kind          ), intent(inout) :: residual_set              (:,:)
-        integer(int_kind           ), intent(in   ) :: num_primitive_variables
-
-        procedure(conservative_to_primitive_function_interface) :: conservative_to_primitive_function
-
-        integer(int_kind) :: i
-
-#ifdef _DEBUG
-        call write_debuginfo("In compute_next_stage_primitive_rank2(), cellsystem.")
-#endif
-
-!$omp parallel do private(i)
-        do i = 1, self%num_cells, 1
-            conservative_variables_set(:,i) = a_time_stepping%compute_next_stage(i, stage_num, self%time_increment, conservative_variables_set(:,i), residual_set(:,i))
-            residual_set              (:,i) = 0.d0
-            primitive_variables_set   (:,i) = conservative_to_primitive_function(an_eos, conservative_variables_set(:,i), num_primitive_variables)
-        end do
-    end subroutine compute_next_stage_primitive_rank2
-
-    subroutine compute_next_stage_rank2(self, a_time_stepping, stage_num, conservative_variables_set, residual_set)
-
-        class  (cellsystem         ), intent(inout) :: self
-        class  (time_stepping      ), intent(inout) :: a_time_stepping
-        integer(int_kind           ), intent(in   ) :: stage_num
-        real   (real_kind          ), intent(inout) :: conservative_variables_set(:,:)
-        real   (real_kind          ), intent(inout) :: residual_set              (:,:)
-
-        integer(int_kind) :: i
-
-#ifdef _DEBUG
-        call write_debuginfo("In compute_next_stage_rank2(), cellsystem.")
-#endif
-
-!$omp parallel do private(i)
-        do i = 1, self%num_cells, 1
-            conservative_variables_set(:,i) = a_time_stepping%compute_next_stage(i, stage_num, self%time_increment, conservative_variables_set(:,i), residual_set(:,i))
-            residual_set              (:,i) = 0.d0
-        end do
-    end subroutine compute_next_stage_rank2
-
-    subroutine compute_next_stage_rank1(self, a_time_stepping, stage_num, conservative_variable_set, residual_set)
-
-        class  (cellsystem         ), intent(inout) :: self
-        class  (time_stepping      ), intent(inout) :: a_time_stepping
-        integer(int_kind           ), intent(in   ) :: stage_num
-        real   (real_kind          ), intent(inout) :: conservative_variable_set(:)
-        real   (real_kind          ), intent(inout) :: residual_set             (:)
-
-        integer(int_kind) :: i
-
-#ifdef _DEBUG
-        call write_debuginfo("In compute_next_stage_rank1(), cellsystem.")
-#endif
-
-!$omp parallel do private(i)
-        do i = 1, self%num_cells, 1
-            ! Fortran cannot implicitly convert a 1-dimensional array of 1 elements to a scalar.
-            ! In the following, the built-in function sum is used to convert to a scalar.
-            conservative_variable_set(i) = sum( a_time_stepping%compute_next_stage(i, stage_num, self%time_increment, [conservative_variable_set(i)], [residual_set(i)]) )
-            residual_set             (i) = 0.d0
-        end do
-    end subroutine compute_next_stage_rank1
-
-    subroutine prepare_time_stepping_rank2(    &
-        self                      , &
-        a_time_stepping           , &
-        conservative_variables_set, &
-        residual_set                  )
-        class(cellsystem   ), intent(inout) :: self
-        class(time_stepping), intent(inout) :: a_time_stepping
-        real (real_kind    ), intent(inout) :: conservative_variables_set(:,:)
-        real (real_kind    ), intent(inout) :: residual_set              (:,:)
-
-        integer(int_kind) :: i
-
-#ifdef _DEBUG
-        call write_debuginfo("In prepare_time_stepping_rank2(), cellsystem.")
-#endif
-
-!$omp parallel do private(i)
-        do i = 1, self%num_cells, 1
-            call a_time_stepping%prepare_time_stepping(i, conservative_variables_set(:,i), residual_set(:,i))
-        end do
-    end subroutine
-
-    subroutine prepare_time_stepping_rank1(    &
-        self                      , &
-        a_time_stepping           , &
-        conservative_variables_set, &
-        residual_set                  )
-        class(cellsystem   ), intent(inout) :: self
-        class(time_stepping), intent(inout) :: a_time_stepping
-        real (real_kind    ), intent(inout) :: conservative_variables_set(:)
-        real (real_kind    ), intent(inout) :: residual_set              (:)
-
-        integer(int_kind) :: i
-
-#ifdef _DEBUG
-        call write_debuginfo("In prepare_time_stepping_rank1(), cellsystem.")
-#endif
-
-!$omp parallel do private(i)
-        do i = 1, self%num_cells, 1
-            call a_time_stepping%prepare_time_stepping(i, [conservative_variables_set(i)], [residual_set(i)])
-        end do
-    end subroutine
-
-    pure function get_number_of_stages(self, a_time_stepping) result(n)
-        class  (cellsystem   ), intent(in) :: self
-        class  (time_stepping), intent(in) :: a_time_stepping
-        integer(int_kind     )                :: n
-        n = a_time_stepping%get_number_of_stages()
-    end function get_number_of_stages
-
-    ! ###  Result writer ###
-    subroutine initialize_result_writer(self, writer, config, num_conservative_variables)
-        class  (cellsystem   ), intent(inout) :: self
-        class  (result_writer), intent(inout) :: writer
-        class  (configuration), intent(inout) :: config
-        integer(int_kind     ), intent(in   ) :: num_conservative_variables
-
-#ifdef _DEBUG
-        call write_debuginfo("In initialize_result_writer(), cellsystem.")
-#endif
-        call writer%initialize(self%num_cells, self%num_points, self%is_real_cell, self%cell_geometries, self%cell_types, config)
-    end subroutine initialize_result_writer
-
-    subroutine result_writer_open_file(self, writer)
-        class(cellsystem   ), intent(inout) :: self
-        class(result_writer), intent(inout) :: writer
-#ifdef _DEBUG
-        call write_debuginfo("In result_writer_open_file(), cellsystem.")
-#endif
-        call writer%open_file(self%time, self%points)
-    end subroutine result_writer_open_file
-
-    subroutine result_writer_close_file(self, writer)
-        class(cellsystem   ), intent(inout) :: self
-        class(result_writer), intent(inout) :: writer
-#ifdef _DEBUG
-        call write_debuginfo("In result_writer_close_file(), cellsystem.")
-#endif
-        call writer%close_file()
-    end subroutine result_writer_close_file
-
-    pure function result_writer_is_writable(self, writer) result(yes)
-        class(cellsystem   ), intent(in) :: self
-        class(result_writer), intent(in) :: writer
-        logical                          :: yes
-        yes = writer%is_writable(self%time)
-    end function result_writer_is_writable
-
-    subroutine write_scolar(self, writer, name, scolar_variables)
-        class    (cellsystem   ), intent(inout) :: self
-        class    (result_writer), intent(inout) :: writer
-        character(len=*        ), intent(in   ) :: name
-        real     (real_kind    ), intent(in   ) :: scolar_variables(:)
-#ifdef _DEBUG
-        call write_debuginfo("In write_scolar(), cellsystem.")
-#endif
-        call writer%write_scolar(self%is_real_cell, name, scolar_variables)
-    end subroutine write_scolar
-
-    subroutine write_vector(self, writer, name, vector_variables)
-        class    (cellsystem   ), intent(inout) :: self
-        class    (result_writer), intent(inout) :: writer
-        character(len=*        ), intent(in   ) :: name
-        real     (real_kind    ), intent(in   ) :: vector_variables(:,:)
-#ifdef _DEBUG
-        call write_debuginfo("In write_vector(), cellsystem.")
-#endif
-        call writer%write_vector(self%is_real_cell, name, vector_variables)
-    end subroutine write_vector
-
-    function get_filename(self, writer) result(name)
-        class    (cellsystem   ), intent(inout) :: self
-        class    (result_writer), intent(inout) :: writer
-        character(len=:        ), allocatable :: name
-        name = writer%get_filename()
-    end function get_filename
-
     ! ### Cellsystem ###
+    subroutine initilaize_cellsystem(self, config)
+        class(cellsystem   ), intent(inout) :: self
+        class(configuration), intent(inout) :: config
+
+        logical           :: found
+
+#ifdef _OPENMP
+        call config%get_int                ("Parallel computing.Number of threads", self%num_threads, found, 1)
+        if(.not. found) call write_warring("'Parallel computing.Number of threads' is not found in configuration file you set. Solver is executed a single thread.")
+
+        call omp_set_num_threads(self%num_threads)
+#endif
+    end subroutine initilaize_cellsystem
+
+    subroutine show_timestepping_infomation(self)
+        class(cellsystem), intent(inout) :: self
+        print '(3(a, g0))', "Step: ", self%num_steps, ", Time increment: ", self%time_increment, ", Time: ", self%time
+    end subroutine show_timestepping_infomation
+
     subroutine read(self, parser, config)
         class(cellsystem         ), intent(inout) :: self
         class(grid_parser        ), intent(inout) :: parser
@@ -1541,6 +1213,16 @@ module class_cellsystem
         self%time = self%time + self%time_increment
         self%num_steps = self%num_steps + 1
     end subroutine increment_time
+
+    subroutine finalize(self)
+        class(cellsystem), intent(inout) :: self
+#ifdef _DEBUG
+        call write_debuginfo("In finalize(), cellsystem.")
+#endif
+        call self%finalize_cells()
+        call self%finalize_faces()
+        call self%finalize_boundary_references()
+    end subroutine finalize
 
     ! ### Getter ###
     pure function get_number_of_faces(self) result(n)
@@ -1614,17 +1296,6 @@ module class_cellsystem
         real(real_kind) :: dt
         dt = self%time_increment
     end function get_time_increment
-
-    ! ### Finalizer ###
-    subroutine finalize(self)
-        class(cellsystem), intent(inout) :: self
-#ifdef _DEBUG
-        call write_debuginfo("In finalize(), cellsystem.")
-#endif
-        call self%finalize_cells()
-        call self%finalize_faces()
-        call self%finalize_boundary_references()
-    end subroutine finalize
 
     ! ### Inner utils ###
     subroutine assign_boundary(self, face_types)
@@ -1949,24 +1620,4 @@ module class_cellsystem
         self%num_slip_wall_faces      = 0
         self%num_symmetric_faces      = 0
     end subroutine finalize_boundary_references
-
-    pure function compute_boundary_gradient(self, lhc_variables, rhc_variables, lhc_position, rhc_position, num_variables) result(gradient_variables)
-        class  (cellsystem), intent(in) :: self
-        real   (real_kind ), intent(in) :: lhc_variables(:)
-        real   (real_kind ), intent(in) :: rhc_variables(:)
-        real   (real_kind ), intent(in) :: lhc_position(3)
-        real   (real_kind ), intent(in) :: rhc_position(3)
-        integer(int_kind  ), intent(in) :: num_variables
-        real   (real_kind )             :: gradient_variables(num_variables*3)
-        integer(int_kind  ) :: i
-        do i = 1, num_variables, 1
-            associate(                                           &
-                grad => gradient_variables(3*(i-1)+1:3*(i-1)+3), &
-                dphi => lhc_variables(i) - rhc_variables(i)    , &
-                dx   => lhc_position - rhc_position              &
-            )
-                grad(1:3) = vector_normalize(dx) * (dphi / vector_magnitude(dx))
-            end associate
-        end do
-    end function compute_boundary_gradient
 end module class_cellsystem
